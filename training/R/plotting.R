@@ -29,7 +29,7 @@ aggregateMatrixList <- function(l, func=function(x){ mean(x, na.rm=T) }, value.n
    #df$value <- apply(m_values,1,function(i){ func(i) })
    
    if(as.matrix){
-      return(acast(df, class ~ feature))
+      return(reshape2::acast(df, class ~ feature))
    } else {
       if(!is.null(value.name)){ colnames(df)[3] <- value.name }
       return(df)
@@ -37,7 +37,10 @@ aggregateMatrixList <- function(l, func=function(x){ mean(x, na.rm=T) }, value.n
 }
 
 ####################################################################################################
-plotTopFeatures <- function(m=NULL, cv_out=NULL, top.n=10, nrow=NULL, ncol=NULL){
+plotTopFeatures <- function(
+   m=NULL, cv_out=NULL, top.n=10, infer.feature.type=F,
+   nrow=NULL, ncol=NULL
+){
    if(!is.null(cv_out)){
       m <- aggregateMatrixList(lapply(cv_out,`[[`,'imp'), as.matrix=T)
    }
@@ -46,20 +49,77 @@ plotTopFeatures <- function(m=NULL, cv_out=NULL, top.n=10, nrow=NULL, ncol=NULL)
       v <- sort(m[i,], decreasing=T)[1:top.n]
       data.frame(class=i, feature=names(v), value=v, index=1:top.n, row.names=NULL)
    }))
-   
    df <- forceDfOrder(df)
+   
+   if(infer.feature.type){
+      df$feature_type <- factor(
+         gsub('[.].+$','',df$feature),
+         levels=unique(gsub('[.].+$','',colnames(m)))
+      )
+   } else {
+      df$feature_type <- 'none'
+   }
    
    label_y_pos <- max(df$value) * 0.05
    
-   ggplot(df, aes(x=index, y=value)) +
+   require(ggplot2)
+   p <- ggplot(df, aes(x=index, y=value)) +
       facet_wrap(~class, nrow=nrow, ncol=ncol) +
-      geom_bar(stat='identity', fill='#659F5B') +
+      
+      #geom_bar(stat='identity', fill='#659F5B') +
+      geom_bar(aes(fill=feature_type), stat='identity') +
+      scale_fill_brewer(palette='Set3') +
+      
       geom_text(aes(label=feature, y=label_y_pos), angle=90, hjust=0, size=2.5) +
-      #scale_x_continuous(breaks = function(x) seq(ceiling(x[1]), floor(x[2]), by=5)) +
-      theme_bw() +
+      
+      labs(y='Feature importance', x='Index', fill='Feature type') +
+      
       theme(
          panel.grid.minor=element_blank()
       )
+   
+   if(length(unique(df$feature_type))==1){
+      p <- p + guides(fill=F)
+   }
+   
+   return(p)
+}
+
+plotFeatureImpHeatmap <- function(
+   m=NULL, cv_out=NULL, min.imp=NULL
+){
+   if(!is.null(cv_out)){
+      m <- aggregateMatrixList(lapply(cv_out,`[[`,'imp'), as.matrix=T)
+   }
+   
+   df <- reshape2::melt(as.matrix(m))
+   colnames(df) <- c('class','feature','value')
+   
+   if(!is.null(min.imp)){
+      feature_whitelist <- as.character(unique(df[df$value >= min.imp,'feature']))
+      df <- df[df$feature %in% feature_whitelist,]
+   }
+   
+   df <- forceDfOrder(df)
+   
+   require(ggplot2)
+   p <- ggplot(df, aes(y=class,x=feature)) + 
+      geom_tile(aes(fill=value)) +
+      scale_fill_distiller(palette='YlGnBu') +
+      
+      labs(y='Class',x='Features',fill='Imp.') +
+      
+      theme_bw() +
+      theme(
+         panel.grid=element_blank(),
+         axis.text.x=element_text(angle=90, hjust=1, vjust=0.5)
+      )
+   
+   if(!is.null(min.imp)){
+      p <- p + xlab(sprintf('Features\n(min.imp>=%s in at least 1 class)', min.imp))
+   }
+   
+   return(p)
 }
 
 ####################################################################################################
@@ -110,11 +170,12 @@ plotPerfHeatmap <- function(
    rel.heights=c(0.3, 1),
    
    ## Confusion heatmap
-   sort=T, rel.values=T, 
+   sort=F, rel.values=T, 
    
    ## Performance metrics
-   perf.metrics=c('f1','prec','tpr'), show.weighted.mean=T
+   metrics=c('f1','prec','tpr'), show.weighted.mean=T
 ){
+   require(ggplot2)
    if(!is.null(cv_out)){
       actual <- unlist(lapply(cv_out,function(i){ i$test_set$actual }))
       predicted <- unlist(lapply(cv_out,function(i){ i$test_set$predicted }))
@@ -135,7 +196,7 @@ plotPerfHeatmap <- function(
    
    p_heatmap <- plotHeatmapFromMatrix(
       tab, show.labels=T, y.lab='Actual', x.lab='Predicted', invert.y=T,
-      legend.name=if(rel.values){ 'True pos. rate' } else { 'Counts' }
+      legend.name=if(rel.values){ 'Prop. predicted' } else { 'Counts' }
    )
    
    ## Samples per class ----------------------------------------------------------------
@@ -168,7 +229,7 @@ plotPerfHeatmap <- function(
       simplify=T
    )
    
-   perf <- mltoolkit::calcPerf(confusion, perf.metrics)
+   perf <- mltoolkit::calcPerf(confusion, metrics)
    rownames(perf) <- perf[,1]; perf[,1] <- NULL
    
    perf <- perf[class_order,]
