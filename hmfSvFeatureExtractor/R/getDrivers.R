@@ -92,9 +92,7 @@ calcGeneMutScores <- function(
    
    gene_whitelist <- read.table(gene.whitelist.path, header=F, stringsAsFactors=F)[,1]
    
-   if(is.null(df)){
-      df <- read.delim(driver.catalog.path)
-   }
+   if(is.null(df)){ df <- read.delim(driver.catalog.path, stringsAsFactors=F) }
    
    df <- df[df$driver!='AMP' & df$gene %in% gene_whitelist,]
    df <- df[!duplicated(df$gene),]
