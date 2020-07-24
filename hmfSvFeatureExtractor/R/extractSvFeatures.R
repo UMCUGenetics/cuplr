@@ -5,7 +5,7 @@
 #' @param linx.fusion.path Path to LINX txt file containing fusion data
 #' @param linx.viral.inserts.path Path to txt file with the columns: SampleId, 
 #' SvId, VirusId, VirusName
-#' @param driver.catalog.path
+#' @param driver.catalog.path Path to LINX driver catalog txt file
 #' @param sample.name See out.path
 #' @param out.path If provided, will write output to path as a 1 column dataframe with the 
 #' sample.name as the column name and feature names as the row names
@@ -189,7 +189,6 @@ mkFeatureMatrix <- function(file.paths, sample.names, func, func.args=list(), ve
 #' @return A matrix
 #' @export
 #'
-#' @examples
 fillMissingSamplesInMatrix <- function(m, sample.names, fill.value=NA){
    #m=l[[1]]
    #sample.names=all_samples
