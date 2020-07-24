@@ -17,18 +17,203 @@ if(F){
    library(mltoolkit)
 
    training_data <- read.delim(
-      paste0(base_dir,'/CUPs_classifier/processed/cuplr/training/models/0.04_adding_sv_features/models/b_contextsSigs_allSvlinx/features.txt.gz'),
+      paste0(base_dir,'/CUPs_classifier/processed/cuplr/training/models/0.05a_addRmd/features.txt.gz'),
       check.names=F
    )
 
-   training_data_ss <- training_data[
-      ,
-      c( grep('^gene_mut',colnames(training_data), value=T) , 'response')
-   ]
-
-   folds <- createCvTrainTestSets(training_data_ss)
+   folds <- createCvTrainTestSets(training_data)
 
 }
+
+####################################################################################################
+trainRandomForestEnsemble <- function(
+   train, test=NULL, colname.response='response',
+   feat.sel.method='wilcox', feat.sel.max.qvalue=0.01, feat.sel.top.n.features=NULL,
+   calc.imp=T, imp.metric='mda', ntree=200,
+   seed=NULL, verbose=1
+){
+   # train=folds[[1]]$train
+   # test=folds[[1]]$test
+   # colname.response='response'
+   # verbose=2
+
+   if(!is.null(seed)){ set.seed(seed) }
+
+   ##----------------------------------------------------------------------
+   if(verbose){ message('> Preparing input features and response variable...') }
+   train_data <- dfToFeaturesAndResponse(train, colname.response=colname.response)
+
+   if(!is.null(test)){
+      test_data <- dfToFeaturesAndResponse(test, colname.response=colname.response)
+   }
+
+   ##----------------------------------------------------------------------
+   if(verbose){ message('> Training random forest ensemble...') }
+   model <- lapply(1:ncol(train_data$y_ohe),function(i){
+      #i='Colon/Rectum'
+
+      if(verbose==2){ message( '[',i,'/',ncol(train_data$y_ohe),']: ', colnames(train_data$y_ohe)[i] ) }
+
+      y <- unname(train_data$y_ohe[,i])
+
+      if(!is.null(feat.sel.method)){
+         if(verbose==2){ message('>> Performing feature selection...') }
+         x <- univarFeatSel(
+            train_data$x, y, method=feat.sel.method,
+            max.qvalue=feat.sel.max.qvalue,
+            sel.top.n.features=feat.sel.top.n.features
+         )
+      } else {
+         x <- train_data$x
+      }
+
+      if(verbose==2){ message('>> Training random forest...') }
+      y <- factor(y, levels=c('TRUE','FALSE'))
+      randomForest::randomForest(
+         x, y,
+         strata=y, proximity=F, ntree=ntree,
+         #importance=F,
+         importance=(calc.imp & imp.metric=='mda'),
+         do.trace=F
+      )
+   })
+   names(model) <- colnames(train_data$y_ohe)
+   class(model) <- c('list','randomForestEnsemble')
+
+   out <- list()
+   out$model <- model
+
+   ##----------------------------------------------------------------------
+   if(calc.imp){
+      if(verbose){ message('> Calculating feature importance...') }
+      exist_features <- unique(unlist(lapply(model, function(i){
+         names(i$forest$ncat)
+      })))
+      exist_features <- colnames(test_data$x)[ colnames(test_data$x) %in% exist_features ] ## Preserve original feature order
+
+      if(imp.metric=='mda'){
+         out$imp <- do.call(rbind, lapply(model, function(i){
+            #i=model[[1]]
+            df <- randomForest::importance(i, type=1)
+            v <- structure(df[,1],names=rownames(df))
+            v <- v[exist_features]
+            names(v) <- exist_features
+            v[is.na(v)] <- 0
+            return(v)
+         }))
+
+      } else {
+         if(!is.null(test)){
+            out$imp <- permutationImportance(
+               model, test_data$x[,exist_features], test_data$y, metric=imp.metric,
+               verbose=(verbose==2)
+            )
+         } else {
+            stop('> Feature importance calculation requires test data')
+         }
+      }
+   }
+
+   ##----------------------------------------------------------------------
+   if(!is.null(test)){
+      if(verbose){ message('> Predicting on test set...') }
+      out$test_set <- list(
+         probabilities = getPredictions(model, test_data$x, output.classes=F),
+         predicted = NA,
+         actual = test_data$y
+      )
+
+      out$test_set$predicted <- with(out$test_set,{
+         factor(
+            colnames(probabilities)[max.col(probabilities)],
+            levels=colnames(probabilities)
+         )
+      })
+   }
+
+   return(out)
+}
+
+
+####################################################################################################
+trainRandomForest <- function(
+   train, test=NULL, colname.response='response', do.feat.sel=T,
+   calc.imp=T, imp.metric='f1', ntree=200,
+   seed=NULL, verbose=1
+){
+   # train=folds[[1]]$train
+   # test=folds[[1]]$test
+   # colname.response='response'
+   # verbose=2
+
+   if(!is.null(seed)){ set.seed(seed) }
+
+   ##----------------------------------------------------------------------
+   if(verbose){ message('> Preparing input features and response variable...') }
+   train_data <- dfToFeaturesAndResponse(train, colname.response=colname.response)
+
+   if(!is.null(test)){
+      test_data <- dfToFeaturesAndResponse(test, colname.response=colname.response)
+   }
+
+   ##----------------------------------------------------------------------
+   if(do.feat.sel){
+      if(verbose){ message('> Removing useless features...') }
+      train_data$x <- univarFeatSel(
+         train_data$x, train_data$y,
+         verbose=(verbose==2)
+      )
+
+      if(!is.null(test)){
+         test_data$x <- test_data$x[,colnames(test_data$x) %in% colnames(train_data$x)]
+      }
+   }
+
+   ##----------------------------------------------------------------------
+   if(verbose){ message('> Training...') }
+   model <- randomForest::randomForest(
+      train_data$x, train_data$y,
+      strata=y, proximity=F, ntree=ntree,
+      importance=(calc.imp & imp.metric=='mda'),
+      do.trace=(verbose==2)
+   )
+
+   out <- list()
+   out$model <- model
+
+   ##----------------------------------------------------------------------
+   if(calc.imp){
+      if(verbose){ message('> Calculating feature importance...') }
+      if(imp.metric=='mda'){
+
+         out$imp <- suppressWarnings({
+            t(randomForest::importance(model, type=1, class=levels(train_data$y)))
+         })
+      } else {
+         if(!is.null(test)){
+            out$imp <- permutationImportance(
+               model, test_data$x, test_data$y, metric=imp.metric,
+               verbose=(verbose==2)
+            )
+         } else {
+            stop('> Feature importance calculation requires test data')
+         }
+      }
+   }
+
+   ##----------------------------------------------------------------------
+   if(!is.null(test)){
+      if(verbose){ message('> Predicting on test set...') }
+      out$test_set <- list(
+         probabilities = getPredictions(model,test_data$x, output.classes=F),
+         predicted = getPredictions(model,test_data$x, output.classes=T),
+         actual = test_data$y
+      )
+   }
+
+   return(out)
+}
+
 
 
 ####################################################################################################
@@ -204,256 +389,6 @@ trainNeuralNet <- function(
    #keras::k_clear_session()
    return(out)
 }
-
-####################################################################################################
-trainRandomForest <- function(
-   train, test=NULL, colname.response='response', do.feat.sel=T,
-   calc.imp=T, imp.metric='f1', ntree=200,
-   seed=NULL, verbose=1
-){
-   # train=folds[[1]]$train
-   # test=folds[[1]]$test
-   # colname.response='response'
-   # verbose=2
-
-   if(!is.null(seed)){ set.seed(seed) }
-
-   ##----------------------------------------------------------------------
-   if(verbose){ message('> Preparing input features and response variable...') }
-   train_data <- dfToFeaturesAndResponse(train, colname.response=colname.response)
-
-   if(!is.null(test)){
-      test_data <- dfToFeaturesAndResponse(test, colname.response=colname.response)
-   }
-
-   ##----------------------------------------------------------------------
-   if(do.feat.sel){
-      if(verbose){ message('> Removing useless features...') }
-      train_data$x <- univarFeatSel(
-         train_data$x, train_data$y,
-         verbose=(verbose==2)
-      )
-
-      if(!is.null(test)){
-         test_data$x <- test_data$x[,colnames(test_data$x) %in% colnames(train_data$x)]
-      }
-   }
-
-   ##----------------------------------------------------------------------
-   if(verbose){ message('> Training...') }
-   model <- randomForest::randomForest(
-      train_data$x, train_data$y,
-      strata=y, proximity=F, ntree=ntree,
-      importance=(calc.imp & imp.metric=='mda'),
-      do.trace=(verbose==2)
-   )
-
-   out <- list()
-   out$model <- model
-
-   ##----------------------------------------------------------------------
-   if(calc.imp){
-      if(verbose){ message('> Calculating feature importance...') }
-      if(imp.metric=='mda'){
-
-         out$imp <- suppressWarnings({
-            t(randomForest::importance(model, type=1, class=levels(train_data$y)))
-         })
-      } else {
-         if(!is.null(test)){
-            out$imp <- permutationImportance(
-               model, test_data$x, test_data$y, metric=imp.metric,
-               verbose=(verbose==2)
-            )
-         } else {
-            stop('> Feature importance calculation requires test data')
-         }
-      }
-   }
-
-   ##----------------------------------------------------------------------
-   if(!is.null(test)){
-      if(verbose){ message('> Predicting on test set...') }
-      out$test_set <- list(
-         probabilities = getPredictions(model,test_data$x, output.classes=F),
-         predicted = getPredictions(model,test_data$x, output.classes=T),
-         actual = test_data$y
-      )
-   }
-
-   return(out)
-}
-
-####################################################################################################
-trainRandomForestEnsemble <- function(
-   train, test=NULL, colname.response='response', do.feat.sel=T,
-   calc.imp=T, imp.metric='mda', ntree=200,
-   seed=NULL, verbose=1
-){
-   # train=folds[[1]]$train
-   # test=folds[[1]]$test
-   # colname.response='response'
-   # verbose=2
-
-   if(!is.null(seed)){ set.seed(seed) }
-
-   ##----------------------------------------------------------------------
-   if(verbose){ message('> Preparing input features and response variable...') }
-   train_data <- dfToFeaturesAndResponse(train, colname.response=colname.response)
-
-   if(!is.null(test)){
-      test_data <- dfToFeaturesAndResponse(test, colname.response=colname.response)
-   }
-
-   ##----------------------------------------------------------------------
-   if(verbose){ message('> Training random forest ensemble...') }
-   model <- lapply(1:ncol(train_data$y_ohe),function(i){
-      #i='Colon/Rectum'
-
-      if(verbose==2){ message( '[',i,'/',ncol(train_data$y_ohe),']: ', colnames(train_data$y_ohe)[i] ) }
-
-      y <- unname(train_data$y_ohe[,i])
-
-      if(do.feat.sel){
-         if(verbose==2){ message('>> Performing feature selection...') }
-         x <- univarFeatSel(train_data$x, y)
-      } else {
-         x <- train_data$x
-      }
-
-      if(verbose==2){ message('>> Training random forest...') }
-      y <- factor(y, levels=c('TRUE','FALSE'))
-      randomForest::randomForest(
-         x, y,
-         strata=y, proximity=F, ntree=ntree,
-         #importance=F,
-         importance=(calc.imp & imp.metric=='mda'),
-         do.trace=F
-      )
-   })
-   names(model) <- colnames(train_data$y_ohe)
-   class(model) <- c('list','randomForestEnsemble')
-
-   out <- list()
-   out$model <- model
-
-   ##----------------------------------------------------------------------
-   if(calc.imp){
-      if(verbose){ message('> Calculating feature importance...') }
-      exist_features <- unique(unlist(lapply(model, function(i){
-         names(i$forest$ncat)
-      })))
-      exist_features <- colnames(test_data$x)[ colnames(test_data$x) %in% exist_features ] ## Preserve original feature order
-
-      if(imp.metric=='mda'){
-         out$imp <- do.call(rbind, lapply(model, function(i){
-            #i=model[[1]]
-            df <- randomForest::importance(i, type=1)
-            v <- structure(df[,1],names=rownames(df))
-            v <- v[exist_features]
-            names(v) <- exist_features
-            v[is.na(v)] <- 0
-            return(v)
-         }))
-
-      } else {
-         if(!is.null(test)){
-            out$imp <- permutationImportance(
-               model, test_data$x[,exist_features], test_data$y, metric=imp.metric,
-               verbose=(verbose==2)
-            )
-         } else {
-            stop('> Feature importance calculation requires test data')
-         }
-      }
-   }
-
-   ##----------------------------------------------------------------------
-   if(!is.null(test)){
-      if(verbose){ message('> Predicting on test set...') }
-      out$test_set <- list(
-         probabilities = getPredictions(model, test_data$x, output.classes=F),
-         predicted = NA,
-         actual = test_data$y
-      )
-
-      out$test_set$predicted <- with(out$test_set,{
-         factor(
-            colnames(probabilities)[max.col(probabilities)],
-            levels=colnames(probabilities)
-         )
-      })
-   }
-
-   return(out)
-}
-
-####################################################################################################
-# trainCForest <- function(
-#    train, test=NULL, colname.response='response',
-#    calc.imp=T, imp.metric='f1', ntree=200,
-#    seed=NULL, verbose=1
-# ){
-#    # train=folds[[1]]$train
-#    # test=folds[[1]]$test
-#    # colname.response='response'
-#    # verbose=2
-#
-#    if(!is.null(seed)){ set.seed(seed) }
-#
-#    ##----------------------------------------------------------------------
-#    if(verbose){ message('> Preparing input features and response variable...') }
-#    train_data <- dfToFeaturesAndResponse(train, colname.response=colname.response)
-#
-#    if(!is.null(test)){
-#       test_data <- dfToFeaturesAndResponse(test, colname.response=colname.response)
-#    }
-#
-#    ##----------------------------------------------------------------------
-#    if(do.feat.sel){
-#       if(verbose){ message('> Removing useless features...') }
-#       train_data$x <- univarFeatSel(
-#          train_data$x, train_data$y,
-#          verbose=(verbose==2)
-#       )
-#
-#       if(!is.null(test)){
-#          test_data$x <- test_data$x[,colnames(test_data$x) %in% colnames(train_data$x)]
-#       }
-#    }
-#
-#    ##----------------------------------------------------------------------
-#    require(randomForest)
-#    model <- randomForest::randomForest(
-#       train_data$x, train_data$y,
-#       strata=y, proximity=F, ntree=ntree,
-#       importance=(calc.imp & imp.metric=='mda'),
-#       do.trace=(verbose==2)
-#    )
-#
-#    imp <- importance(model, 1, class=levels(train_data$y))
-#    plotTopFeatures(t(imp), top.n=20)
-#
-#    importance(model, 1, class='Prostate')
-#
-#    # require(partykit)
-#    # model <- cforest(
-#    #    data=cbind(as.data.frame(train_data$x), data.frame(response=train_data$y)),
-#    #    formula=response~.,
-#    #    ntree=200, trace=T
-#    # )
-#    #
-#
-#    #
-#    # pred <- predict(model, newdata=test_data$x)
-#    #
-#    # pred <- do.call(rbind, pred)
-#    # colnames(pred) <- levels(test_data$y)
-#    # rownames(pred) <- rownames(test_data$x)
-#    #
-#    # imp <- varimp(model, conditional=T)
-# }
-
 
 ####################################################################################################
 crossValidate <- function(
