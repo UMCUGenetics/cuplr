@@ -208,7 +208,7 @@ detectKataegis <- function(
 #' @return An integer vector
 #' @export
 #'
-getContextsKataegis <- function(
+extractContextsKataegis <- function(
    vcf.snv, vcf.sv,
    vcf.filter='PASS',
    ref.genome=mutSigExtractor::DEFAULT_GENOME, keep.chroms=c(1:22,'X'), merge.consecutive=F, 
