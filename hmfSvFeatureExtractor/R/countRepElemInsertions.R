@@ -12,6 +12,7 @@ countRepElemInsertions <- function(
    tag.features=T
 ){
    #vcf.file='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/data/somatics/160704_HMFregXXXXXXXX/XXXXXXXX.purple.sv.ann.vcf.gz'
+   #vcf.file='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/data/somatics/171223_HMFregXXXXXXXX/XXXXXXXX.purple.sv.ann.vcf.gz'
    
    vcf <- mutSigExtractor::variantsFromVcf(
       vcf.file, vcf.filter='PASS', 
@@ -22,7 +23,7 @@ countRepElemInsertions <- function(
    rep_elem_whitelist <- read.table(rep.elem.whitelist.path, header=F, stringsAsFactors=F)[,1]
    counts <- structure(rep(0,length(rep_elem_whitelist)), names=rep_elem_whitelist)
    
-   if(nrow(vcf)==0){ return(counts) }
+   if(!is.data.frame(vcf)){ return(counts) }
    
    rep_elements <- mutSigExtractor::getInfoValues(vcf$info, 'INSRMRC')[,1]
    
