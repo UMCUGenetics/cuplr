@@ -8,7 +8,7 @@ getViralInsertions(
   linx.viral.inserts.path,
   viral.host.ref.path = VIRAL_HOST_REF,
   return.counts = F,
-  add.feature.type = F
+  tag.features = T
 )
 }
 \arguments{
@@ -21,7 +21,7 @@ virus_name, feature_group, cancer_associated}
 \item{return.counts}{If TRUE, returns the actual number of viral inserts
 found in a sample}
 
-\item{add.feature.type}{If TRUE, will tag the value names with the feature
+\item{tag.features}{If TRUE, will tag the value names with the feature
 type}
 }
 \value{

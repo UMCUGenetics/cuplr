@@ -4,12 +4,12 @@
 \alias{getPurplePurityData}
 \title{Get gender and whole genome duplication status}
 \usage{
-getPurplePurityData(purple.purity.path, add.feature.type = F)
+getPurplePurityData(purple.purity.path, tag.features = T)
 }
 \arguments{
 \item{purple.purity.path}{Path to purple.purity.tsv file}
 
-\item{add.feature.type}{If TRUE, will tag the value names with the feature
+\item{tag.features}{If TRUE, will tag the value names with the feature
 type}
 }
 \value{
