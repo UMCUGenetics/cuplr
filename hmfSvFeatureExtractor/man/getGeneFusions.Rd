@@ -7,7 +7,7 @@
 getGeneFusions(
   linx.fusion.path,
   gene.fusion.whitelist.path = GENE_FUSION_WHITELIST,
-  add.feature.type = F
+  tag.features = T
 )
 }
 \arguments{
@@ -15,8 +15,7 @@ getGeneFusions(
 
 \item{gene.fusion.whitelist.path}{Path to txt file with list of gene fusions}
 
-\item{add.feature.type}{If TRUE, will tag the value names with the feature
-type}
+\item{tag.features}{If TRUE, will tag the value names with the feature type}
 }
 \value{
 A (0,1) vector
