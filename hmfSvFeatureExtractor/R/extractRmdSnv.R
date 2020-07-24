@@ -16,7 +16,7 @@
 #' @export
 #'
 extractRmdSnv <- function(
-   vcf.file, ref.genome=DEFAULT_GENOME, verbose=F,
+   vcf.file, ref.genome=mutSigExtractor::DEFAULT_GENOME, verbose=F,
    sample.name=NULL, bin.size=1e6, as.matrix=T, ...
 ){
    #vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/171002_HMFregCPCT_FR12246237_FR15412823_CPCT02380011/CPCT02380011T.purple.somatic.vcf.gz'
@@ -105,10 +105,8 @@ extractRmdSnv <- function(
    }
 
    if(verbose){ message('Returning output...') }
-
-
+   
    if(!as.matrix){ return(unname(counts)) }
-
    out <- as.matrix(counts)
    rownames(out) <- paste0('r',rownames(out))
 
