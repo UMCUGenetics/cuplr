@@ -14,7 +14,7 @@
 #' ## Load data
 #' metadata <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CUPs_classifier/processed/metadata/cancer_type_labels.txt')
 #' metadata <- metadata[metadata$cohort=='HMF',]
-#' driver_catalog <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CUPs_classifier/processed/cuplr/hmfSvFeatureExtractor/scripts/gather_drivers//driver.catalog.merged.txt.gz')
+#' driver_catalog <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CUPs_classifier/processed/cuplr/hmfSvFeatureExtractor/scripts/select_drivers//driver.catalog.merged.txt.gz')
 #' driver_catalog$cancer_type <- metadata[match(driver_catalog$sample, metadata$sample),'cancer_type']
 #' amp_catalog <- driver_catalog[driver_catalog$driver=='AMP',]
 #' 
@@ -25,8 +25,7 @@
 #' )
 calcCancerTypeEnrichment <- function(
    df, feature.colname, class.colname='cancer_type',
-   v.classes=metadata$cancer_type,
-   verbose=F
+   v.classes, verbose=F
 ){
    #df=amp_catalog
    #class.colname='cancer_type'
@@ -81,8 +80,19 @@ calcCancerTypeEnrichment <- function(
    
    conting <- as.matrix(out[,c('pos_freq','pos_total','neg_freq','neg_total')])
    colnames(conting) <- NULL
+   
+   if(verbose){
+      counter <- 0
+      pb <- txtProgressBar(max=nrow(conting), style=3)
+   }
+   
    out$p_value <- apply(conting, 1, function(i){
       #i=conting[1,]
+      if(verbose){
+         counter <<- counter + 1
+         setTxtProgressBar(pb, counter)
+      }
+      
       m <- matrix(i, nrow=2)
       fisher.test(m, alternative='greater')$p.value
    })
