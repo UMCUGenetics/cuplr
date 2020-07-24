@@ -1,0 +1,9 @@
+annotation	score
+Pathogenic	5
+Pathogenic/Likely_pathogenic	5
+Likely_pathogenic	4
+Uncertain_significance	3
+Conflicting_interpretations_of_pathogenicity	3
+Likely_benign	2
+Benign/Likely_benign	2
+Benign	1

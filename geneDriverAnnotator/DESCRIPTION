@@ -1,0 +1,17 @@
+Package: geneDriverAnnotator
+Type: Package
+Title: Determines gene amplifications and biallelic losses from HMF pipeline output
+Version: 2.02
+Author: Luan N. Nguyen
+Maintainer: Luan N. Nguyen <n.l.nguyen-2@umcutrecht.nl>
+Description: Determines gene amplifications and biallelic losses from HMF pipeline output
+License: MIT
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.0
+Depends:
+	seqminer
+Suggests:
+	Rsamtools,
+	biomaRt,
+	naturalsort
