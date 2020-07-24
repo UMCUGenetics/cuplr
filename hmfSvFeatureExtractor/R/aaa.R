@@ -3,7 +3,8 @@
 
    ## Paths within the package
    pkg_constant_paths <- list(
-      c('CENTROMERE_POSITIONS','/centromere_positions_hg19.txt'),
+      c('CYTOBANDS','/cytoBand.txt.gz'),
+      
       c('VIRAL_HOST_REF','/viral_host_ref_ann.txt'),
       c('GENE_FUSION_WHITELIST','/gene_fusion_whitelist.txt'),
       
@@ -12,7 +13,9 @@
       c('GENE_MONOALL_WHITELIST','/gene_monoallel_whitelist.txt'),
       c('GENE_MUT_WHITELIST','/gene_mut_whitelist.txt'),
       
-      c('REP_ELEM_WHITELIST','/rep_elem_whitelist.txt')
+      c('REP_ELEM_WHITELIST','/rep_elem_whitelist.txt'),
+      
+      c('RESOLVED_TYPE_ANNOTATIONS','/resolved_type_annotations.txt')
    )
 
    for(i in pkg_constant_paths){
