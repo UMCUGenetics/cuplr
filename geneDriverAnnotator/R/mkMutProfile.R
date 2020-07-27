@@ -47,6 +47,10 @@ mkMutProfileGeneCnv <- function(
    #cnv.file='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/170613_HMFregXXXXXXXX/XXXXXXXX.purple.cnv.somatic.tsv'
    #cnv.file='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/data/somatics/161123_HMFregXXXXXXXX/XXXXXXXX.purple.cnv.somatic.tsv'
    
+   #cnv.file='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/vcf/somatic/cnv/cna_annotated/0009b464-b376-4fbc-8a56-da538269a02f.consensus.20170119.somatic.cna.annotated.txt'
+   #cnv.file='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/vcf/somatic/cnv/cna_annotated/fc8130df-6860-7677-e040-11ac0d485ddc.consensus.20170119.somatic.cna.annotated.txt'
+   #sel.cols=c(chrom='chromosome',start='start',end='end',total_cn='total_cn',major_cn='major_cn',minor_cn='minor_cn')
+   
    ## Subsetting for genes ------------------------
    if(verbose){ message('Reading cnv file...') }
    cnv <- read.delim(cnv.file, stringsAsFactors=F)
@@ -68,9 +72,17 @@ mkMutProfileGeneCnv <- function(
    )
    
    if(verbose){ message('Calculating CN info per gene...') }
+   
+   if(any(sapply(overlaps,length)==0)){
+      warning('Some genes have no copy number info')
+   }
+   
    if(!is.null(exons.bed.file)){
       exon_cnv <- lapply(seq_along(overlaps),function(i){
          #i=1
+         if(length(overlaps[[i]])==0){
+            return(NULL)
+         }
          df <- cnv[overlaps[[i]],]
          df$hgnc_symbol <- bed[i,'hgnc_symbol']
          df$ensembl_gene_id <- bed[i,'ensembl_gene_id']
@@ -79,18 +91,24 @@ mkMutProfileGeneCnv <- function(
       exon_cnv <- do.call(rbind, exon_cnv)
       
       exon_cnv_split <- split(exon_cnv, factor(exon_cnv$ensembl_gene_id, unique(exon_cnv$ensembl_gene_id)))
-      gene_cnv <- do.call(rbind, lapply(exon_cnv_split, function(i){
-         #i=exon_cnv_split[['ENSG00000005471']]
-         data.frame(
-            ensembl_gene_id=i[1,'ensembl_gene_id'],
-            min_copy_number=min(i$total_cn, na.rm=T),
-            max_copy_number=max(i$total_cn, na.rm=T),
-            min_minor_allele_ploidy=min(i$minor_cn, na.rm=T)
-         )
-      }))
+      suppressWarnings({
+         gene_cnv <- do.call(rbind, lapply(exon_cnv_split, function(i){
+            #i=exon_cnv_split[['ENSG00000168172']]
+            data.frame(
+               ensembl_gene_id=i[1,'ensembl_gene_id'],
+               min_copy_number=min(i$total_cn, na.rm=T),
+               max_copy_number=max(i$total_cn, na.rm=T),
+               min_minor_allele_ploidy=min(i$minor_cn, na.rm=T)
+            )
+         }))
+      })
+      
    } else {
       gene_cnv_pre <- lapply(seq_along(overlaps),function(i){
          #i=1
+         if(length(overlaps[[i]])==0){
+            return(NULL)
+         }
          df <- cnv[overlaps[[i]],]
          df$hgnc_symbol <- bed[i,'hgnc_symbol']
          df$ensembl_gene_id <- bed[i,'ensembl_gene_id']
@@ -173,6 +191,7 @@ mkMutProfileGeneCnv <- function(
       gains$gain_ratio_genome >= min.gain.ratio.genome,
       'amp','none'
    )
+   gains$gain_type[ is.na(gains$gain_type) ] <- 'none'
    
    gains$gain_type[
       gains$gain_type=='amp' & 
@@ -237,6 +256,12 @@ mkMutProfileGeneCnv <- function(
       gains[!(colnames(gains) %in% colnames(gene_cnv))],
       losses[!(colnames(losses) %in% colnames(gene_cnv))]
    )
+   
+   ## Round floats to save space
+   out <- as.data.frame(lapply(out, function(i){
+      if(is.numeric(i)){ round(i,3) }
+      else { i }
+   }))
 
    return(out)
 }
