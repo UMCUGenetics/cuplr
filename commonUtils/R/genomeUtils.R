@@ -128,6 +128,8 @@ isOverlappingChromPos <- function(
 #' 'auto' means that the human chromosome arm names are used. Note that chroms 13, 14, 15, 21, 22
 #' are considered to only have the long (i.e. q) arm.
 #' @param arm.only Only return the arm and not the chrom number?
+#' @param centro.intervals.rough.fix If TRUE, intervals intersecting with the centromere will be
+#' assigned to the q arm.
 #' @param show.warnings Show warning messages?
 #'
 #' @return A character vector of chromosome arm names
@@ -135,7 +137,7 @@ isOverlappingChromPos <- function(
 #'
 getChromArm <- function(
    df=NULL, centro.pos=CENTRO_POS_HG19, one.armed.chroms=c(13,14,15,21,22),
-   arm.only=F, seq.levels.style='NCBI', show.warnings=F
+   arm.only=F, seq.levels.style='NCBI', centro.intervals.rough.fix=F, show.warnings=F
 ){
 
    colnames(df)[1:3] <- c('chrom','start','end')
@@ -158,6 +160,10 @@ getChromArm <- function(
    df$arm <- c('pq','p','q')[
       max.col(df[,c('is_pq','is_p','is_q')])
    ]
+
+   if(centro.intervals.rough.fix){
+      df$arm[df$arm=='pq'] <- 'q'
+   }
 
    df$arm[df$chrom %in% one.armed.chroms] <- 'q'
 
