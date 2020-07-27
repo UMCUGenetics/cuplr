@@ -28,6 +28,7 @@ detGeneStatuses <- function(
    ## Defaults for HMF pipeline output
    do.filter.vcf=T, do.snpeff.ann=F,
    keep.chroms=c(1:22,'X'),
+   sel.cols.cnv=c(chrom='chromosome',start='start',end='end',total_cn='copyNumber',major_cn='majorAllelePloidy',minor_cn='minorAllelePloidy'),
    
    verbose=T
 ){
@@ -39,7 +40,7 @@ detGeneStatuses <- function(
       ## HMF
       vcf_paths <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/HMF_DR104/metadata/vcf_paths.txt', stringsAsFactors=F)
       #sample.name <- 'CPCT02010422T' ## BRCA2 LOH+som
-      sample.name <- 'CPCT02010543T' ## APC som stop gain (5) + som FS (5)
+      #sample.name <- 'CPCT02010543T' ## APC som stop gain (5) + som FS (5)
 
       out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/test/output/'
       out.dir <- paste0(out.parent.dir,'/',sample.name,'/')
@@ -213,6 +214,7 @@ detGeneStatuses <- function(
       if(verbose){ message('\n## Annotating gene CNV table...') }
       mut_profile$gene_cnv <- mkMutProfileGeneCnv(
          cnv.file=input.file.paths['cnv'],
+         sel.cols=sel.cols.cnv,
          verbose=verbose
       )
       
@@ -322,7 +324,7 @@ detGeneStatuses <- function(
    
    if(verbose){ message('## Determining most pathogenic diplotype per gene...') }
    gene_diplotypes_max <- getGeneDiplotypeMaxEff(gene_diplotypes)
-   ##subset(gene_diplotypes, hit_score>=9)
+   ##subset(gene_diplotypes_max, hit_score>=9)
    
    ## Export output tables ========================================================
    if(verbose){ message('## Exporting gene diplotype tables...') }
