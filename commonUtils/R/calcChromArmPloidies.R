@@ -64,7 +64,8 @@ calcChromArmPloidies <- function(
    if(verbose){ message('Splitting CN segments by chrom arm...') }
    cnv$chrom_arm <- getChromArm(
       data.frame(chrom=cnv$chrom, start=cnv$start, end=cnv$end),
-      one.armed.chroms=one.armed.chroms
+      one.armed.chroms=one.armed.chroms,
+      centro.intervals.rough.fix=T
    )
    cnv$chrom_arm <- gsub('chr','',cnv$chrom_arm)
    cnv$chrom_arm <- factor(cnv$chrom_arm, unique(cnv$chrom_arm))
@@ -86,7 +87,6 @@ calcChromArmPloidies <- function(
          df[1L,] <- NA
          return(df)
       }
-
    })
 
    ##----------------------------------------------------------------
