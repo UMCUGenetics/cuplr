@@ -10,18 +10,25 @@ getGeneDiplotypeMaxEff <- function(gene.diplotypes){
    #gene.diplotypes=gene_diplotypes
    
    df <- gene.diplotypes
-   df$diplotype_origin <- factor(df$diplotype_origin, c('cnv_cnv','cnv_som','cnv_germ','som_som','germ_som'))
+   
+   ## Force: cnv_cnv as highest priority, germ+som as lowest priority
+   df$diplotype_origin <- factor(
+      df$diplotype_origin, 
+      #c('germ_som','som_som','cnv_germ','cnv_som','cnv_cnv') 
+      c('cnv_cnv','cnv_som','cnv_germ','som_som','germ_som') 
+   )
    
    df <- df[
       order(
          df$ensembl_gene_id,
-         -as.integer(df$diplotype_origin), ## rev sorting
-         -df$hit_score ## rev sorting
+         -df$hit_score,
+         -as.integer(df$diplotype_origin)
       )
    ,]
-   
    df <- df[!duplicated(df$ensembl_gene_id),]
+   #subset(df,hgnc_symbol=='BRCA2')
    
+   ## Per gene, count number of rows with same hit_score
    tab <- unlist(lapply(
       split(gene.diplotypes$hit_score, gene.diplotypes$ensembl_gene_id), 
       function(i){ sum(i==max(i)) }
