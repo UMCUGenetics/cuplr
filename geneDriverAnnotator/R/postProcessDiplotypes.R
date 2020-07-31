@@ -29,10 +29,15 @@ getGeneDiplotypeMaxEff <- function(gene.diplotypes){
    #subset(df,hgnc_symbol=='BRCA2')
    
    ## Per gene, count number of rows with same hit_score
-   tab <- unlist(lapply(
-      split(gene.diplotypes$hit_score, gene.diplotypes$ensembl_gene_id), 
-      function(i){ sum(i==max(i)) }
-   ))
+   
+   tab <- (function(){
+      l <- split(gene.diplotypes$hit_score, gene.diplotypes$ensembl_gene_id)
+      unlist(lapply(l, function(i){
+         if(length(i)==0){ return(0) }
+         sum(i==max(i)) 
+      }))
+   })()
+   
    df$n_max_score_biall_states <- unname(tab)[ match(df$ensembl_gene_id, names(tab)) ]
    
    df[order(df$hgnc_symbol),]
