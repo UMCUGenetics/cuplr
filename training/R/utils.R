@@ -18,77 +18,89 @@ dfToFeaturesAndResponse <- function(df, colname.response='response'){
 }
 
 ################################################################################
-univarFeatSel <- function(x, y, method='median', max.qvalue=0.01, sel.top.n.features=NULL, verbose=T){
-   #df=training_data
-   #x <- df[,colnames(df)!=colname.response]
-   #y <- as.factor(df[,colname.response])
+univarFeatSel <- function(
+   x, y,
+   max.qvalue=0.01, sel.top.n.features=NULL,
+   verbose=T
+){
+   # colname.response='response'
+   # x <- df[,colnames(df)!=colname.response]
+   # y <- as.factor(df[,colname.response])
+   # #y <- y=='Prostate'
 
-   #print(head(x))
-   #print(y)
+   if( !(is.logical(y) | is.factor(y)) ){
+      stop('`y` must be a logical or factor')
+   }
+   #if(is.logical(y)){ y <- factor(y,c('TRUE','FALSE')) }
 
-   if(method=='median'){
-      whitelistByPairwiseTest <- function(m_pos, m_neg){
-         med_pos <- apply(m_pos,2,median)
-         med_neg <- apply(m_neg,2,median)
+   main <- function(v, y.logical){
+      #y.logical=y
+      if(is.numeric(v)){
+         #v=x$viral_ins.Hepatitis_C_virus
+         v_split <- split(v, y.logical)
+         wilcox.test(v_split[['TRUE']], v_split[['FALSE']])$p.value
+      } else {
+         #v=ifelse(x$purple.gender,'male','female')
+         #v=unname(m[,'AR'])
+         #y=metadata[ match(rownames(m), metadata$sample),'cancer_type' ]
+         #y.logical <- y=='Prostate'
 
-         med_diff <- med_pos - med_neg
-         names(med_diff)[ med_diff > 0 ]
+         neg_category <- levels(as.factor(v))[1]
+         #v=rep('0;none',length(v))
+
+         fisher.test(
+            matrix(
+               c(
+                  sum(v!=neg_category & y.logical), sum(y.logical),
+                  sum(v!=neg_category & !y.logical), length(y.logical)
+               ),
+               nrow=2
+            )
+         )$p.value
       }
-
-   } else if(method=='wilcox'){
-      whitelistByPairwiseTest <- function(m_pos, m_neg){
-         #m_pos=x_split[['Prostate']]
-         #m_neg=do.call(rbind, unname(x_split[names(x_split)!='Prostate']))
-
-         p_values <- unlist(lapply(1:ncol(m_pos), function(i){
-            #i=1
-            wilcox.test(m_pos[,i], m_neg[,i])$p.value
-         }))
-         names(p_values) <- colnames(m_pos)
-         p_values <- sort(p_values)
-         q_values <- p.adjust(p_values,'bonferroni')
-
-         out <- names(q_values)[ q_values < max.qvalue ]
-
-         if(!is.null(sel.top.n.features)){
-            out <- out[1:sel.top.n.features]
-            out <- out[!is.na(out)]
-         }
-
-         return(out)
-      }
-
-   } else {
-      stop('Invalid `method` specified')
    }
 
    if(is.logical(y)){
-      x_split <- split(as.data.frame(x), y)
-
-      feature_whitelist <- whitelistByPairwiseTest(x_split[['TRUE']], x_split[['FALSE']])
-
-   } else if(is.factor(y)){
-      x_split <- split(as.data.frame(x), y)
-      classes <- levels(y)
-      features <- colnames(x)
-
-      l <- lapply(1:length(classes), function(i){
-         #i=23
-         if(verbose){ message('Processing [',i,'/',length(classes),']: ',classes[i]) }
-         m_pos <- as.matrix(x_split[[i]])
-         m_neg <- as.matrix(do.call(rbind, unname(x_split[-i])))
-
-         whitelistByPairwiseTest(m_pos, m_neg)
+      if(verbose){ counter <- 0 }
+      p_values <- apply(x, 2, function(i){
+         if(verbose){
+            counter <<- counter + 1
+            message('[',counter,'] ', colnames(x)[[counter]] )
+         }
+         main(i, y)
       })
+      p_values <- sort(p_values)
 
-      feature_whitelist <- unique(unlist(l))
+      q_values <- p.adjust(p_values, method='bonferroni')
+
+      keep_features <- names(q_values)[ q_values < max.qvalue ]
+      if(!is.null(sel.top.n.features)){ keep_features <- keep_features[1:sel.top.n.features] }
+      keep_features <- na.exclude(keep_features)
 
    } else {
-      stop('`y` must be a logical or factor')
+      y_logicals <- lapply(levels(y), function(i){ y==i })
+      names(y_logicals) <- levels(y)
+
+      if(verbose){ counter <- 0 }
+      m_p_values <- do.call(cbind, lapply(y_logicals, function(y_logical){
+         if(verbose){
+            counter <<- counter + 1
+            message('[',counter,'] ', names(y_logicals)[[counter]] )
+         }
+         apply(x, 2, function(feature){ main(feature, y_logical) })
+      }))
+      m_q_values <- apply(m_p_values, 2, p.adjust, method='bonferroni')
+
+      keep_features <- unlist(apply(m_q_values, 2, function(i){
+         names(i)[ i<max.qvalue ]
+      }), use.names=F)
+
+      keep_features <- unique(na.exclude(keep_features))
    }
 
-   return( x[,colnames(x) %in% feature_whitelist] )
+   return(keep_features)
 }
+
 
 
 ################################################################################
