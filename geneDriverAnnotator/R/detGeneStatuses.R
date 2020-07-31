@@ -33,6 +33,8 @@ detGeneStatuses <- function(
    verbose=T
 ){
    
+   options(stringsAsFactors=F)
+   
    ## Inputs for debugging ========================================================
    if(F){
       devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/')
@@ -41,8 +43,10 @@ detGeneStatuses <- function(
       vcf_paths <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/HMF_DR104/metadata/vcf_paths.txt', stringsAsFactors=F)
       #sample.name <- 'XXXXXXXX' ## BRCA2 LOH+som
       #sample.name <- 'XXXXXXXX' ## APC som stop gain (5) + som FS (5)
-
-      out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/test/output/'
+      sample.name <- 'XXXXXXXX' ## BRCA2 LOH+som
+      
+      #out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/test/output/'
+      out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/HMF_DR104/gene_ann_2/'
       out.dir <- paste0(out.parent.dir,'/',sample.name,'/')
       dir.create(out.dir, recursive=T, showWarnings=F)
 
@@ -50,11 +54,26 @@ detGeneStatuses <- function(
       input.file.paths <- paste0('/Users/lnguyen/',input.file.paths)
       names(input.file.paths) <- c('germ_vcf','som_vcf','sv_vcf','cnv')
 
+      ## PCAWG
+      vcf_paths <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/manifest/manifest_gene_ann.txt.gz', stringsAsFactors=F)
+      #sample.name <- '54195db3-94a9-4538-8bb8-9953d936acd4'
+      sample.name <- '6f4d836f-e86f-4b12-9549-7117f59e3d4a'
+      
+      out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/gene_ann_2/'
+      out.dir <- paste0(out.parent.dir,'/',sample.name,'/')
+      dir.create(out.dir, recursive=T, showWarnings=F)
+      
+      input.file.paths <- unlist(vcf_paths[vcf_paths$sample_id==sample.name,-1])
+      input.file.paths <- paste0('/Users/lnguyen/',input.file.paths)
+      names(input.file.paths) <- c('germ_vcf','som_vcf','cnv')
+      
+      sel.cols.cnv=c(chrom='chromosome',start='start',end='end',total_cn='total_cn',major_cn='major_cn',minor_cn='minor_cn')
+      
       #------
       do.filter.vcf=T
       do.snpeff.ann=F
       keep.chroms=c(1:22,'X')
-      
+
       ## Common args
       genes.bed.file=GENES_BED_FILE
       exons.bed.file=EXONS_BED_FILE
@@ -207,7 +226,13 @@ detGeneStatuses <- function(
    )
    
    if( all(file.exists(unlist(mut_profile_paths))) ){
-      mut_profile <- lapply(mut_profile_paths, read.delim, stringsAsFactors=F)
+      mut_profile <- lapply(mut_profile_paths, function(i){
+         tryCatch({
+            read.delim(i, stringsAsFactors=F)
+         }, error=function(error_condition){
+            data.frame()
+         })
+      })
    } else {
       mut_profile <- list()
       
@@ -326,25 +351,41 @@ detGeneStatuses <- function(
    gene_diplotypes_max <- getGeneDiplotypeMaxEff(gene_diplotypes)
    ##subset(gene_diplotypes_max, hit_score>=9)
    
+   amp_summary <- (function(){
+      df <- mut_profile$gene_cnv[
+         match(gene_diplotypes_max$ensembl_gene_id, mut_profile$gene_cnv$ensembl_gene_id),
+         c('gain_type','gain_ratio_genome','gain_ratio_arm','gain_ratio_focal','gain_ratio_max')
+      ]
+      df$gain_type <- factor(df$gain_type, c('none','chrom','arm','focal'))
+      levels(df$gain_type) <- paste0(0:3,';',levels(df$gain_type))
+      return(df)
+   })()
+   
+   gene_diplotypes_max <- insColAfter(
+      gene_diplotypes_max,
+      amp_summary,
+      after='hgnc_symbol'
+   )
+   
    ## Export output tables ========================================================
    if(verbose){ message('## Exporting gene diplotype tables...') }
    #write.tsv(gene_diplotypes,paste0(out.dir,'/gene_diplotypes_full.txt.gz'))
    write.tsv(gene_diplotypes_max,paste0(out.dir,'/gene_diplotypes.txt.gz'))
    
-   driver_summary <- gene_diplotypes_max[,c('ensembl_gene_id','hgnc_symbol','biall_type','biall_status','a1.max_score','a2.max_score')]
-   driver_summary <- cbind(
-      driver_summary,
-      (function(){
-         df <- mut_profile$gene_cnv[
-            match(driver_summary$ensembl_gene_id, mut_profile$gene_cnv$ensembl_gene_id),
-            c('gain_type','gain_ratio_genome','gain_ratio_max')
-         ]
-         df$gain_type <- factor(df$gain_type, c('none','chrom','arm','focal'))
-         levels(df$gain_type) <- paste0(0:3,';',levels(df$gain_type))
-         return(df)
-      })()
-   )
-   write.tsv(driver_summary,paste0(out.dir,'/driver_summary.txt.gz'))
+   # driver_summary <- gene_diplotypes_max[,c('ensembl_gene_id','hgnc_symbol','biall_type','biall_status','a1.max_score','a2.max_score')]
+   # driver_summary <- cbind(
+   #    driver_summary,
+   #    (function(){
+   #       df <- mut_profile$gene_cnv[
+   #          match(driver_summary$ensembl_gene_id, mut_profile$gene_cnv$ensembl_gene_id),
+   #          c('gain_type','gain_ratio_genome','gain_ratio_arm','gain_ratio_focal')
+   #       ]
+   #       df$gain_type <- factor(df$gain_type, c('none','chrom','arm','focal'))
+   #       levels(df$gain_type) <- paste0(0:3,';',levels(df$gain_type))
+   #       return(df)
+   #    })()
+   # )
+   # write.tsv(driver_summary,paste0(out.dir,'/driver_summary.txt.gz'))
    
 }
 
