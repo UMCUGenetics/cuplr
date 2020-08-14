@@ -8,7 +8,7 @@ calcCancerTypeEnrichment(
   df,
   feature.colname,
   class.colname = "cancer_type",
-  v.classes = metadata$cancer_type,
+  v.classes,
   verbose = F
 )
 }
@@ -34,7 +34,7 @@ Perform an enrichment (fisher test) analysis across multiple classes
 ## Load data
 metadata <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CUPs_classifier/processed/metadata/cancer_type_labels.txt')
 metadata <- metadata[metadata$cohort=='HMF',]
-driver_catalog <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CUPs_classifier/processed/cuplr/hmfSvFeatureExtractor/scripts/gather_drivers//driver.catalog.merged.txt.gz')
+driver_catalog <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CUPs_classifier/processed/cuplr/hmfSvFeatureExtractor/scripts/select_drivers//driver.catalog.merged.txt.gz')
 driver_catalog$cancer_type <- metadata[match(driver_catalog$sample, metadata$sample),'cancer_type']
 amp_catalog <- driver_catalog[driver_catalog$driver=='AMP',]
 

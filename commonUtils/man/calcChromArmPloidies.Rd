@@ -5,17 +5,18 @@
 \title{Calculate overall chrom arm copy numbers}
 \usage{
 calcChromArmPloidies(
-  cnv.file,
+  cnv.file = NULL,
+  cnv = NULL,
   out.file = NULL,
-  min.rel.cum.segment.size = 0.5,
+  sel.cols = c(chrom = "chromosome", start = "start", end = "end", total_cn =
+    "copyNumber", major_cn = "majorAllelePloidy", minor_cn = "minorAllelePloidy"),
+  mode = c("total_cn", "minor_cn"),
+  min.rel.cum.segment.size = if (mode[1L] == "minor_cn") {     0.9 } else {     0.5 },
   max.rel.cum.segment.size.diff = 0.1,
-  chrom.arm.split.method = "universal",
-  centromere.positions.path = CENTROMERE_POSITIONS,
+  keep.chroms = paste0("chr", c(1:22, "X")),
   one.armed.chroms = c(13, 14, 15, 21, 22),
-  chrom.arm.names = "auto",
-  ignore.chroms = NULL,
-  tag.features = T,
-  verbose = T
+  tag.features = F,
+  verbose = F
 )
 }
 \arguments{
@@ -23,7 +24,7 @@ calcChromArmPloidies(
 
 \item{out.file}{Path to output file. If NULL, returns a named vector}
 
-\item{min.rel.cum.segment.size}{If a chrom arm has a CN category that covers >0.5 (i.e 50\%;
+\item{min.rel.cum.segment.size}{If a chrom arm has a CN category that covers >0.5 (i.e 50%;
 default) of a chrom arm, this CN is the copy number of the arm}
 
 \item{max.rel.cum.segment.size.diff}{This value (default 0.1) determines whether which CN
@@ -33,15 +34,9 @@ these CN categories have similar cumulative segment size as the one with the hig
 these have the same CN as the genome CN, return the genome CN. Otherwise, simply return the one
 with the highest segment support (as is done above).}
 
-\item{chrom.arm.split.method}{Which method to determine the chromosome arm coords? If 'hmf', uses
-'method' column from purple cnv file to determine centromere positions (i.e. p/q arm split
-point). If 'universal', uses the a (processed) gap.txt.gz table from the UCSC genome browser to
-determine centromere positions. These 2 methods should in theory be identical, unless the HMF
-pipeline code changes.}
+\item{keep.chroms}{Which chromosomes to keep?}
 
-\item{chrom.arm.names}{A character vector in the form c('1p','1q','2p','2q', ...). The default
-'auto' means that the human chromosome arm names are used. Note that chroms 13, 14, 15, 21, 22
-are considered to only have the long (i.e. q) arm.}
+\item{one.armed.chroms}{Which chromosomes are considered to have only one arm?}
 
 \item{tag.features}{If TRUE, will tag the value names with the feature type}
 
@@ -56,9 +51,4 @@ This function first rounds copy numbers (CN) to integers so that CN segments can
 grouped together. Per chrom arm, the coverage of each CN category is calculated (i.e.
 cumulative segment size). The chrom arm CN is (roughly) defined as the CN category with the
 highest cumulative segment size
-}
-\examples{
-When multiple CNs have similar segment support as the one with the highest, if one 
-of these have the same CN as the genome CN, return the genome CN. Otherwise, simply return 
-the one with the highest segment support (as is done above)
 }
