@@ -15,33 +15,33 @@ rle2Clusters <- function(x){
 ####################################################################################################
 #' Combine feature columns by summing them together
 #'
-#' @param x A matrix or dataframe 
+#' @param x A matrix or dataframe
 #' @param target.features A character vector of column (feature) names
 #' @param regex Instead of target.features, a regex can be specified
-#' @param target.name A name to assign the new feature. If unspecified, will use the name of the 
+#' @param target.name A name to assign the new feature. If unspecified, will use the name of the
 #' first old feature
 #'
 #' @return The original matrix or dataframe with the indicated features combined
 #' @export
 #'
 combineFeatures <- function(x, target.features=NULL, regex=NULL, target.name=NULL){
-   
+
    if(!is.null(regex)){
       target.features <- grep(regex,colnames(x),value=T)
       if(length(target.features)==0){ stop('No features match the regex pattern') }
    }
-   
+
    target_col <- target.features[1]
-   
+
    x[,target_col] <- rowSums(x[,target.features])
-   
+
    rm_cols <- target.features[target.features!=target_col]
    x <- x[,!(colnames(x) %in% rm_cols)]
-   
+
    if(!is.null(target.name)){
       colnames(x)[colnames(x)==target_col] <- target.name
    }
-   
+
    return(x)
 }
 
@@ -58,20 +58,20 @@ combineFeatures <- function(x, target.features=NULL, regex=NULL, target.name=NUL
 #'
 insertRow <- function(df, row.num, new.row=NULL, offset=1) {
    df[seq(row.num+1,nrow(df)+1),] <- df[seq(row.num,nrow(df)),]
-   
+
    if(is.null(new.row)){
       new.row <- df[row.num,]
    }
-   
+
    df[row.num+offset,] <- new.row
-  
+
    return(df)
 }
 
 ####################################################################################################
 #' Write tsv file
 #'
-#' @param x The object to be written, preferably a matrix or data frame. If not, it is attempted to 
+#' @param x The object to be written, preferably a matrix or data frame. If not, it is attempted to
 #' coerce x to a data frame.
 #' @param file Path to the output file. If file ends with .gz, a gzip compressed file will be written
 #' @param ... Arguments that can be passed to write.table()
