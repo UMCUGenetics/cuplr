@@ -88,8 +88,8 @@ getInfoValues <- function(v, keys){
 #'
 #' @return A data frame containing the relevant variant info for extracting the indicated signature type
 #' @export
-variantsFromVcf <- function(
-   vcf.file, seq.levels.style='UCSC', keep.chroms=NULL,
+vcfAsDataframe <- function(
+   vcf.file, seq.levels.style='NCBI', keep.chroms=NULL,
    vcf.filter=NA, vcf.fields=c('CHROM','POS','REF','ALT','FILTER'),
    merge.consecutive=F,
    verbose=F
@@ -107,10 +107,8 @@ variantsFromVcf <- function(
 
    ## Set chromosome names to the same used in the supplied ref genome
    vcf$chrom <- as.character(vcf$chrom)
-   if(!is.null(ref.genome)){
-      if(verbose){ message('Converting chrom name style...') }
-      GenomeInfoDb::seqlevelsStyle(vcf$chrom)<- seq.levels.style
-   }
+   if(verbose){ message('Converting chrom name style...') }
+   GenomeInfoDb::seqlevelsStyle(vcf$chrom)<- seq.levels.style
 
    ## Keep certain chromosome types
    if(!is.null(keep.chroms)){
