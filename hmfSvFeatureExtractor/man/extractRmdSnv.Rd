@@ -6,7 +6,7 @@
 \usage{
 extractRmdSnv(
   vcf.file,
-  ref.genome = DEFAULT_GENOME,
+  ref.genome = mutSigExtractor::DEFAULT_GENOME,
   verbose = F,
   sample.name = NULL,
   bin.size = 1e+06,
