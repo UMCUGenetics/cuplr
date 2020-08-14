@@ -20,8 +20,8 @@ dfToFeaturesAndResponse <- function(df, colname.response='response'){
 ################################################################################
 univarFeatSel <- function(
    x, y,
-   max.qvalue=0.01, sel.top.n.features=NULL,
-   verbose=T
+   max.qvalue=0.01, sel.top.n.features=NULL, return.new.x=T,
+   verbose=F
 ){
    # colname.response='response'
    # x <- df[,colnames(df)!=colname.response]
@@ -98,6 +98,9 @@ univarFeatSel <- function(
       keep_features <- unique(na.exclude(keep_features))
    }
 
+   if(return.new.x){
+      return(x[,keep_features])
+   }
    return(keep_features)
 }
 
