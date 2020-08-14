@@ -270,12 +270,14 @@ mkGenomeBins <- function(
    centro.pos=CENTRO_POS_HG19, chrom.lengths=CHROM_LENGTHS_HG19
 ){
 
+   ## Parse options
    keep.chroms <- as.character(keep.chroms)
    GenomeInfoDb::seqlevelsStyle(keep.chroms)<- GenomeInfoDb::seqlevelsStyle(names(chrom.lengths))[1]
    GenomeInfoDb::seqlevelsStyle(names(centro.pos))<- GenomeInfoDb::seqlevelsStyle(names(chrom.lengths))[1]
 
-   chrom.lengths <- chrom.lengths[ match(keep.chroms, chrom.lengths$chrom),]
+   chrom.lengths <- chrom.lengths[ match(keep.chroms, names(chrom.lengths)) ]
 
+   ## Main
    genome_bins <- do.call(rbind, lapply(names(chrom.lengths), function(i){
       chrom_length <- chrom.lengths[i]
 
@@ -290,12 +292,13 @@ mkGenomeBins <- function(
       return(out)
    }))
 
-   if(split.centro.bins){
-      genome_bins$chrom_arm <- getChromArm(
-         genome_bins[,c('chrom','start','end')],
-         show.warnings=F
-      )
+   ## Deal with bins that overlap centromere
+   genome_bins$chrom_arm <- getChromArm(
+      genome_bins[,c('chrom','start','end')],
+      show.warnings=F
+   )
 
+   if(split.centro.bins){
       pq_index <- grep('pq$',genome_bins$chrom_arm)
       for(i in 1:length(pq_index)){
          #i=pq_pos[1]
@@ -309,11 +312,6 @@ mkGenomeBins <- function(
          pq_index <- pq_index+1
       }
 
-      genome_bins$chrom_arm <- getChromArm(
-         genome_bins[,c('chrom','start','end')],
-         show.warnings=F
-      )
-
       #genome_bins[grep('pq',genome_bins$chrom_arm),]
       #genome_bins$chrom_arm <- NULL
    }
@@ -321,7 +319,13 @@ mkGenomeBins <- function(
    genome_bins$start_linear <- linearizeChromPos(df=genome_bins[,c('chrom','start')])
    genome_bins$end_linear <- linearizeChromPos(df=genome_bins[,c('chrom','end')])
 
-   genome_bins$id <- 1:nrow(genome_bins)
+   ## Make feature names
+   genome_bins$chrom_arm <- factor(genome_bins$chrom_arm, unique(genome_bins$chrom_arm))
+   genome_bins$chrom_arm_id <- unlist(lapply(table(genome_bins$chrom_arm), function(i){
+      1:i
+   }))
+   genome_bins$bin_name <- paste0(genome_bins$chrom_arm,'_',genome_bins$chrom_arm_id)
+   genome_bins$chrom_arm_id <- NULL
 
    return(genome_bins)
 }
