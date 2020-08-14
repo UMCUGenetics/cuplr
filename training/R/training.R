@@ -17,7 +17,7 @@ if(F){
    library(mltoolkit)
 
    training_data <- read.delim(
-      paste0(base_dir,'/CUPs_classifier/processed/cuplr/training/models/0.05a_addRmd/features.txt.gz'),
+      paste0(base_dir,'/CUPs_classifier/processed/cuplr/training/models/0.05c_addRmd200kb_featSel/features.txt.gz'),
       check.names=F
    )
 
@@ -25,10 +25,11 @@ if(F){
 
 }
 
+
 ####################################################################################################
 trainRandomForestEnsemble <- function(
    train, test=NULL, colname.response='response',
-   feat.sel.method='wilcox', feat.sel.max.qvalue=0.01, feat.sel.top.n.features=NULL,
+   do.feat.sel=TRUE, feat.sel.max.qvalue=0.01, feat.sel.top.n.features=NULL,
    calc.imp=T, imp.metric='mda', ntree=200,
    seed=NULL, verbose=1
 ){
@@ -56,12 +57,13 @@ trainRandomForestEnsemble <- function(
 
       y <- unname(train_data$y_ohe[,i])
 
-      if(!is.null(feat.sel.method)){
+      if(do.feat.sel){
          if(verbose==2){ message('>> Performing feature selection...') }
          x <- univarFeatSel(
-            train_data$x, y, method=feat.sel.method,
+            train_data$x, y,
             max.qvalue=feat.sel.max.qvalue,
-            sel.top.n.features=feat.sel.top.n.features
+            sel.top.n.features=feat.sel.top.n.features,
+            verbose=F
          )
       } else {
          x <- train_data$x
@@ -69,7 +71,7 @@ trainRandomForestEnsemble <- function(
 
       if(verbose==2){ message('>> Training random forest...') }
       y <- factor(y, levels=c('TRUE','FALSE'))
-      randomForest::randomForest(
+      rf <- randomForest::randomForest(
          x, y,
          strata=y, proximity=F, ntree=ntree,
          #importance=F,
@@ -113,6 +115,8 @@ trainRandomForestEnsemble <- function(
          }
       }
    }
+
+
 
    ##----------------------------------------------------------------------
    if(!is.null(test)){
