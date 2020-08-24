@@ -1,5 +1,15 @@
 ####################################################################################################
-aggregateMatrixList <- function(l, func=function(x){ mean(x, na.rm=T) }, value.name=NULL, as.matrix=F){
+#' Apply a summary function to a list of matrixes of the same dimensions
+#'
+#' @param l A list of matrices
+#' @param func A summary function (default is mean())
+#' @param as.matrix If TRUE, will return a single matrix with the aggregated values. If FALSE, will
+#' return a melted dataframe.
+#' @param value.name A custom column name for the value column of the melted dataframe
+#'
+#' @export
+#'
+aggregateMatrixList <- function(l, func=function(x){ mean(x, na.rm=T) }, as.matrix=F, value.name=NULL){
    #l=lapply(cv_out,`[[`,'imp')
 
    all_cols <- unique(unlist(lapply(l, colnames)))
@@ -24,12 +34,16 @@ aggregateMatrixList <- function(l, func=function(x){ mean(x, na.rm=T) }, value.n
    m_values <- as.matrix(df_pre[,-c(1,2)])
    df$value <- apply(m_values,1,function(i){ func(i) })
 
+
+
    #m_values <- do.call(cbind, lapply(l_melt,`[[`,'value'))
    #df <- l_melt[[1]]
    #df$value <- apply(m_values,1,function(i){ func(i) })
 
    if(as.matrix){
-      return(reshape2::acast(df, class ~ feature))
+      out <- reshape2::acast(df, class ~ feature)
+      out <- out[,colnames(l[[1]])]
+      return(out)
    } else {
       if(!is.null(value.name)){ colnames(df)[3] <- value.name }
       return(df)
@@ -37,6 +51,20 @@ aggregateMatrixList <- function(l, func=function(x){ mean(x, na.rm=T) }, value.n
 }
 
 ####################################################################################################
+#' Make barplots from a matrix of feature importances (for multiclass classification)
+#'
+#' @param m A numeric matrix where columns represent the features and rows represent the labels
+#' @param cv_out Alternative input to `m`. Cross validation output in the form of a list that has
+#' 'imp' object (e.g. cv_out[[1]]$imp)
+#' @param top.n Top number of features to show
+#' @param infer.feature.type Determine the feature type based on the tag/prefix. Everything before
+#' the first dot (.) is considered the feature tag
+#' @param n.row Number of facet rows
+#' @param n.col Number of facet columns
+#'
+#' @return A ggplot object
+#' @export
+#'
 plotTopFeatures <- function(
    m=NULL, cv_out=NULL, top.n=10, infer.feature.type=F,
    n.row=NULL, n.col=NULL
@@ -96,11 +124,27 @@ plotTopFeatures <- function(
 }
 
 ####################################################################################################
+#' Make heatmap from a matrix of feature importances (for multiclass classification)
+#'
+#' @param m A numeric matrix where columns represent the features and rows represent the labels
+#' @param cv_out Alternative input to `m`. Cross validation output in the form of a list that has
+#' 'imp' object (e.g. cv_out[[1]]$imp)
+#' @param top.n Top number of features to show
+#' @param min.imp Features below this importance value are excluded from the plot
+#' @param invert.y Invert the y-axis?
+#'  @param sort.features Order features alphabetically?
+#'
+#' @return A ggplot object
+#' @export
+#'
 plotFeatureImpHeatmap <- function(
-   m=NULL, cv_out=NULL, top.n=50, min.imp=NULL
+   m=NULL, cv_out=NULL, top.n=50, min.imp=NULL, invert.y=T, sort.features=F
 ){
    if(!is.null(cv_out)){
       m <- aggregateMatrixList(lapply(cv_out,`[[`,'imp'), as.matrix=T)
+   }
+   if(sort.features){
+      m <- m[,order(colnames(m))]
    }
 
    df <- reshape2::melt(as.matrix(m))
@@ -116,18 +160,36 @@ plotFeatureImpHeatmap <- function(
    }
 
    df <- forceDfOrder(df)
+   df$index <- as.integer(df$feature)
+
+   if(invert.y){
+      df$class <- factor(df$class, rev(levels(df$class)))
+   }
+
+   n_sel_features <- length(unique(df$feature))
+   xlabel <-
+      if(ncol(m) < n_sel_features ){
+         'Features'
+      } else {
+         paste0('Features (top ',n_sel_features,'/',ncol(m),')')
+      }
 
    require(ggplot2)
-   p <- ggplot(df, aes(y=class,x=feature)) +
+   p <- ggplot(df, aes(y=class,x=index)) +
       geom_tile(aes(fill=value)) +
+      scale_x_continuous(
+         sec.axis=dup_axis(), breaks=unique(df$index), labels=levels(df$feature),
+         expand=c(0,0)
+      ) +
       scale_fill_distiller(palette='YlGnBu') +
 
-      labs(y='Class',x='Features',fill='Imp.') +
+      labs(y='Class',x=xlabel,fill='Feat.\nimp.') +
 
       theme_bw() +
       theme(
          panel.grid=element_blank(),
-         axis.text.x=element_text(angle=90, hjust=1, vjust=0.5)
+         axis.text.x.top=element_text(angle=90, hjust=0, vjust=0.5),
+         axis.text.x.bottom=element_text(angle=90, hjust=1, vjust=0.5)
       )
 
    if(!is.null(min.imp)){
@@ -138,6 +200,20 @@ plotFeatureImpHeatmap <- function(
 }
 
 ####################################################################################################
+#' Plot a heatmap from a matrix
+#'
+#' @param m A numeric matrix
+#' @param x.lab x-axis labels
+#' @param y.lab y-axis labels
+#' @param legend.name Legend title
+#' @param show.labels Show raw values within each cell?
+#' @param palette Name of the brewer color palette
+#' @param palette.direction Color palette direction. Can be 1 (forward) or -1 (reverse).
+#' @param invert.y Invert the y-axis?
+#'
+#' @return A ggplot object
+#' @export
+#'
 plotHeatmapFromMatrix <- function(
    m, x.lab=NULL, y.lab=NULL, legend.name='value',
    show.labels=F, palette='YlGnBu', palette.direction=-1, invert.y=F
@@ -180,6 +256,27 @@ plotHeatmapFromMatrix <- function(
    return(p)
 }
 
+####################################################################################################
+#' Plot heatmap of classifier performance
+#'
+#' @description Creates two plots. Upper plot shows performance metrics per cancer type and lower
+#' plot shows the number or % of samples correctly/incorrectly classified
+#'
+#' @param actual A vector of the actual classes
+#' @param predicted A vector of the predicted classes
+#' @param cv_out Alternative input to `actual` and `predicted`. Cross validation output in the
+#' form of a list that has 'imp' object (e.g. cv_out[[1]]$test_set$actual and
+#' cv_out[[1]]$test_set$predicted)
+#' @param rel.heights A numeric vector of length 2. Relative heights of the upper and lower plots
+#' @param sort Sort cancer type by number of % sample of correctly classified
+#' @param rel.values In lower plot, show absolute number or %
+#' @param metrics A character vector indicating which performance metrics to show in the upper plot.
+#' See documentation for mltoolkit to see which metrics are available
+#' @param show.weighted.mean In upper plot, calculated the weighted mean or normal mean?
+#'
+#' @return A cowplot object
+#' @export
+#'
 plotPerfHeatmap <- function(
    actual=NULL, predicted=NULL, cv_out=NULL,
    rel.heights=c(0.3, 1),
@@ -282,68 +379,6 @@ plotPerfHeatmap <- function(
    )
 
 }
-
-####################################################################################################
-# plotPerfCustom <- function(
-#    actual=NULL, predicted=NULL, cv_out=NULL, metrics=c('f1','prec','rec'),
-#    sort=T, show.summary.stats=T
-# ){
-#    #metrics=c('f1','prec','rec')
-#
-#    if(!is.null(cv_out)){
-#       actual <- unlist(lapply(cv_out,function(i){ i$test_set$actual }))
-#       predicted <- unlist(lapply(cv_out,function(i){ i$test_set$predicted }))
-#    }
-#
-#    confusion <- mltoolkit::confusionMatrix(
-#       predicted=mltoolkit::oneHotEncode(predicted),
-#       actual=actual,
-#       simplify=T
-#    )
-#
-#    perf <- mltoolkit::calcPerf(confusion, metrics)
-#    rownames(perf) <- perf[,1]; perf[,1] <- NULL
-#
-#    if(sort){
-#       perf <- perf[order(perf[,1], decreasing=T),]
-#    }
-#
-#    if(show.summary.stats){
-#       perf_agg <- rbind(
-#          MEAN = apply(perf,2,mean),
-#          WEIGHTED_MEAN = apply(perf,2,function(i){
-#             weights <- table(actual)/length(actual)
-#             weights <- weights[names(i)]
-#             weighted.mean(i, weights)
-#          })
-#       )
-#
-#       perf <- rbind(perf_agg,perf)
-#    }
-#
-#    perf <- cbind(class=rownames(perf), perf)
-#    rownames(perf) <- NULL
-#
-#    pd <- reshape2::melt(perf,'class')
-#    colnames(pd) <- c('class','metric','value')
-#    pd <- forceDfOrder(pd)
-#
-#    ggplot(pd, aes(x=class, y=value)) +
-#       facet_wrap(~metric, ncol=1) +
-#       geom_bar(stat='identity', fill='#d26c6c') +
-#       geom_text(aes(label=round(value,2), y=0.02), angle=90, hjust=0, vjust=0.5) +
-#       theme_bw() +
-#       theme(
-#          axis.text.x=element_text(angle=90, hjust=1, vjust=0.5)
-#       )
-#
-# }
-
-
-
-
-
-
 
 
 
