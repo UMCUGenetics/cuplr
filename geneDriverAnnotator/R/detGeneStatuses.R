@@ -43,7 +43,11 @@ detGeneStatuses <- function(
       vcf_paths <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/HMF_DR104/metadata/vcf_paths.txt', stringsAsFactors=F)
       #sample.name <- 'CPCT02010422T' ## BRCA2 LOH+som
       #sample.name <- 'CPCT02010543T' ## APC som stop gain (5) + som FS (5)
-      sample.name <- 'CPCT02010349T' ## BRCA2 LOH+som
+      #sample.name <- 'CPCT02010349T' ## BRCA2 LOH+som
+      #sample.name <- 'CPCT02010794T' ## TERT hotspot
+      #sample.name <- 'CPCT02010451T' ## BRAF hotspot
+      #sample.name <- 'CPCT02270045T' ## KRAS hotspot
+      sample.name <- 'CPCT02020568T' ## NF2 truncation
       
       #out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/test/output/'
       out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/HMF_DR104/gene_ann_2/'
@@ -52,7 +56,7 @@ detGeneStatuses <- function(
 
       input.file.paths <- unlist(vcf_paths[vcf_paths$sample==sample.name,-1])
       input.file.paths <- paste0('/Users/lnguyen/',input.file.paths)
-      names(input.file.paths) <- c('germ_vcf','som_vcf','sv_vcf','cnv')
+      names(input.file.paths) <- c('germ_vcf','som_vcf','sv_vcf','gene_cnv','cnv')
 
       ## PCAWG
       vcf_paths <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/manifest/manifest_gene_ann.txt.gz', stringsAsFactors=F)
@@ -202,9 +206,13 @@ detGeneStatuses <- function(
          if(nrow(txt)!=0){
             if(verbose){ message('> Adding ClinVar annotations...') }
             txt$clinvar_sig <- getClinSig(txt, CLINVAR_PATH) ## seqminer::tabix.read returns error if dataframe is empty
+            txt$is_hotspot_mut <- detIsHotspotMut(txt, HOTSPOTS_PATH) 
+            
+            txt$clinvar_sig[ txt$is_hotspot_mut ] <- 'Pathogenic'
+            
          } else {
             if(verbose){ message('> No variants remain after filtering. Skipping adding ClinVar annotations...') }
-            txt <- cbind(txt, data.frame(clinsig='')[0,,drop=F])
+            txt <- cbind(txt, data.frame(clinvar_sig=character(), is_hotspot_mut=logical()))
          }
          
          write.tsv(txt, preproc_files[MUT_TXT])

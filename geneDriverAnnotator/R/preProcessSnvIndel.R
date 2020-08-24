@@ -154,7 +154,7 @@ extractVcfFields <- function(
 #' @return A character vector of the clinical significance annotations
 #' @export
 #'
-getClinSig <- function(df, db.path, verbose=T){
+getClinSig <- function(df, db.path, col.index='clinsig', verbose=T){
 
    ##
    if(verbose){ message('Querying database using coords from df...') }
@@ -181,28 +181,28 @@ getClinSig <- function(df, db.path, verbose=T){
    
    ##
    if(verbose){ message('Retrieving clinical significance for df rows with entry in database...') }
-   clinsigs <- with(df_split$proc, {
+   out <- with(df_split$proc, {
       unlist(Map(function(chrom,pos,ref,alt){
          
          query <- tabix_out[
             tabix_out$chrom==chrom & tabix_out$pos==pos & tabix_out$ref==ref & tabix_out$alt==alt,
-            'clinsig'
-            ]
+            col.index
+         ]
          
          if(length(query)==0){ NA } else { query }
          
       },chrom,pos,ref,alt))
    })
    
-   clinsigs <- c(
+   out <- c(
       rep(NA,nrow(df_split$na)), ## For rows without entry in database, return NA
-      clinsigs
+      out
    )
    
    ## Restore order of original df
    if(verbose){ message('Returning output...') }
    row_order <- as.integer(c(rownames(df_split$na), rownames(df_split$proc)))
-   clinsigs[order(row_order)]
+   out[order(row_order)]
 
 }
 
@@ -217,3 +217,29 @@ getClinSig <- function(df, db.path, verbose=T){
 # )
 # 
 # View(df[!is.na(df$clinsig),])
+
+####################################################################################################
+#' Determine if mutation is a hotspot mutation
+#'
+#' @param df A bed file like dataframe containing the columns: chrom, pos, ref, alt
+#' @param db.path Path to a tabix indexed bed file with the clinical significance annotations (e.g.
+#' from ClinVar). This bed file should contain the columns (in this order): chrom, pos, ref, alt, 
+#' clinsig, id. However, it should not have colnames.
+#' 
+#' @return A logical vector
+#' @export
+#' 
+detIsHotspotMut <- function(df, db.path, verbose=T){
+   #df=txt
+   #db.path='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/scripts/format_hotspot_table/known_hotspots_hg19.txt.gz'
+   db <- read.delim(db.path, stringsAsFactors=F)
+   db_strings <- with(db,{ paste(chrom, pos, ref, alt, sep='_') })
+   df_strings <- with(df,{ paste(chrom, pos, ref, alt, sep='_') })
+   df_strings %in% db_strings
+}
+
+
+
+
+
+
