@@ -12,7 +12,7 @@
 #' considered an amplification.
 #' @param min.gain.ratio.max.arm.diff The min difference between gain_ratio_max and gain_ratio_arm
 #' to be considered a focal amplification
-#' @param deep.del.max.max.copy.number The max max_copy_number for a gene to be considered to 
+#' @param deep.del.max.min.copy.number The max min_copy_number for a gene to be considered to 
 #' be completely lost (deep deletion)
 #' @param trunc.max.min.copy.number The max min_copy_number to for a gene to be considered to have
 #' a truncation
@@ -31,7 +31,7 @@ mkMutProfileGeneCnv <- function(
    min.gain.ratio.genome=1.8,
    min.gain.ratio.max.arm.diff=0.8,
    
-   deep.del.max.max.copy.number=0.3, 
+   deep.del.max.min.copy.number=0.3, 
    loh.max.min.minor.allele.ploidy=0.2,
    
    ## Misc
@@ -50,6 +50,7 @@ mkMutProfileGeneCnv <- function(
    #cnv.file='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/vcf/somatic/cnv/cna_annotated/0009b464-b376-4fbc-8a56-da538269a02f.consensus.20170119.somatic.cna.annotated.txt'
    #cnv.file='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/vcf/somatic/cnv/cna_annotated/fc8130df-6860-7677-e040-11ac0d485ddc.consensus.20170119.somatic.cna.annotated.txt'
    #sel.cols=c(chrom='chromosome',start='start',end='end',total_cn='total_cn',major_cn='major_cn',minor_cn='minor_cn')
+   #cnv.file<-input.file.paths['cnv']
    
    ## Subsetting for genes ------------------------
    if(verbose){ message('Reading cnv file...') }
@@ -225,7 +226,7 @@ mkMutProfileGeneCnv <- function(
    losses$loss_type <- 'none'
    losses <- within(losses,{
       loss_type[ min_minor_allele_ploidy <= loh.max.min.minor.allele.ploidy ] <- 'loh'
-      loss_type[ max_copy_number <= deep.del.max.max.copy.number ] <- 'deep_deletion'
+      loss_type[ min_copy_number <= deep.del.max.min.copy.number ] <- 'deep_deletion'
    })
    
    if(verbose){ message('Calculating biallelic loss scores...') }
