@@ -39,6 +39,32 @@ dfToFeaturesAndResponse <- function(df, colname.response='response'){
 }
 
 ################################################################################
+#' Performs pairwise testing and selects significant features
+#'
+#' @description For numerical variables, wilcoxon tests are performed. For categorical variables,
+#' fisher exact tests are performed. The first factor level is assumed to be the negative outcome,
+#' while the other levels are grouped together as the positive outcome. For example,
+#' with the factor `as.factor(c('none','loh+pathogenic','deep_deletion'))`, 'none' is considered the
+#' negative outcome.
+#'
+#' When y is a factor (multiclass classification), multiple one-vs-rest pairwise tests (i.e. one for
+#' each class label) are performed for each feature. A feature is kept if any of the pairwise tests
+#' give a significant pvalue/qvalue.
+#'
+#' @param x A matrix or dataframe of features
+#' @param y A vector of class labels. For binary classification a logical vector. For
+#' multiclass classification a factor.
+#' @param max.qvalue qvalue threshold for keeping features
+#' @param max.pvalue pvalue threshold for keeping features. Overrides max.qvalue
+#' @param sel.top.n.features Limit the total number of features that are selected
+#' @param return.new.x If TRUE, returns a feature matrix with the selected features. Else, a
+#' character vector of the selected features
+#' @param verbose Show progress messages?
+#'
+#' @return A vector of feature names if return.new.x=TRUE, else a feature matrix with the selected
+#' features
+#' @export
+#'
 univarFeatSel <- function(
    x, y,
    max.qvalue=0.01, max.pvalue=NULL, sel.top.n.features=NULL,
@@ -96,7 +122,7 @@ univarFeatSel <- function(
       q_values <- p.adjust(p_values, method='bonferroni')
 
       if(!is.null(max.pvalue)){
-         keep_features <- names(p_values)[ p_values < max.qvalue ]
+         keep_features <- names(p_values)[ p_values < thres ]
       } else {
          keep_features <- names(q_values)[ q_values < max.qvalue ]
       }
@@ -118,9 +144,15 @@ univarFeatSel <- function(
       }))
       m_q_values <- apply(m_p_values, 2, p.adjust, method='bonferroni')
 
-      keep_features <- unlist(apply(m_q_values, 2, function(i){
-         names(i)[ i<max.qvalue ]
-      }), use.names=F)
+      if(!is.null(max.pvalue)){
+         keep_features <- unlist(apply(m_p_values, 2, function(i){
+            names(i)[ i<max.pvalue ]
+         }), use.names=F)
+      } else {
+         keep_features <- unlist(apply(m_q_values, 2, function(i){
+            names(i)[ i<max.qvalue ]
+         }), use.names=F)
+      }
 
       keep_features <- unique(na.exclude(keep_features))
    }

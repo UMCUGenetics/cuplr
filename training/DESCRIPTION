@@ -11,3 +11,4 @@ Encoding: UTF-8
 LazyData: true
 Suggests:
 	rfFC
+RoxygenNote: 7.1.0
