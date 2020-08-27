@@ -305,6 +305,7 @@ trainRandomForest <- function(
    }
 
    out$model <- model
+   out$categorical_lvls <- categorical_lvls
 
    ##----------------------------------------------------------------------
    if(calc.imp){
