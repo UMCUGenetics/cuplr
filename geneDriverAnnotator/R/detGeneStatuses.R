@@ -47,7 +47,8 @@ detGeneStatuses <- function(
       #sample.name <- 'CPCT02010794T' ## TERT hotspot
       #sample.name <- 'CPCT02010451T' ## BRAF hotspot
       #sample.name <- 'CPCT02270045T' ## KRAS hotspot
-      sample.name <- 'CPCT02020568T' ## NF2 truncation
+      #sample.name <- 'CPCT02020568T' ## NF2 truncation
+      sample.name <- 'CPCT02070276T' ## BRCA1 LOH + false hotspot
       
       #out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/test/output/'
       out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/HMF_DR104/gene_ann_2/'
@@ -61,7 +62,7 @@ detGeneStatuses <- function(
       ## PCAWG
       vcf_paths <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/manifest/manifest_gene_ann.txt.gz', stringsAsFactors=F)
       #sample.name <- '54195db3-94a9-4538-8bb8-9953d936acd4'
-      sample.name <- '6f4d836f-e86f-4b12-9549-7117f59e3d4a'
+      sample.name <- '1bea3a72-3b73-4072-a6bb-96a90119d3ac'
       
       out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/gene_ann_2/'
       out.dir <- paste0(out.parent.dir,'/',sample.name,'/')
@@ -208,7 +209,7 @@ detGeneStatuses <- function(
             txt$clinvar_sig <- getClinSig(txt, CLINVAR_PATH) ## seqminer::tabix.read returns error if dataframe is empty
             txt$is_hotspot_mut <- detIsHotspotMut(txt, HOTSPOTS_PATH) 
             
-            txt$clinvar_sig[ txt$is_hotspot_mut ] <- 'Pathogenic'
+            #txt$clinvar_sig[ txt$is_hotspot_mut ] <- 'Pathogenic'
             
          } else {
             if(verbose){ message('> No variants remain after filtering. Skipping adding ClinVar annotations...') }
