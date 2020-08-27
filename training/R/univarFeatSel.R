@@ -1,44 +1,3 @@
-################################################################################
-#' Preserve order of dataframe values
-#'
-#' @description Converts character columns into factors to preserve the order of their values
-#' @param df A dataframe
-#'
-#' @return A data frame with characters converted into factors
-#' @export
-#'
-forceDfOrder <- function(df){
-   if(!is.data.frame(df)){ stop('Input must be a dataframe') }
-   as.data.frame(lapply(df, function(i){
-      if(!is.numeric(i)){ i <- factor(i, unique(i)) }
-      return(i)
-   }))
-}
-
-################################################################################
-#' Prepares a feature dataframe for multiclass classifier training
-#'
-#' @description Separates a dataframe containing features and response variable. The response
-#' variable is also one hot encoded
-#'
-#' @param df A dataframe
-#' @param colname.response Name of the response column
-#'
-#' @return A list containing the feature matrix/dataframe, response vector, and response
-#' one-hot encode matrix
-#' @export
-#'
-dfToFeaturesAndResponse <- function(df, colname.response='response'){
-   x <- df[,colnames(df)!=colname.response]
-   #x <- as.matrix(x)
-
-   y <- as.factor(df[,colname.response])
-   y_ohe <- oneHotEncode(y, sample.names=rownames(x))
-
-   list(x=x, y=y, y_ohe=y_ohe)
-}
-
-################################################################################
 #' Performs pairwise testing and selects significant features
 #'
 #' @description For numerical variables, wilcoxon tests are performed. For categorical variables,
@@ -82,11 +41,15 @@ univarFeatSel <- function(
 
    main <- function(v, y.logical){
       #y.logical=y
+
+      ## Numeric data: wilcox text
       if(is.numeric(v)){
          #v=x$viral_ins.Hepatitis_C_virus
          #v=x$rmd.14q_107
          v_split <- split(v, y.logical)
          wilcox.test(v_split[['TRUE']], v_split[['FALSE']])$p.value
+
+      ## Categorical data: fisher test
       } else {
          #v=ifelse(x$purple.gender,'male','female')
          #v=unname(m[,'AR'])
@@ -109,6 +72,7 @@ univarFeatSel <- function(
       }
    }
 
+   ## Binary classification
    if(is.logical(y)){
       if(verbose){ counter <- 0 }
       p_values <- unlist(lapply(as.data.frame(x), function(i){
@@ -122,7 +86,7 @@ univarFeatSel <- function(
       q_values <- p.adjust(p_values, method='bonferroni')
 
       if(!is.null(max.pvalue)){
-         keep_features <- names(p_values)[ p_values < thres ]
+         keep_features <- names(p_values)[ p_values < max.pvalue ]
       } else {
          keep_features <- names(q_values)[ q_values < max.qvalue ]
       }
@@ -130,6 +94,7 @@ univarFeatSel <- function(
       if(!is.null(sel.top.n.features)){ keep_features <- keep_features[1:sel.top.n.features] }
       keep_features <- na.exclude(keep_features)
 
+   ## Multiclass classification
    } else {
       y_logicals <- lapply(levels(y), function(i){ y==i })
       names(y_logicals) <- levels(y)
@@ -162,64 +127,6 @@ univarFeatSel <- function(
    }
    return(keep_features)
 }
-
-
-
-################################################################################
-#' Predict method for random forest ensemble
-#'
-#' @param object An object of class randomForestEnsemble
-#' @param newdata A data frame or matrix containing new data. (Note: If not given, the out-of-bag
-#' prediction in object is returned)
-#' @param type 'response', 'prob' or 'votes', indicating the type of output: predicted values,
-#' matrix of class probabilities, or matrix of vote counts. 'class' is allowed, but automatically
-#' converted to "response", for backward compatibility.
-#'
-#' @return 'response': predicted classes (the classes with majority vote). 'prob' matrix of class
-#' probabilities (one column for each class and one row for each input). 'vote'
-#' matrix of vote counts (one column for each class and one row for each new input); either in raw
-#' counts or in fractions (if norm.votes=TRUE).
-#' @export
-#'
-predict.randomForestEnsemble <- function(object, newdata, type='response', verbose=F){
-   # object=model
-   # newdata=test_data$x
-   # type='response'
-
-   categorical_feature_names <- names(object[[1]]$categorical_lvls)
-   x <- as.data.frame(lapply(colnames(newdata), function(i){
-      #i='gene_def.AR'
-      if(!(i %in% categorical_feature_names)){
-         return(newdata[,i])
-      } else{
-         factor(newdata[,i], levels=object[[1]]$categorical_lvls[[i]])
-      }
-   }))
-   rownames(x) <- rownames(newdata)
-   colnames(x) <- colnames(newdata)
-
-   if(verbose){ counter <- 0 }
-   m <- do.call(cbind, lapply(object, function(i){
-      #i=object$Breast
-      if(verbose){
-         counter <<- counter + 1
-         message('[RF ',counter,'/',length(object),']: ', names(object)[counter])
-      }
-      randomForest:::predict.randomForest(i, x, type='prob')[,1]
-   }))
-
-   if(type=='prob'){
-      m
-   } else {
-      factor( colnames(m)[ max.col(m) ], levels=colnames(m) )
-   }
-}
-
-
-
-
-
-
 
 
 
