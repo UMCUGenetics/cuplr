@@ -22,8 +22,9 @@ if(F){
    # )
 
    training_data <- readRDS(
-      paste0(base_dir,'/CUPs_classifier/processed/cuplr/training/models/0.06a_ownDrivers/features/features.rds')
+      paste0(base_dir,'/CUPs_classifier/processed/cuplr/training/models/0.06c_probWeighRf_balanceClasses/features/features.rds')
    )
+   training_data$response <- training_data$response=='Lymphoid'
 
    folds <- createCvTrainTestSets(training_data)
 
@@ -60,6 +61,7 @@ crossValidate <- function(
 
    if(!is.list(train.func.args)){ stop('`train.func.args` must be a list') }
 
+   set.seed(seed)
    if(!is.null(df)){
       folds <- mltoolkit::createCvTrainTestSets(df, stratify.by.col=colname.response, k=k)
    }
@@ -68,7 +70,7 @@ crossValidate <- function(
    if(verbose){ message('Performing CV...') }
    main <- function(i){
       #i=1
-      if(verbose){ message('\n## Fold: ',i) }
+      #if(verbose){ message('\n## Fold: ',i) }
       fold <- folds[[i]]
 
       fold_seed <- as.integer(paste0(seed,i))
@@ -127,7 +129,6 @@ crossValidate <- function(
 #' value
 #' @param ntree Number of decision trees in the random forest
 #' @param get.local.increments If TRUE, get local increments to calculate feature contributions
-#' @param calc.imp Calculate feature importance?
 #' @param seed Random seed as an integer
 #' @param fold.num Cross validation fold number. Only used in the prefix of progress messages. If
 #' not specified, no prefix will be displayed.
@@ -140,15 +141,14 @@ trainRandomForest <- function(
    train, test=NULL, colname.response='response',
 
    ## univariate feature slection
-   do.feat.sel=TRUE, feat.sel.max.qvalue=0.01, feat.sel.max.pvalue=1, feat.sel.top.n.features=NULL,
+   do.feat.sel=T, feat.sel.max.qvalue=NULL, feat.sel.max.pvalue=0.01, feat.sel.top.n.features=NULL,
 
    ## class balancing
    balance.classes=F, k.inner=5,
    n.resamples.true=4, n.resamples.false=4, midpoint.type='geometric',
    min.size.diff=NULL, max.upsample.ratio=10,
 
-   ntree=500, get.local.increments=TRUE,
-   calc.imp=T,
+   ntree=500, get.local.increments=T,
    seed=NULL, fold.num=NULL, verbose=1
 ){
    if(F){
@@ -157,16 +157,16 @@ trainRandomForest <- function(
       colname.response='response'
 
       ## univariate feature slection
-      do.feat.sel=TRUE; feat.sel.max.qvalue=0.01; feat.sel.max.pvalue=1; feat.sel.top.n.features=NULL;
+      do.feat.sel=T; feat.sel.max.qvalue=NULL; feat.sel.max.pvalue=0.01; feat.sel.top.n.features=25;
 
       ## class balancing
       balance.classes=F; k.inner=5;
       n.resamples.true=4; n.resamples.false=4; midpoint.type='geometric';
       min.size.diff=NULL; max.upsample.ratio=10
 
-      ntree=500; get.local.increments=TRUE;
+      ntree=500; get.local.increments=T;
       calc.imp=T;
-      seed=NULL; fold.num=NULL; verbose=1
+      seed=NULL; fold.num=NULL; verbose=2
    }
 
    if(!is.null(seed)){ set.seed(seed) }
@@ -174,33 +174,34 @@ trainRandomForest <- function(
    msg_prefix <- if(!is.null(fold.num)){ paste0('[[',fold.num,']] ') } else { '' }
 
    ##----------------------------------------------------------------------
-   if(verbose){message(msg_prefix,'> Preparing input features and response variable...')}
+   if(verbose>=1){message(msg_prefix,'> Preparing input features and response variable...')}
    train_data <- dfToFeaturesAndResponse(train, colname.response=colname.response)
-
+   
    if(any(sapply(train_data$x, is.character))){
       stop('Categorical features must be factors and not characters')
    }
-   categorical_lvls <- lapply(train_data$x, levels)
-   categorical_lvls <- categorical_lvls[ !sapply(categorical_lvls, is.null) ]
-
+   
    if(!is.null(test)){
       test_data <- dfToFeaturesAndResponse(test, colname.response=colname.response)
+      if(any(sapply(test_data$x, is.character))){
+         stop('Categorical features must be factors and not characters')
+      }
    }
-
-
+   
    ##----------------------------------------------------------------------
    y <- train_data$y
+   #y <- y=='Stomach'
+
+   x <- train_data$x
 
    if(do.feat.sel){
-      if(verbose){ message(msg_prefix,'> Performing feature selection...') }
+      if(verbose>=1){ message(msg_prefix,'> Performing feature selection...') }
       x <- univarFeatSel(
-         train_data$x, y,
+         x, y,
          max.qvalue=feat.sel.max.qvalue, max.pvalue=feat.sel.max.pvalue,
          sel.top.n.features=feat.sel.top.n.features,
-         verbose=(verbose==3)
+         verbose=(verbose>=3)
       )
-   } else {
-      x <- train_data$x
    }
 
    ##----------------------------------------------------------------------
@@ -208,7 +209,7 @@ trainRandomForest <- function(
    out$model <- NA ## placeholder
 
    if(balance.classes){
-      if(verbose){ message(msg_prefix,'> Balancing classes...') }
+      if(verbose>=1){ message(msg_prefix,'> Balancing classes...') }
       resampling_grid <- resamplingGrid(
          a=sum(y==TRUE), b=sum(y==FALSE),
          breaks.a=n.resamples.true, breaks.b=n.resamples.false,
@@ -221,7 +222,7 @@ trainRandomForest <- function(
          size_true <- resampling_grid[i,'size_a']
          size_false <- resampling_grid[i,'size_b']
 
-         if(verbose==2){
+         if(verbose>=2){
             ratio_true <- round(resampling_grid[i,'ratio_a'], 2)
             ratio_false <- round(resampling_grid[i,'ratio_b'], 2)
             message(msg_prefix,'>> TRUE, FALSE: ',ratio_true,'x, ', ratio_false,'x')
@@ -239,8 +240,8 @@ trainRandomForest <- function(
          inner_cv <- crossValidate(
             folds=inner_folds, colname.response=colname.response,
             train.func=trainRandomForest,
-            train.func.args=list(ntree=ntree, do.feat.sel=F, get.local.increments=F, calc.imp=F),
-            verbose=(verbose==3)
+            train.func.args=list(ntree=ntree, do.feat.sel=F, get.local.increments=F),
+            verbose=(verbose>=3)
          )
 
          unlist(lapply(inner_cv, function(j){
@@ -262,7 +263,8 @@ trainRandomForest <- function(
 
       resampling_grid$perf <- sapply(perfs_inner_cv, mean)
       resampling_grid$sd <- sapply(perfs_inner_cv, sd)
-      resampling_grid$best <- resampling_grid$perf==max(resampling_grid$perf)
+      resampling_grid$best <- FALSE
+      resampling_grid$best[ which.max(resampling_grid$perf) ] <- TRUE
 
       # resampling_grid$index <- 1:nrow(resampling_grid)
       # ggplot(resampling_grid, aes(x=index, y=perf)) +
@@ -286,18 +288,18 @@ trainRandomForest <- function(
    }
 
    ##----------------------------------------------------------------------
-   if(verbose){ message(msg_prefix,'> Training random forest...') }
+   if(verbose>=1){ message(msg_prefix,'> Training random forest...') }
    model <- randomForest::randomForest(
       x=x,
       y=if(is.logical(y)){ factor(y, c('TRUE','FALSE')) } else { y }, strata=y,
       proximity=F, ntree=ntree, importance=T,
       keep.inbag=T, replace=F, ## required for calculating local increments
       na.action=na.roughfix,
-      do.trace=(verbose==3)
+      do.trace=F
    )
 
    if(get.local.increments){
-      if(verbose){ message(msg_prefix,'> Getting local increments...') }
+      if(verbose>=1){ message(msg_prefix,'> Getting local increments...') }
       ## Used for calculating per sample feature contributions
       invisible(capture.output(
          model$localIncrements <- rfFC::getLocalIncrements(model, x)
@@ -305,17 +307,24 @@ trainRandomForest <- function(
    }
 
    out$model <- model
+
+   ## Store levels from categorical features
+   categorical_lvls <- lapply(x, levels)
+   categorical_lvls <- categorical_lvls[ !sapply(categorical_lvls, is.null) ]
+   categorical_lvls <- categorical_lvls[names(categorical_lvls) %in% colnames(x)]
+
    out$categorical_lvls <- categorical_lvls
 
    ##----------------------------------------------------------------------
-   if(calc.imp){
-      if(verbose){ message(msg_prefix,'> Calculating feature importance...') }
-      out$imp <- t(randomForest::importance(model, type=1))
-   }
+   if(verbose>=1){ message(msg_prefix,'> Calculating feature importance...') }
+   out$imp <- sort(
+      randomForest::importance(model, type=1)[,1],
+      decreasing=T
+   )
 
    ##----------------------------------------------------------------------
    if(!is.null(test)){
-      if(verbose){
+      if(verbose>=1){
          message(msg_prefix,'> Predicting on test set...')
       }
       out$test_set <- list(
@@ -330,11 +339,42 @@ trainRandomForest <- function(
             levels=colnames(probabilities)
          )
       })
+      # df <- cbind(
+      #    as.data.frame(out$test_set$probabilities),
+      #    class=out$test_set$actual,
+      #    response=out$test_set$actual=='Stomach'
+      # )
+      # df[order(df$response, decreasing=T),]
+      # df[order(df[,'TRUE'], decreasing=T),]
    }
 
    out$seed <- seed
+   class(out) <- 'randomForestContainer'
 
    return(out)
+}
+
+print.randomForestContainer <- function(rf){
+   cat(
+      'Objects in list:\n',
+      paste0('$',names(rf))
+   )
+
+   cat('\n\n$model'); print(rf$model)
+
+   cat(
+      '\n$categorical_lvls',
+      '\nNumber of categorical features:',
+      length(rf$categorical_lvls),
+      '\n'
+   )
+
+   cat(
+      '\n$imp',
+      '\nNumber of features:', length(rf$imp),
+      '\nTop features:\n'
+   )
+   print(head(rf$imp, 5))
 }
 
 ####################################################################################################
@@ -344,18 +384,11 @@ trainRandomForest <- function(
 #' @param test A dataframe containing the training features and response column. Used for testing
 #' the performance of the trained model
 #' @param colname.response The column name of the response variable (i.e. training labels)
-#' @param do.feat.sel Perform univariate feature selection?
-#' @param feat.sel.max.qvalue Only features with q-value (from univariate feature selection) lower
-#' than this will be kept
-#' @param feat.sel.max.pvalue Only features with p-value (from univariate feature selection) lower
-#' than this will be kept
-#' @param feat.sel.top.n.features Only keep the top number of features
-#' @param calc.imp Calculate feature importance?
-#' @param ntree Number of decision trees in the random forest
-#' @param get.local.increments If TRUE, get local increments to calculate feature contributions
+#' @param args.trainRandomForest A list of arguments that can be passed to `trainRandomForest()`
 #' @param seed Random seed as an integer
 #' @param fold.num Cross validation fold number. Only used in the prefix of progress messages. If
 #' not specified, no prefix will be displayed.
+#' @param multi.core Use multiple cores?
 #' @param verbose Show progress? Can be 0, 1, 2 (increasing verbosity)
 #'
 #' @return A list containing the training output
@@ -363,110 +396,89 @@ trainRandomForest <- function(
 #'
 trainRandomForestEnsemble <- function(
    train, test=NULL, colname.response='response',
-   do.feat.sel=TRUE, feat.sel.max.qvalue=0.01, feat.sel.max.pvalue=1, feat.sel.top.n.features=NULL,
-   calc.imp=T, ntree=500, get.local.increments=TRUE,
-   seed=NULL, fold.num=NULL, verbose=1
+   args.trainRandomForest=list(),
+   seed=NULL, fold.num=NULL, multi.core=F, verbose=1
 ){
-   # train=folds[[1]]$train
-   # test=folds[[1]]$test
-   # colname.response='response'
-   # do.feat.sel=TRUE
-   # feat.sel.max.qvalue=1
-   # feat.sel.max.pvalue=0.01
-   # feat.sel.top.n.features=200
-   # calc.imp=T
-   # imp.metric='mda'
-   # ntree=200
-   # get.local.increments=T
-   # seed=NULL
-   # fold.num=1
-   # verbose=2
+   if(F){
+      train=folds[[1]]$train
+      test=folds[[1]]$test
+      colname.response='response'
+
+      args.trainRandomForest=list(feat.sel.max.pvalue=0.01, feat.sel.top.n.features=100)
+
+      seed=NULL
+      fold.num=1
+      verbose=2
+   }
 
    if(!is.null(seed)){ set.seed(seed) }
 
    msg_prefix <- if(!is.null(fold.num)){ paste0('[[',fold.num,']] ') } else { '' }
 
    ##----------------------------------------------------------------------
-   if(verbose){message(msg_prefix,'> Preparing input features and response variable...')}
-   train_data <- dfToFeaturesAndResponse(train, colname.response=colname.response)
-
-   if(any(sapply(train_data$x, is.character))){
-      stop('Categorical features must be factors and not characters')
-   }
-   categorical_lvls <- lapply(train_data$x, levels)
-   categorical_lvls <- categorical_lvls[ !sapply(categorical_lvls, is.null) ]
-
-   if(!is.null(test)){
-      test_data <- dfToFeaturesAndResponse(test, colname.response=colname.response)
-   }
-
-   ##----------------------------------------------------------------------
    if(verbose){ message(msg_prefix,'> Training random forest ensemble...') }
-   model <- lapply(1:ncol(train_data$y_ohe),function(i){
-      #i='Prostate'
 
-      if(verbose==2){ message(msg_prefix, '[',i,'/',ncol(train_data$y_ohe),']: ', colnames(train_data$y_ohe)[i] ) }
-
-      y <- unname(train_data$y_ohe[,i])
-
-      if(do.feat.sel){
-         if(verbose==2){ message(msg_prefix,'>> Performing feature selection...') }
-         x <- univarFeatSel(
-            train_data$x, y,
-            max.qvalue=feat.sel.max.qvalue, max.pvalue=feat.sel.max.pvalue,
-            sel.top.n.features=feat.sel.top.n.features,
-            verbose=F
-         )
-      } else {
-         x <- train_data$x
-      }
-
-      if(verbose==2){ message(msg_prefix,'>> Training random forest...') }
-      rf <- randomForest::randomForest(
-         x=x,
-         y=factor(y, levels=c('TRUE','FALSE')),
-         strata=y, proximity=F, ntree=ntree,
-         importance=(calc.imp & imp.metric=='mda'),
-         keep.inbag=T, replace=F, ## required for calculating local increments
-         na.action=na.roughfix,
-         do.trace=F
+   y_ohe <- oneHotEncode(as.factor(train[,colname.response]))
+   
+   main <- function(i){
+      #i=16
+      #i='Lymphoid'
+      
+      if(verbose==2){ message(msg_prefix, '[',i,'/',ncol(y_ohe),']: ', colnames(y_ohe)[i] ) }
+      
+      y <- unname(y_ohe[,i])
+      train_new <- train
+      train_new$response <- y_ohe[,i]
+      
+      rf <- do.call(
+         trainRandomForest,
+         c(list(train=train_new), args.trainRandomForest)
       )
-
-      if(get.local.increments){
-         if(verbose==2){ message(msg_prefix,'>> Getting local increments...') }
-         ## Used for calculating per sample feature contributions
-         invisible(capture.output(
-            rf$localIncrements <- rfFC::getLocalIncrements(rf, x)
-         ))
-      }
-
+      
       return(rf)
-   })
-   names(model) <- colnames(train_data$y_ohe)
+   }
+   
+   if(!multi.core){
+      model <- lapply(1:ncol(y_ohe), main)
+   } else {
+      require(foreach)
+      require(parallel)
+      require(doParallel)
+      
+      #cores <- Sys.getenv("SLURM_NTASKS_PER_NODE")
+      cores <- parallel::detectCores()
+      if(verbose){ message('Multicore: ',cores,' cores') }
+      
+      registerDoParallel(cores=cores)
+      model <- foreach(i=1:ncol(y_ohe)) %dopar% { main(i) }
+      #stopCluster(cl)
+   }
+   names(model) <- colnames(y_ohe)
    class(model) <- c('list','randomForestEnsemble')
-
+   
    out <- list()
+   
    out$model <- model
    out$seed <- seed
 
    ##----------------------------------------------------------------------
-   if(calc.imp){
-      if(verbose){ message(msg_prefix,'> Calculating feature importance...') }
-      exist_features <- unique(unlist(lapply(model, function(i){
-         names(i$forest$ncat)
-      })))
-      exist_features <- colnames(train_data$x)[ colnames(train_data$x) %in% exist_features ] ## Preserve original feature order
+   if(verbose){ message(msg_prefix,'> Calculating feature importance...') }
+   exist_features <- unique(unlist(lapply(model, function(i){
+      names(i$forest$ncat)
+   })))
+   features <- colnames(train)[!(colnames(train) %in% colname.response)]
+   exist_features <- features[ features %in% exist_features ] ## Preserve original feature order
+   rm(features)
 
-      out$imp <- do.call(rbind, lapply(model, function(i){
-         #i=model[[1]]
-         df <- randomForest::importance(i, type=1)
-         v <- structure(df[,1],names=rownames(df))
-         v <- v[exist_features]
-         names(v) <- exist_features
-         v[is.na(v)] <- 0
-         return(v)
-      }))
-   }
+   out$imp <- do.call(rbind, lapply(model, function(i){
+      #i=model[[1]]
+      df <- randomForest::importance(i, type=1)
+      v <- structure(df[,1],names=rownames(df))
+      v <- v[exist_features]
+      names(v) <- exist_features
+      v[is.na(v)] <- 0
+      return(v)
+   }))
 
    ##----------------------------------------------------------------------
    if(!is.null(test)){
@@ -474,9 +486,13 @@ trainRandomForestEnsemble <- function(
          message(msg_prefix,'> Predicting on test set...')
       }
       out$test_set <- list(
-         probabilities = predict.randomForestEnsemble(model, test_data$x, type='prob'),
+         probabilities = predict.randomForestEnsemble(
+            model, 
+            test[,!(colnames(test) %in% colname.response)], 
+            type='prob'
+         ),
          predicted = NA,
-         actual = test_data$y
+         actual = test[,colname.response]
       )
 
       out$test_set$predicted <- with(out$test_set,{
@@ -490,6 +506,55 @@ trainRandomForestEnsemble <- function(
    return(out)
 }
 
+#' Predict method for random forest ensemble
+#'
+#' @param object An object of class randomForestEnsemble
+#' @param newdata A data frame or matrix containing new data. (Note: If not given, the out-of-bag
+#' prediction in object is returned)
+#' @param type 'response', 'prob' or 'votes', indicating the type of output: predicted values,
+#' matrix of class probabilities, or matrix of vote counts. 'class' is allowed, but automatically
+#' converted to "response", for backward compatibility.
+#'
+#' @return 'response': predicted classes (the classes with majority vote). 'prob' matrix of class
+#' probabilities (one column for each class and one row for each input). 'vote'
+#' matrix of vote counts (one column for each class and one row for each new input); either in raw
+#' counts or in fractions (if norm.votes=TRUE).
+#' @export
+#'
+predict.randomForestEnsemble <- function(object, newdata, type='response', verbose=F){
+   # object=model
+   # newdata=test[,!(colnames(test) %in% colname.response)]
+   # type='prob'
+   
+   ## Force factor levels from training set onto new data
+   categorical_feature_names <- names(object[[1]]$categorical_lvls)
+   x <- as.data.frame(lapply(colnames(newdata), function(i){
+      #i='gene_def.AR'
+      if(!(i %in% categorical_feature_names)){
+         return(newdata[,i])
+      } else{
+         factor(newdata[,i], levels=object[[1]]$categorical_lvls[[i]])
+      }
+   }))
+   rownames(x) <- rownames(newdata)
+   colnames(x) <- colnames(newdata)
+   
+   if(verbose){ counter <- 0 }
+   m <- do.call(cbind, lapply(object, function(i){
+      #i=object$Breast
+      if(verbose){
+         counter <<- counter + 1
+         message('[RF ',counter,'/',length(object),']: ', names(object)[counter])
+      }
+      randomForest:::predict.randomForest(i, x, type='prob')[,1]
+   }))
+   
+   if(type=='prob'){
+      m
+   } else {
+      factor( colnames(m)[ max.col(m) ], levels=colnames(m) )
+   }
+}
 
 
 
