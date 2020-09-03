@@ -210,37 +210,32 @@ plotFeatureImpHeatmap <- function(
 #' @param palette Name of the brewer color palette
 #' @param palette.direction Color palette direction. Can be 1 (forward) or -1 (reverse).
 #' @param invert.y Invert the y-axis?
+#' @param x.title.position Position of the x axis title
 #'
 #' @return A ggplot object
 #' @export
 #'
 plotHeatmapFromMatrix <- function(
    m, x.lab=NULL, y.lab=NULL, legend.name='value',
-   show.labels=F, palette='YlGnBu', palette.direction=-1, invert.y=F
+   show.labels=F, custom.labels=NULL, palette='YlGnBu', palette.direction=-1, invert.y=F,
+   x.title.position='bottom'
 ){
 
    #m=t(imp)
    if(!is.matrix(m) & !is.numeric(m)){ stop('`m` must be a numeric matrix') }
-   m_melt <- reshape2::melt(m)
+   m_melt <- as.data.frame(reshape2::melt(m))
    colnames(m_melt)[1:2] <- c('y','x')
+   m_melt$x <- factor(m_melt$x, levels=unique(m_melt$x))
+   m_melt$y <- factor(m_melt$y, levels=unique(m_melt$y))
+   m_melt$label <- m_melt$value
 
    if(invert.y){
       m_melt$y <- factor(m_melt$y, rev(levels(m_melt$y)))
    }
 
-   p <- ggplot(m_melt, aes(x, y, fill=value)) +
-      geom_tile(color='grey') +
-      scale_fill_distiller(
-         name=legend.name,
-         palette=palette, direction=palette.direction,
-         guide=guide_colorbar(
-            frame.colour='black', ticks.colour='black',
-            direction='horizontal', title.position='top', reverse=T, barwidth=4, barheight=1,
-            label.theme=element_text(angle=90, vjust=0.5, size=10)
-         )
-      ) +
-      #scale_x_discrete(expand=c(0,0)) +
-      #scale_y_discrete(expand=c(0,0)) +
+   p <- ggplot(m_melt, aes(x, y)) +
+      scale_x_discrete(expand=c(0,0), position=x.title.position) +
+      scale_y_discrete(expand=c(0,0)) +
       theme_bw() +
       theme(
          panel.grid=element_blank(),
@@ -249,9 +244,51 @@ plotHeatmapFromMatrix <- function(
          axis.ticks=element_blank()
       )
 
-   if(show.labels){ p <- p + geom_text(aes(label=value), size=3.5) }
-   if(!is.null(x.lab)){ p <- p + xlab(x.lab) }
-   if(!is.null(y.lab)){ p <- p + ylab(y.lab) }
+   if(palette=='none'){
+      p <- p + geom_tile(fill='white', color='grey')
+   } else {
+      p <- p +
+         geom_tile(aes(fill=value), color='grey') +
+         scale_fill_distiller(
+            name=legend.name,
+            palette=palette, direction=palette.direction,
+            guide=guide_colorbar(
+               frame.colour='black', ticks.colour='black',
+               direction='horizontal', title.position='top', reverse=T, barwidth=4, barheight=1,
+               label.theme=element_text(angle=90, vjust=0.5, size=10)
+            )
+         )
+   }
+
+   if(!is.null(custom.labels)){
+      if(is.matrix(custom.labels) | is.data.frame(custom.labels)){
+         if(!identical(dim(custom.labels),dim(m))){
+            stop('custom.labels when a matrix must have the same dims as m: ',nrow(m),'x',ncol(m))
+         }
+         m_melt$label <- melt(as.matrix(custom.labels))$value
+      } else {
+         if(length(custom.labels) != nrow(m_melt)){
+            stop('custom.labels when a vector must be the same length as the number of observations: ',nrow(m_melt))
+         }
+         m_melt$label <- custom.labels
+      }
+   }
+
+   if(show.labels){
+      p <- p + geom_text(data=m_melt, aes(label=label), size=3.5)
+   }
+
+   if(is.null(x.lab)){
+      p <- p + theme(axis.title.x.top=element_blank(), axis.title.x.bottom=element_blank())
+   } else {
+      p <- p + xlab(x.lab)
+   }
+
+   if(is.null(y.lab)){
+      p <- p + theme(axis.title.y=element_blank())
+   } else {
+      p <- p + ylab(y.lab)
+   }
 
    return(p)
 }
@@ -267,7 +304,7 @@ plotHeatmapFromMatrix <- function(
 #' @param cv_out Alternative input to `actual` and `predicted`. Cross validation output in the
 #' form of a list that has 'imp' object (e.g. cv_out[[1]]$test_set$actual and
 #' cv_out[[1]]$test_set$predicted)
-#' @param rel.heights A numeric vector of length 2. Relative heights of the upper and lower plots
+#' @param rel.heights A numeric vector of length 3. Relative heights of the plots
 #' @param sort Sort cancer type by number of % sample of correctly classified
 #' @param rel.values In lower plot, show absolute number or %
 #' @param metrics A character vector indicating which performance metrics to show in the upper plot.
@@ -279,7 +316,7 @@ plotHeatmapFromMatrix <- function(
 #'
 plotPerfHeatmap <- function(
    actual=NULL, predicted=NULL, cv_out=NULL,
-   rel.heights=c(0.3, 1),
+   rel.heights=c(0.3, 0.05, 1),
 
    ## Confusion heatmap
    sort=F, rel.values=T,
@@ -294,10 +331,10 @@ plotPerfHeatmap <- function(
    }
 
    ## Large confusion matrix ----------------------------------------------------------------
-   tab <- table(actual, predicted)
+   tab <- table(predicted, actual)
 
    if(rel.values){
-      tab <- t(apply(tab,1,function(i){ i/sum(i) }))
+      tab <- apply(tab,2,function(i){ i/sum(i) })
       tab <- round(tab,2)
    }
 
@@ -307,31 +344,34 @@ plotPerfHeatmap <- function(
    tab <- cbind(NA,tab) ## Add dummy column for mean performance
 
    p_heatmap <- plotHeatmapFromMatrix(
-      tab, show.labels=T, y.lab='Actual', x.lab='Predicted', invert.y=T,
-      legend.name=if(rel.values){ 'Prop. predicted' } else { 'Counts' }
+      tab, show.labels=T, x.lab='Actual\n(Columns: prop. misclassified as which class)', y.lab='Predicted', invert.y=T,
+      #palette=if(rel.values){ 'YlGnBu' } else { 'none' },
+      legend.name=if(rel.values){ 'Column fraction' } else { 'Counts' }
    )
 
    ## Samples per class ----------------------------------------------------------------
    class_counts <- table(actual)
-   class_counts <- class_counts[colnames(tab)]
+   class_counts <- class_counts[class_order]
+   class_counts <- c(total=length(actual), class_counts)
 
-   class_counts[1] <- length(actual)
-   names(class_counts)[1] <- 'total'
+   correct_counts <- unlist(lapply(split(data.frame(actual, predicted), actual), function(i){
+      sum(i$actual==i$predicted)
+   }))
+   correct_counts <- correct_counts[class_order]
+   correct_counts <- c(total=sum(actual==predicted),correct_counts)
 
-   class_counts <- data.frame(class=names(class_counts), counts=as.numeric(class_counts))
-   class_counts <- forceDfOrder(class_counts)
+   counts <- data.frame(total=class_counts, correct=correct_counts)
+   counts$incorrect <- counts$total - counts$correct
+   #counts <- counts[,ncol(counts):1]
+   #counts <- forceDfOrder(counts)
 
-   p_class_counts <- ggplot(class_counts, aes(x=class, y=1, label=counts)) +
-      geom_tile(fill='white',color='black') +
-      geom_text(size=3.5) +
-      ylab('# samples') +
-      theme_bw() +
+   p_counts <-
+      plotHeatmapFromMatrix(t(as.matrix(counts)), palette='none', show.labels=T) +
+      geom_hline(yintercept=1.5, size=0.5) +
       theme(
-         panel.grid=element_blank(),
-         axis.text=element_blank(),
-         axis.title.x=element_blank(),
-         axis.title.y=element_text(angle=0, vjust=0.5, size=10),
-         axis.ticks=element_blank()
+         #panel.grid=element_blank(),
+         axis.text.x.bottom=element_blank(),
+         axis.title=element_blank()
       )
 
    ## Performance stats ----------------------------------------------------------------
@@ -349,7 +389,7 @@ plotPerfHeatmap <- function(
    ## Summary stats
    if(show.weighted.mean){
       perf_summary <- rbind(
-         WEIGHTED_MEAN=apply(perf,2,function(i){
+         OVERALL=apply(perf,2,function(i){
             weights <- table(actual)/length(actual)
             weights <- weights[names(i)]
             weighted.mean(i, weights)
@@ -357,7 +397,7 @@ plotPerfHeatmap <- function(
       )
    } else {
       perf_summary <- rbind(
-         MEAN = apply(perf,2,mean)
+         OVERALL = apply(perf,2,mean)
       )
    }
    perf <- rbind(perf_summary, perf)
@@ -365,21 +405,115 @@ plotPerfHeatmap <- function(
 
    p_perf <- plotHeatmapFromMatrix(
          t(perf), palette='RdYlGn', palette.direction=1, show.labels=T,
-         y.lab='Perf.', legend.name='Metric value'
+         y.lab='Perf.', legend.name='Metric value', x.title.position='top'
       ) +
-      scale_x_discrete(position='top') +
       theme(
          axis.title.x=element_blank()
       )
 
    ## Combine --------------------------------
    cowplot::plot_grid(
-      p_perf, p_class_counts, p_heatmap,
-      ncol=1, align='v', axis='tblr', rel_heights=c(0.3, 0.05, 1)
+      p_perf, p_counts, p_heatmap,
+      ncol=1, align='v', axis='tblr', rel_heights=c(0.3, 0.15, 1)
    )
 
 }
 
 
+####################################################################################################
+#' Plot false negative rate
+#'
+#' @description The false negative rate can also be interpreted as the cumulative fraction of
+#' samples per class that have a given probability.
+#'
+#' @param actual A vector of the actual classes
+#' @param prob A matrix of probabilities, where rows are the samples and columns are the cancer
+#' types
+#'
+#' @return A ggplot object
+#' @export
+#'
+plotFnr <- function(actual, prob){
 
+   confusion <- mltoolkit::confusionMatrix(
+      predicted=prob,
+      actual=actual,
+      cutoff.interval=0.1
+   )
+
+   perf <- do.call(rbind, lapply(names(confusion), function(i){
+      df <- confusion[[i]]
+      df <- cbind(
+         df, mltoolkit::calcPerf(df,metrics=c('tpr','fnr','prec','f1'), add.start.end.values=F)
+      )
+      df <- cbind(class=i,df)
+      return(df)
+   }))
+
+   m <- reshape2::dcast( perf[,c('class','cutoff','fn')], class~cutoff, value.var='fn' )
+   rownames(m) <- m[,1]; m[,1] <- NULL
+   m <- as.matrix(m)
+
+   m_rel <- round(m/m[,ncol(m)],2)
+
+   custom_labels <- paste0(
+      format(round(reshape2::melt(m_rel)$value, 2), nsmall=2),
+      ' (',reshape2::melt(m)$value,')'
+   )
+
+   plotHeatmapFromMatrix(
+      m_rel, invert.y=T, x.lab='Probability', y.lab='Cancer type',
+      show.labels=T, custom.labels=custom_labels, legend.name='Fraction'
+   ) +
+      #ggtitle('Per cancer type, fraction/counts of samples <=probability') +
+      ggtitle(expression("Per cancer type, fraction/counts of samples with prob."<="indicated prob.")) +
+      theme(
+         axis.text.x.bottom=element_text(angle=0, hjust=0.5)
+      )
+
+}
+
+####################################################################################################
+mkTrainingReport <- function(dir, verbose=T){
+   if(F){
+      dir=paste0(base_dir,'/CUPs_classifier/processed/cuplr/training/models/0.06a_ownDrivers/')
+      verbose=T
+   }
+
+   plots_dir <- paste0(dir,'/plots/')
+   dir.create(plots_dir, showWarnings=F)
+
+   if(verbose){ message('Loading feat imp data...') }
+   imp <- readRDS(paste0(dir,'/imp.rds'))
+   m_imp <- aggregateMatrixList(imp, as.matrix=T)
+
+   if(verbose){ message('Plotting imp barplots...') }
+   pdf(paste0(plots_dir,'/imp_barplots.pdf'), 16, 10)
+   plot( plotTopFeatures(m_imp, top.n=40, infer.feature.type=T, n.col=4) )
+   dev.off()
+
+   if(verbose){ message('Loading feat imp heatmap...') }
+   pdf(paste0(plots_dir,'/imp_heatmap.pdf'), 17, 8)
+   plot( plotFeatureImpHeatmap(m_imp, top.n=150) )
+   dev.off()
+   #plotFeatureImpHeatmap(m_imp, min.imp=1)
+
+   if(verbose){ message('Loading test set data...') }
+   test_set <- readRDS(paste0(dir,'/test_set.rds'))
+   actual <- unlist(lapply(test_set,`[[`,'actual'))
+   predicted <- unlist(lapply(test_set,`[[`,'predicted'))
+   prob <- as.data.frame(do.call(rbind, lapply(test_set, function(i){ i$probabilities })))
+
+   if(verbose){ message('Plotting perf heatmap...') }
+   pdf(paste0(plots_dir,'/perf_heatmap.pdf'), 11, 8.5)
+   suppressWarnings({
+      plot( plotPerfHeatmap(actual, predicted, show.weighted.mean=F) )
+   })
+   dev.off()
+
+   if(verbose){ message('Plotting false negative rates...') }
+   pdf(paste0(plots_dir,'/fnr_heatmap.pdf'), 11, 8)
+   plot( plotFnr(actual, prob) )
+   dev.off()
+}
 
