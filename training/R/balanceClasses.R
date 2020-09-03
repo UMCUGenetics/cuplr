@@ -75,17 +75,25 @@ resamplingGrid <- function(
       return(size)
    }
 
-   size_a <- calcTargetSampleSize(
-      start=a,
-      end=if(!is.na(midpoint)){ midpoint } else { b },
-      breaks=breaks.a
-   )
+   if(breaks.a==1){
+      size_a <- a
+   } else {
+      size_a <- calcTargetSampleSize(
+         start=a,
+         end=if(!is.na(midpoint)){ midpoint } else { b },
+         breaks=breaks.a
+      )
+   }
 
-   size_b <- calcTargetSampleSize(
-      start=b,
-      end=if(!is.na(midpoint)){ midpoint } else { a },
-      breaks=breaks.b
-   )
+   if(breaks.b==1){
+      size_b <- b
+   } else {
+      size_b <- calcTargetSampleSize(
+         start=b,
+         end=if(!is.na(midpoint)){ midpoint } else { a },
+         breaks=breaks.b
+      )
+   }
 
    ## Return output
    out <- structure(
