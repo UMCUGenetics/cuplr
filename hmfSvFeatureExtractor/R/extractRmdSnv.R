@@ -13,13 +13,15 @@
 #' @export
 #'
 extractRmdSnv <- function(
-   vcf.file, sample.name=NULL, bin.size=1e6, as.matrix=T, 
+   vcf.file=NULL, df=NULL, sample.name=NULL, bin.size=1e6, as.matrix=T,
    verbose=F, ...
 ){
    #vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/171002_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
    #vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/200117_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
-
-   df <- vcfAsDataframe(vcf.file, verbose=verbose, ...)
+   
+   if(!is.null(vcf.file)){
+      df <- vcfAsDataframe(vcf.file, verbose=verbose, ...)
+   }
    #df <- vcfAsDataframe(vcf.file, verbose=verbose, vcf.filter='PASS')
 
    df_colnames <- c('chrom','pos','ref','alt')
@@ -34,6 +36,11 @@ extractRmdSnv <- function(
    if(verbose){ message('Subsetting for SNVs...') }
    df <- df[nchar(df$ref)==1 & nchar(df$alt)==1,]
    
+   if(nrow(df)!=0){
+      if(verbose){ message('Converting chrom name style...') }
+      GenomeInfoDb::seqlevelsStyle(df$chrom)<- 'NCBI'
+   }
+
    ##----------------------------------------------------------------
    if(verbose){ message('Counting muts per bin...') }
    genome_bins <- mkGenomeBins(bin.size=bin.size)
@@ -42,6 +49,7 @@ extractRmdSnv <- function(
    counts <- structure(rep(0, nrow(genome_bins)), names=genome_bins$bin_name )
    
    if(nrow(df)!=0){
+      df <- df[df$chrom %in% genome_bins$chrom,]
       df$bin_name <- (function(){
          l <- Map(function(chrom,pos){
             which(
