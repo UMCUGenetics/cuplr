@@ -476,7 +476,7 @@ plotFnr <- function(actual, prob){
 ####################################################################################################
 mkTrainingReport <- function(dir, verbose=T){
    if(F){
-      dir=paste0(base_dir,'/CUPs_classifier/processed/cuplr/training/models/0.06a_ownDrivers/')
+      dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/training/models/0.08a_blacklistSamples_probWeighRf/'
       verbose=T
    }
 
@@ -507,7 +507,7 @@ mkTrainingReport <- function(dir, verbose=T){
    if(verbose){ message('Plotting perf heatmap...') }
    pdf(paste0(plots_dir,'/perf_heatmap.pdf'), 11, 8.5)
    suppressWarnings({
-      plot( plotPerfHeatmap(actual, predicted, show.weighted.mean=F) )
+      plot( plotPerfHeatmap(actual, predicted, show.weighted.mean=T) )
    })
    dev.off()
 
