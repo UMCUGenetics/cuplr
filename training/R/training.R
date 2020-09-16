@@ -397,7 +397,8 @@ print.randomForestContainer <- function(rf){
 trainRandomForestEnsemble <- function(
    train, test=NULL, colname.response='response',
    args.trainRandomForest=list(),
-   seed=NULL, fold.num=NULL, multi.core=F, verbose=1
+   seed=NULL, fold.num=NULL, multi.core=F, verbose=1,
+   tmp.dir=NULL
 ){
    if(F){
       train=folds[[1]]$train
@@ -439,7 +440,7 @@ trainRandomForestEnsemble <- function(
    }
    
    if(!multi.core){
-      model <- lapply(1:ncol(y_ohe), main)
+      ensemble <- lapply(1:ncol(y_ohe), main)
    } else {
       require(foreach)
       require(parallel)
@@ -450,29 +451,35 @@ trainRandomForestEnsemble <- function(
       if(verbose){ message('Multicore: ',cores,' cores') }
       
       registerDoParallel(cores=cores)
-      model <- foreach(i=1:ncol(y_ohe)) %dopar% { main(i) }
+      ensemble <- foreach(i=1:ncol(y_ohe)) %dopar% { main(i) }
       #stopCluster(cl)
    }
-   names(model) <- colnames(y_ohe)
-   class(model) <- c('list','randomForestEnsemble')
+   names(ensemble) <- colnames(y_ohe)
+   
+   if(!is.null(tmp.dir)){
+      dir.create(tmp.dir, showWarnings=F)
+      saveRDS(ensemble, paste0(tmp.dir,'/model.rds'))
+   }
+   #ensemble=readRDS('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/training/models/0.06e_balanceClasses/tmp/model.rds')
    
    out <- list()
+   class(out) <- c('list','randomForestEnsemble')
    
-   out$model <- model
+   out$ensemble <- ensemble
    out$seed <- seed
 
    ##----------------------------------------------------------------------
    if(verbose){ message(msg_prefix,'> Calculating feature importance...') }
-   exist_features <- unique(unlist(lapply(model, function(i){
-      names(i$forest$ncat)
+   exist_features <- unique(unlist(lapply(ensemble, function(i){
+      names(i$model$forest$ncat)
    })))
    features <- colnames(train)[!(colnames(train) %in% colname.response)]
    exist_features <- features[ features %in% exist_features ] ## Preserve original feature order
    rm(features)
 
-   out$imp <- do.call(rbind, lapply(model, function(i){
-      #i=model[[1]]
-      df <- randomForest::importance(i, type=1)
+   out$imp <- do.call(rbind, lapply(ensemble, function(i){
+      #i=ensemble[[1]]
+      df <- randomForest::importance(i$model, type=1)
       v <- structure(df[,1],names=rownames(df))
       v <- v[exist_features]
       names(v) <- exist_features
@@ -487,23 +494,32 @@ trainRandomForestEnsemble <- function(
       }
       out$test_set <- list(
          probabilities = predict.randomForestEnsemble(
-            model, 
+            out, 
             test[,!(colnames(test) %in% colname.response)], 
             type='prob'
          ),
          predicted = NA,
-         actual = test[,colname.response]
+         #actual = test[,colname.response]
+         actual = factor(test[,colname.response], colnames(y_ohe))
       )
 
       out$test_set$predicted <- with(out$test_set,{
          factor(
             colnames(probabilities)[max.col(probabilities)],
-            levels=colnames(probabilities)
+            levels=colnames(y_ohe)
          )
       })
    }
 
    return(out)
+}
+
+print.randomForestEnsemble <- function(object){
+   cat('$ensemble\n\nBinary RF names:\n')
+   print(names(object$ensemble))
+   
+   cat('\nOther list levels:\n')
+   cat( paste0('$',names(object)[3:length(object)]) )
 }
 
 #' Predict method for random forest ensemble
@@ -522,31 +538,33 @@ trainRandomForestEnsemble <- function(
 #' @export
 #'
 predict.randomForestEnsemble <- function(object, newdata, type='response', verbose=F){
-   # object=model
+   # object=ensemble
    # newdata=test[,!(colnames(test) %in% colname.response)]
    # type='prob'
    
+   ensemble <- object$ensemble
+   
    ## Force factor levels from training set onto new data
-   categorical_feature_names <- names(object[[1]]$categorical_lvls)
+   categorical_feature_names <- names(ensemble[[1]]$categorical_lvls)
    x <- as.data.frame(lapply(colnames(newdata), function(i){
       #i='gene_def.AR'
       if(!(i %in% categorical_feature_names)){
          return(newdata[,i])
       } else{
-         factor(newdata[,i], levels=object[[1]]$categorical_lvls[[i]])
+         factor(newdata[,i], levels=ensemble[[1]]$categorical_lvls[[i]])
       }
    }))
    rownames(x) <- rownames(newdata)
    colnames(x) <- colnames(newdata)
    
    if(verbose){ counter <- 0 }
-   m <- do.call(cbind, lapply(object, function(i){
-      #i=object$Breast
+   m <- do.call(cbind, lapply(ensemble, function(i){
+      #i=ensemble$Breast
       if(verbose){
          counter <<- counter + 1
-         message('[RF ',counter,'/',length(object),']: ', names(object)[counter])
+         message('[RF ',counter,'/',length(ensemble),']: ', names(ensemble)[counter])
       }
-      randomForest:::predict.randomForest(i, x, type='prob')[,1]
+      randomForest:::predict.randomForest(i$model, x, type='prob')[,1]
    }))
    
    if(type=='prob'){
