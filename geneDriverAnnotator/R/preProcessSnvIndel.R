@@ -8,7 +8,7 @@
 #' @param out.file Path to output vcf file (make sure to add .gz at the end)
 #' @param mode Can be 'germ' or 'som'
 #' @param bed.file Path to bed file specifying the genome intervals to keep (defaults ot the one 
-#' stored in this package)
+#' stored in this package). If NULL, vcf will not be subsetting for bed file regions.
 #' @param java.path Path to java binary (defaults to the installed JRE location)
 #' @param snpsift.path Path to SnpSift jar (defaults to the one included in this package)
 #'
@@ -41,7 +41,7 @@ filterVcf <- function(
       
       'gunzip -c $VCF_FILE | \n',
       if(!is.null(mode)){ '$JAVA -jar $SNPSIFT filter -v "$FILTER_STRING" | \n' } else { '' },
-      '$JAVA -jar $SNPSIFT intervals -verbose $BED_FILE | \n',
+      if(!is.null(bed.file)){ '$JAVA -jar $SNPSIFT intervals -verbose $BED_FILE | \n' } else { '' },
       'gzip -c > $OUT_FILE'
    )
    
@@ -84,7 +84,7 @@ annotateVariantType <- function(
       'VCF_FILE=',vcf.file,'\n',
       'OUT_FILE=',out.file,'\n',
 
-      '$JAVA -jar $SNPEFF ann $GENOME $VCF_FILE -lof -no-downstream -no-intergenic -noShiftHgvs -noStats -verbose | \n',
+      '$JAVA -jar -Xmx16G $SNPEFF ann $GENOME $VCF_FILE -lof -no-downstream -no-intergenic -noShiftHgvs -noStats -verbose | \n',
       'gzip -c > ${OUT_FILE}.tmp \n',
       'mv ${OUT_FILE}.tmp ${OUT_FILE}' ## Hack to do annotation inline of vcf.file
    )
