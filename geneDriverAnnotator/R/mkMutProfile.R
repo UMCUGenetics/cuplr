@@ -133,7 +133,8 @@ mkMutProfileGeneCnv <- function(
    
    ## Subsetting for genes ------------------------
    if(verbose){ message('Reading cnv file...') }
-   cnv <- read.delim(cnv.file, stringsAsFactors=F)
+   cnv <- read.delim(cnv.file, stringsAsFactors=F, check.names=F)
+   colnames(cnv) <- sub('#','', colnames(cnv))
    cnv <- cnv[,sel.cols]
    colnames(cnv) <- names(sel.cols)
    GenomeInfoDb::seqlevelsStyle(cnv$chrom)<- 'NCBI'
