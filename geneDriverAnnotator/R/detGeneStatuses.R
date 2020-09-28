@@ -59,12 +59,22 @@ detGeneStatuses <- function(
       input.file.paths <- paste0('/Users/lnguyen/',input.file.paths)
       names(input.file.paths) <- c('germ_vcf','som_vcf','sv_vcf','gene_cnv','cnv')
 
+      ## PCAWG pipeline5
+      # out.dir='/Users/lnguyen/hpc/cuppen/projects/P0003_FOOTPRINTS/WGS_clones/processed/Liver_footprint//gene_ann//ALC3_CLONE32/'
+      # sample.name=basename(out.dir)
+      # input.file.paths=c(
+      #    germ_vcf='/Users/lnguyen/hpc/cuppen/projects/P0003_FOOTPRINTS/WGS_clones/processed/Liver_footprint_data/vcf/batch01//c110116R_ALC3CLONE32_ALC3BLOOD/c110116R_ALC3CLONE32_ALC3BLOOD.annotated.vcf.gz',
+      #    som_vcf='/Users/lnguyen/hpc/cuppen/projects/P0003_FOOTPRINTS/WGS_clones/processed/Liver_footprint_data/vcf/batch01//c110116R_ALC3CLONE32_ALC3BLOOD//somaticVariants/c110116RALC3BLOOD_c110116RALC3CLONE32/c110116RALC3BLOOD_c110116RALC3CLONE32_post_processed.vcf.gz',
+      #    cnv='/Users/lnguyen/hpc/cuppen/projects/P0003_FOOTPRINTS/WGS_clones/processed/Liver_footprint_data/vcf/batch01//c110116R_ALC3CLONE32_ALC3BLOOD//purple/c110116RALC3CLONE32.purple.cnv'
+      # )
+      
+      
       ## PCAWG
       vcf_paths <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/manifest/manifest_gene_ann.txt.gz', stringsAsFactors=F)
       #sample.name <- '54195db3-94a9-4538-8bb8-9953d936acd4'
       sample.name <- '1bea3a72-3b73-4072-a6bb-96a90119d3ac'
       
-      out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/gene_ann_2/'
+      out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_2020/gene_ann/'
       out.dir <- paste0(out.parent.dir,'/',sample.name,'/')
       dir.create(out.dir, recursive=T, showWarnings=F)
       
@@ -93,49 +103,40 @@ detGeneStatuses <- function(
       stop('out.dir does not exist: ',out.dir)
    }
    
-   if(length(names(input.file.paths))==0){
-      stop('input.file.paths must be a named vector or list')
+   if(!all(c('germ_vcf','som_vcf','cnv') %in% names(input.file.paths))){
+      stop("input.file.paths must have the names 'germ_vcf','som_vcf','cnv'")
    }
    
-   if(is.list(input.file.paths)){ ## Coerce list to vector
-      input.file.paths <- structure(input.file.paths, names=names(input.file.paths))
-   }
+   input.file.paths <- as.list(input.file.paths)
    
-   # if(anyNA(input.file.paths[c('germ_vcf','som_vcf','cnv')])){
-   #    stop('germ_vcf, som_vcf and cnv must be specified in input.file.paths')
-   # }
-   
-   # if(any(input.file.paths[!is.na(input.file.paths)])){
-   #    stop('One or more of the input files do not exist')
-   # }
-
    ## Pre-process somatic/germline vcfs ========================================================
    preproc_dir <- paste0(out.dir,'/preproc/')
    dir.create(preproc_dir, recursive=T, showWarnings=F)
    
-   preproc_files <- c()
+   preproc_files <- list()
    
    bed_file <- read.delim(genes.bed.file, stringsAsFactors=F, check.names=F)
 
    #input.file.paths['som_vcf'] <- '/Users/lnguyen/hpc/cog_bioinf/cuppen/project_data/Luan_projects/datasets/PCAWG_2020/scripts/merge_snv_indel_vcfs/test.vcf.gz'
-   for(mut_type in c('som','germ')){
+   
+   preprocSnvIndelVcfs <- function(mut_type=c('germ','som')){
       # mut_type='som'
       
       MUT_VCF <- paste0(mut_type,'_vcf')
       MUT_TXT <- paste0(mut_type,'_txt')
       
-      preproc_files[MUT_VCF] <- paste0(preproc_dir,'/',sample.name,'.',mut_type,'.vcf.gz')
-      preproc_files[MUT_TXT] <- paste0(preproc_dir,'/',sample.name,'.',mut_type,'.txt.gz')
+      preproc_files[[MUT_VCF]] <<- paste0(preproc_dir,'/',sample.name,'.',mut_type,'.vcf.gz')
+      preproc_files[[MUT_TXT]] <<- paste0(preproc_dir,'/',sample.name,'.',mut_type,'.txt.gz')
       
       if(verbose){ message('\n## Processing ',toupper(mut_type),' vcf...') }
       
-      if(  !file.exists(preproc_files[MUT_VCF]) ){
+      if(  !file.exists(preproc_files[[MUT_VCF]]) ){
          
          if(do.filter.vcf){
             if(verbose){ message('> Filtering vcf on variants in genes in bed file and PASS variants...') }
             filterVcf(
-               vcf.file = input.file.paths[MUT_VCF],
-               out.file = preproc_files[MUT_VCF],
+               vcf.file = input.file.paths[[MUT_VCF]],
+               out.file = preproc_files[[MUT_VCF]],
                mode = mut_type,
                bed.file = genes.bed.file,
                java.path = java.path,
@@ -145,13 +146,13 @@ detGeneStatuses <- function(
             message('> Skipping filtering vcf; copying vcf to out dir...')
             system(paste(
                'cp',
-               input.file.paths[MUT_VCF],
-               preproc_files[MUT_VCF]
+               input.file.paths[[MUT_VCF]],
+               preproc_files[[MUT_VCF]]
             ))
          }
          
       } else {
-         if(verbose){ message('> Skipping filtering vcf; output file exists: ',preproc_files[MUT_VCF]) }
+         if(verbose){ message('> Skipping filtering vcf; output file exists: ',preproc_files[[MUT_VCF]]) }
       }
       
       ## Snpeff annotation
@@ -162,8 +163,8 @@ detGeneStatuses <- function(
          if(!file.exists(ann_done)){
             if(verbose){ message('> Annotating variants...') }
             annotateVariantType(
-               vcf.file = preproc_files[MUT_VCF], 
-               out.file = preproc_files[MUT_VCF],
+               vcf.file = preproc_files[[MUT_VCF]], 
+               out.file = preproc_files[[MUT_VCF]],
                genome = 'GRCh37.75',
                java.path = java.path, 
                snpeff.path = snpeff.path
@@ -176,22 +177,22 @@ detGeneStatuses <- function(
       }
       
       ## Filtering
-      if( !file.exists(preproc_files[MUT_TXT]) ){
+      if( !file.exists(preproc_files[[MUT_TXT]]) ){
          if(verbose){ message('> Extracting revelant fields in vcf to txt...') }
          extractVcfFields(
-            vcf.file = preproc_files[MUT_VCF],
-            out.file = preproc_files[MUT_TXT],
+            vcf.file = preproc_files[[MUT_VCF]],
+            out.file = preproc_files[[MUT_TXT]],
             java.path = java.path,
             snpsift.path = snpsift.path
          )
          
-         txt <- read.delim(preproc_files[MUT_TXT], stringsAsFactors=F)
+         txt <- read.delim(preproc_files[[MUT_TXT]], stringsAsFactors=F)
          if(nrow(txt)!=0){ 
             txt$chrom <- as.character(txt$chrom)
             GenomeInfoDb::seqlevelsStyle(txt$chrom)<- 'NCBI' 
          }
          GenomeInfoDb::seqlevelsStyle(keep.chroms)<- 'NCBI'
-            
+         
          if(!is.null(keep.chroms)){
             if(verbose){ message('> Keeping chromosomes: ',paste(keep.chroms, collapse=',')) }
             txt <- txt[txt$chrom %in% keep.chroms,]
@@ -216,13 +217,22 @@ detGeneStatuses <- function(
             txt <- cbind(txt, data.frame(clinvar_sig=character(), is_hotspot_mut=logical()))
          }
          
-         write.tsv(txt, preproc_files[MUT_TXT])
+         write.tsv(txt, preproc_files[[MUT_TXT]])
          rm(txt)
          
       } else {
-         if(verbose){ message('> Skipping making txt; output file exists: ',preproc_files[MUT_TXT]) }
+         if(verbose){ message('> Skipping making txt; output file exists: ',preproc_files[[MUT_TXT]]) }
       }
    }
+   
+   preprocSnvIndelVcfs('som')
+   
+   if(!is.na(input.file.paths$germ_vcf)){
+      preprocSnvIndelVcfs('germ')
+   } else {
+      if(verbose){ message('\n## Skipping germline vcf processing as none was provided') }
+   }
+   
    
    ## Make preliminary output ========================================================
    mut_profile_dir <- paste0(out.dir,'/mut_profiles/')
@@ -233,6 +243,10 @@ detGeneStatuses <- function(
       som=paste0(mut_profile_dir,'/mut_profile_som.txt.gz'),
       germ=paste0(mut_profile_dir,'/mut_profile_germ.txt.gz')
    )
+   
+   if(is.na(input.file.paths$germ_vcf)){ 
+      mut_profile_paths$germ <- NULL
+   }
    
    if( all(file.exists(unlist(mut_profile_paths))) ){
       mut_profile <- lapply(mut_profile_paths, function(i){
@@ -247,14 +261,14 @@ detGeneStatuses <- function(
       
       if(verbose){ message('\n## Annotating gene CNV table...') }
       mut_profile$gene_cnv <- mkMutProfileGeneCnv(
-         cnv.file=input.file.paths['cnv'],
+         cnv.file=input.file.paths$cnv,
          sel.cols=sel.cols.cnv,
          verbose=verbose
       )
       
       if(verbose){ message('\n## Annotating germline and somatic mutations...') }
       if(verbose){ message('> som...') }
-      som_txt <- read.delim(preproc_files['som_txt'], stringsAsFactors=F)
+      som_txt <- read.delim(preproc_files[['som_txt']], stringsAsFactors=F)
       mut_profile$som <- mkMutProfileSnvIndel(
          som_txt,
          scoring=SCORING_MUT,
@@ -263,15 +277,17 @@ detGeneStatuses <- function(
          verbose=verbose
       )
       
-      if(verbose){ message('> germ...') }
-      germ_txt <- read.delim(preproc_files['germ_txt'], stringsAsFactors=F)
-      mut_profile$germ <- mkMutProfileSnvIndel(
-         germ_txt,
-         scoring=SCORING_MUT,
-         keep.only.first.eff=T,
-         filter.no.impact.variants=F,
-         verbose=verbose
-      )
+      if(!is.na(input.file.paths$germ_vcf)){
+         if(verbose){ message('> germ...') }
+         germ_txt <- read.delim(preproc_files[['germ_txt']], stringsAsFactors=F)
+         mut_profile$germ <- mkMutProfileSnvIndel(
+            germ_txt,
+            scoring=SCORING_MUT,
+            keep.only.first.eff=T,
+            filter.no.impact.variants=F,
+            verbose=verbose
+         )
+      }
       
       ## Write output
       if(verbose){ message('\n## Exporting mutation profiles...') }
@@ -302,14 +318,16 @@ detGeneStatuses <- function(
       verbose = verbose
    ) 
    
-   if(verbose){ message('> cnv_germ...') }
-   l_gene_diplotypes$cnv_germ <- mkGeneDiplotypesCnvMut(
-      mut.profile.cnv = mut_profile$gene_cnv, 
-      mut.profile.mut = mut_profile$germ, 
-      mut.origin = 'germ',
-      verbose=verbose
-   )
-   
+   if(!is.na(input.file.paths$germ_vcf)){
+      if(verbose){ message('> cnv_germ...') }
+      l_gene_diplotypes$cnv_germ <- mkGeneDiplotypesCnvMut(
+         mut.profile.cnv = mut_profile$gene_cnv, 
+         mut.profile.mut = mut_profile$germ, 
+         mut.origin = 'germ',
+         verbose=verbose
+      )
+   }
+
    if(verbose){ message('> som_som...') }
    l_gene_diplotypes$som_som <- mkGeneDiplotypesMutMut(
       mut.profile.mut1 = mut_profile$som, 
@@ -318,13 +336,15 @@ detGeneStatuses <- function(
       verbose = verbose
    )
    
-   if(verbose){ message('> germ_som...') }
-   l_gene_diplotypes$germ_som <- mkGeneDiplotypesMutMut(
-      mut.profile.mut1 = mut_profile$germ, 
-      mut.profile.mut2 = mut_profile$som, 
-      diplotype.origin = 'germ_som',
-      verbose=verbose
-   )
+   if(!is.na(input.file.paths$germ_vcf)){
+      if(verbose){ message('> germ_som...') }
+      l_gene_diplotypes$germ_som <- mkGeneDiplotypesMutMut(
+         mut.profile.mut1 = mut_profile$germ, 
+         mut.profile.mut2 = mut_profile$som, 
+         diplotype.origin = 'germ_som',
+         verbose=verbose
+      )
+   }
 
    # subset(l_gene_diplotypes$cnv_som, hgnc_symbol %in% c('BRCA1','BRCA2'))
    # View(subset(l_gene_diplotypes$cnv_germ, hgnc_symbol %in% c('BRCA1','BRCA2')))
@@ -380,21 +400,6 @@ detGeneStatuses <- function(
    if(verbose){ message('## Exporting gene diplotype tables...') }
    #write.tsv(gene_diplotypes,paste0(out.dir,'/gene_diplotypes_full.txt.gz'))
    write.tsv(gene_diplotypes_max,paste0(out.dir,'/gene_diplotypes.txt.gz'))
-   
-   # driver_summary <- gene_diplotypes_max[,c('ensembl_gene_id','hgnc_symbol','biall_type','biall_status','a1.max_score','a2.max_score')]
-   # driver_summary <- cbind(
-   #    driver_summary,
-   #    (function(){
-   #       df <- mut_profile$gene_cnv[
-   #          match(driver_summary$ensembl_gene_id, mut_profile$gene_cnv$ensembl_gene_id),
-   #          c('gain_type','gain_ratio_genome','gain_ratio_arm','gain_ratio_focal')
-   #       ]
-   #       df$gain_type <- factor(df$gain_type, c('none','chrom','arm','focal'))
-   #       levels(df$gain_type) <- paste0(0:3,';',levels(df$gain_type))
-   #       return(df)
-   #    })()
-   # )
-   # write.tsv(driver_summary,paste0(out.dir,'/driver_summary.txt.gz'))
    
 }
 
