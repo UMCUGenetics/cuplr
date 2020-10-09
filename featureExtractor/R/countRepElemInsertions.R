@@ -2,7 +2,6 @@
 #'
 #' @param vcf.file Path to vcf file
 #' @param rep.elem.whitelist.path Path to txt file with list of selected repeat elements
-#' @param tag.features If TRUE, will tag the value names with the feature type
 #'
 #' @return An integer vector
 #' @export
@@ -31,10 +30,6 @@ countRepElemInsertions <- function(
    tab <- tab[names(tab) %in% rep_elem_whitelist]
    
    counts[names(tab)] <- tab
-   
-   if(tag.features){
-      names(counts) <- paste0('rep_elem.',names(counts))
-   }
    
    return(counts)
 }
