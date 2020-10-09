@@ -5,13 +5,16 @@
 \title{Make gene driver features from gene diplotypes table}
 \usage{
 getDrivers(
-  gene.diplotypes.path,
+  gene.diplotypes.path = NULL,
+  gene.diplotypes = NULL,
   gene.amp.whitelist.path = GENE_AMP_WHITELIST,
   gene.def.whitelist.path = GENE_DEF_WHITELIST
 )
 }
 \arguments{
 \item{gene.diplotypes.path}{Path to gene_diplotypes.txt.gz (output from geneDriverAnnotator)}
+
+\item{gene.diplotypes}{Alternatively the gene diplotypes dataframe can be provided as input}
 
 \item{gene.amp.whitelist.path}{Path to txt file with list of selected amplified genes}
 
