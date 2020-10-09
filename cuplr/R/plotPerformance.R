@@ -61,13 +61,16 @@ aggregateMatrixList <- function(l, func=function(x){ mean(x, na.rm=T) }, as.matr
 #' the first dot (.) is considered the feature tag
 #' @param n.row Number of facet rows
 #' @param n.col Number of facet columns
+#' @param feature.type.colors A character vector of color hex codes with names being the feature
+#' types
 #'
 #' @return A ggplot object
 #' @export
 #'
 plotTopFeatures <- function(
    m=NULL, cv_out=NULL, top.n=10, infer.feature.type=F,
-   n.row=NULL, n.col=NULL
+   n.row=NULL, n.col=NULL,
+   feature.type.colors=NULL
 ){
    if(!is.null(cv_out)){
       m <- aggregateMatrixList(lapply(cv_out,`[[`,'imp'), as.matrix=T)
@@ -93,11 +96,36 @@ plotTopFeatures <- function(
 
    label_y_pos <- max(df$value) * 0.05
 
-   color_pal <- c(
-      RColorBrewer::brewer.pal(12, 'Set3'),
-      RColorBrewer::brewer.pal(9, 'Pastel1'),
-      RColorBrewer::brewer.pal(8, 'Pastel2')
-   )
+   if(is.null(feature.type.colors)){
+      color_pal <- c(
+         RColorBrewer::brewer.pal(12, 'Set3'),
+         RColorBrewer::brewer.pal(9, 'Pastel1'),
+         RColorBrewer::brewer.pal(8, 'Pastel2')
+      )
+      color_pal <- structure(
+         color_pal[1:length(levels(df$feature_type))],
+         names=levels(df$feature_type)
+      )
+   } else if(feature.type.colors=='auto'){
+      color_pal <- c(
+         sigs="#8DD3C7",
+         kataegis="#FFFFB3",
+         gene_amp="#FB8072",
+         gene_def="#80B1D3",
+         aneuploidy="#FDB462",
+         #arm_loss="#FDB462",
+         #arm_gain="#B3DE69",
+         purple='#BC80BD',
+         sv_types="#FCCDE5",
+         viral_ins="#D9D9D9",
+         fusion="#FFED6F",
+         rep_elem="#CCEBC5",
+         rmd="#BEBADA"
+      )
+   } else {
+      color_pal <- feature.type.colors
+   }
+
 
    require(ggplot2)
    p <- ggplot(df, aes(x=index, y=value)) +
@@ -106,7 +134,7 @@ plotTopFeatures <- function(
       #geom_bar(stat='identity', fill='#659F5B') +
       geom_bar(aes(fill=feature_type), stat='identity') +
       #scale_fill_brewer(palette='Set3') +
-      scale_fill_manual(values=color_pal) +
+      scale_fill_manual(values=color_pal, limits=names(color_pal)) +
 
       geom_text(aes(label=label, y=label_y_pos), angle=90, hjust=0, size=2.5) +
 
