@@ -17,14 +17,12 @@
 #' with the highest segment support (as is done above).
 #' @param keep.chroms Which chromosomes to keep?
 #' @param one.armed.chroms Which chromosomes are considered to have only one arm?
-#' @param tag.features If TRUE, will tag the value names with the feature type
 #' @param verbose Show progress messages?
 #'
 #' @return A named vector of chrom arm copy numbers, or specified writes a table to out.file if
 #' specified
 #' @export
 #'
-#' @examples
 calcChromArmPloidies <- function(
    ## I/O
    cnv.file=NULL, cnv=NULL, out.file=NULL,
@@ -38,7 +36,7 @@ calcChromArmPloidies <- function(
    ## Misc
    keep.chroms=paste0('chr',c(1:22,'X')),
    one.armed.chroms=c(13,14,15,21,22),
-   tag.features=F, verbose=F
+   verbose=F
 ){
    if(!is.null(cnv.file)){
       cnv <- read.delim(cnv.file, check.names=F, stringsAsFactors=F)[,sel.cols]
@@ -171,10 +169,6 @@ calcChromArmPloidies <- function(
    out <- structure(rep(NA,length(chrom_arm_names)), names=chrom_arm_names)
    out[names(ploidies)] <- ploidies
 
-   if(tag.features){
-      names(out) <- paste0('ploidy.',names(out))
-   }
-
    if(is.null(out.file)){
       return(out)
    } else {
@@ -188,49 +182,65 @@ calcChromArmPloidies <- function(
 ################################################################################
 #' Calculate change in chrom arm copy number compared to genome copy number
 #'
+#' @rdname calcChromArmCnChange
+#'
 #' @param x Output from calcChromArmPloidies() as a matrix or vector
+#' @param direction Can be'gain' or 'loss'
 #'
 #' @return A matrix or vector
 #' @export
 #'
-calcChromArmCnChange <- function(x){
-   if(is.matrix(x) | is.data.frame(x)){
-      arm <- x[,-ncol(x)]
-      genome <- x[,ncol(x)]
-   } else if(is.numeric(x)){
-      arm <- x[-length(x)]
-      genome <- x[length(x)]
-   } else {
-      stop('`x` must be a vector or matrix')
-   }
-
-   main <- function(x, mode){
-      x_diff <- arm - genome
-      if(mode=='gain'){ x_diff[x_diff < 0] <- 0 }
-      else { x_diff[x_diff > 0] <- 0 }
-      x_diff <- abs(x_diff)
-
-      if(is.matrix(x) | is.data.frame(x)){
-         colnames(x_diff) <- gsub('^\\w+[.]',paste0(mode,'.'), colnames(x_diff))
-      } else {
-         names(x_diff) <- gsub('^\\w+[.]',paste0(mode,'.'), names(x_diff))
-      }
-
-      return(x_diff)
-   }
-
-   if(is.matrix(x) | is.data.frame(x)){
-      cbind(
-         main(x, 'gain'),
-         main(x, 'loss')
-      )
-   } else {
-      c(
-         main(x, 'gain'),
-         main(x, 'loss')
-      )
-   }
+calcChromArmCnChange <- function (x, ...) {
+   UseMethod("calcChromArmCnChange", x)
 }
 
-#calcChromArmCnChange(df[1,grep('^ploidy',colnames(df))])
+#' @rdname calcChromArmCnChange
+#' @method calcChromArmCnChange numeric
+calcChromArmCnChange.numeric <- function(x, direction){
+   #x <- unlist(features$ploidy[1,])
+
+   genome_index <- which(names(x)=='genome')
+   arm <- x[-genome_index]
+   genome <- x[genome_index]
+
+   x_diff <- arm - genome
+   if(direction=='gain'){
+      x_diff[x_diff < 0] <- 0
+   } else if(direction=='loss') {
+      x_diff[x_diff > 0] <- 0
+   } else {
+      stop("`direction` must be 'gain' or 'loss'")
+   }
+   x_diff <- abs(x_diff)
+
+   return(x_diff)
+}
+
+#' @rdname calcChromArmCnChange
+#' @method calcChromArmCnChange matrix
+calcChromArmCnChange.matrix <- function(m, direction){
+   #m=features$ploidy
+
+   genome_index <- which(colnames(m)=='genome')
+   arm <- m[,-ncol(m)]
+   genome <- m[,ncol(m)]
+
+   x_diff <- arm - genome
+   if(direction=='gain'){
+      x_diff[x_diff < 0] <- 0
+   } else if(direction=='loss') {
+      x_diff[x_diff > 0] <- 0
+   } else {
+      stop("`direction` must be 'gain' or 'loss'")
+   }
+   x_diff <- abs(x_diff)
+
+   return(x_diff)
+}
+
+#' @rdname calcChromArmCnChange
+#' @method calcChromArmCnChange data.frame
+calcChromArmCnChange.data.frame <- calcChromArmCnChange.matrix
+
+
 
