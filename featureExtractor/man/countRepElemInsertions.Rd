@@ -14,8 +14,6 @@ countRepElemInsertions(
 \item{vcf.file}{Path to vcf file}
 
 \item{rep.elem.whitelist.path}{Path to txt file with list of selected repeat elements}
-
-\item{tag.features}{If TRUE, will tag the value names with the feature type}
 }
 \value{
 An integer vector

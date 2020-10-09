@@ -2,35 +2,42 @@
 % Please edit documentation in R/extractFeaturesCuplr.R
 \name{extractFeaturesCuplr}
 \alias{extractFeaturesCuplr}
-\title{Extract SV features from PURPLE and LINX output}
+\title{Extract features for CUPLR}
 \usage{
 extractFeaturesCuplr(
+  germ.vcf.path,
+  som.vcf.path,
+  sv.vcf.path,
   purple.cnv.path,
   purple.purity.path,
   linx.fusion.path,
   linx.viral.inserts.path,
-  driver.catalog.path,
-  out.path = NULL,
-  sample.name = NULL,
+  linx.vis.sv.data.path,
+  out.dir,
+  sample.name,
   verbose = 1
 )
 }
 \arguments{
+\item{germ.vcf.path}{Path to germline SNV/indel vcf}
+
+\item{som.vcf.path}{Path to somatic SNV/indel vcf}
+
+\item{sv.vcf.path}{Path to GRIDSS SV vcf}
+
 \item{purple.cnv.path}{Path to purple cnv file}
 
 \item{purple.purity.path}{Path to purple.purity.tsv file}
 
 \item{linx.fusion.path}{Path to LINX txt file containing fusion data}
 
-\item{linx.viral.inserts.path}{Path to txt file with the columns: SampleId,
-SvId, VirusId, VirusName}
+\item{linx.viral.inserts.path}{Path to txt file with the columns: SampleId,}
 
-\item{driver.catalog.path}{Path to LINX driver catalog txt file}
+\item{linx.vis.sv.data.path}{Path to the LINX txt file containing the annotated SVs}
 
-\item{out.path}{If provided, will write output to path as a 1 column dataframe with the
-sample.name as the column name and feature names as the row names}
+\item{out.dir}{out.dir Path to output dir}
 
-\item{sample.name}{See out.path}
+\item{sample.name}{A character string indicating the sample name}
 
 \item{verbose}{Show messages?}
 }
@@ -38,5 +45,5 @@ sample.name as the column name and feature names as the row names}
 A 1-row data.frame
 }
 \description{
-Extract SV features from PURPLE and LINX output
+Extract features for CUPLR
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/extractFeaturesCuplr.R
 \name{mkFeatureMatrix}
 \alias{mkFeatureMatrix}
-\title{Execute an extraction function from hmfSvFeatureExtractor over a list of files}
+\title{Execute an extraction function from featureExtractor over a list of files}
 \usage{
 mkFeatureMatrix(
   file.paths,
@@ -27,7 +27,7 @@ mkFeatureMatrix(
 A matrix
 }
 \description{
-Execute an extraction function from hmfSvFeatureExtractor over a list of files
+Execute an extraction function from featureExtractor over a list of files
 }
 \examples{
 manifest <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/hmfSvFeatureExtractor/scripts/mk_manifest/manifest.txt.gz')
