@@ -1,5 +1,6 @@
 #' Spawn CV jobs for submission with SLURM
 #'
+#' @param df A dataframe of features and the response variable
 #' @param train.data.path Path to rds file. A dataframe of features and the response variable
 #' @param train.script.path Path to training R script. The following input arguments are required in
 #' within the script:
@@ -19,11 +20,12 @@
 #' @export
 #'
 spawnCvJobs <- function(
-   train.data.path, train.script.path,
+   train.data.path=NULL, df=NULL,
+   train.script.path,
    cv.out.dir=paste0(dirname(train.script.path),'/cv_out/'),
    colname.response='response',
    k=20, seed=1, rm.path.prefix='/Users/lnguyen',
-   time='2:00:00',mem='10G',
+   time='2:00:00',mem='16G',
    verbose=T
 ){
    if(F){
@@ -42,12 +44,19 @@ spawnCvJobs <- function(
    if(verbose){ message('Creating jobs @: ', cv.out.dir) }
    dir.create(cv.out.dir, showWarnings=F, recursive=T)
 
-   if(verbose){ message('Reading training data: ', train.data.path) }
-   df <- readRDS(train.data.path)
+   if(is.null(df)){
+      if(verbose){ message('Reading training data: ', train.data.path) }
+      if(grepl('.rds$',train.data.path)){
+         df <- readRDS(train.data.path)
+      } else {
+         df <- read.delim(train.data.path, check.names=F)
+      }
+   }
+
    n_classes <- length(unique(df[,colname.response]))
 
    if(verbose){ message('Getting fold indexes...') }
-   folds <- mltoolkit::createCvTrainTestSets(df, stratify.by.col=colname.response, k=20, return.data=F)
+   folds <- mltoolkit::createCvTrainTestSets(df, stratify.by.col=colname.response, k=k, return.data=F)
 
    if(verbose){ message('Writing jobs...') }
    for(i in 1:length(folds)){
@@ -166,14 +175,14 @@ gatherCvOutput <- function(
    dir.create(plots_dir, showWarnings=F)
 
    if(verbose){ message('Plotting imp barplots...') }
-   pdf(paste0(plots_dir,'/imp_barplots.pdf'), 18, 10)
-   plot( plotTopFeatures(imp, top.n=50, infer.feature.type=T, n.col=4) )
+   pdf(paste0(plots_dir,'/imp_barplots.pdf'), 16, 10)
+   plot( plotTopFeatures(imp, top.n=40, infer.feature.type=T, n.col=4, feature.type.colors='auto') )
    dev.off()
 
-   if(verbose){ message('Plotting feat imp heatmap...') }
-   pdf(paste0(plots_dir,'/imp_heatmap.pdf'), 17, 8)
-   plot( plotFeatureImpHeatmap(imp, top.n=150) )
-   dev.off()
+   # if(verbose){ message('Plotting feat imp heatmap...') }
+   # pdf(paste0(plots_dir,'/imp_heatmap.pdf'), 17, 8)
+   # plot( plotFeatureImpHeatmap(imp, top.n=150) )
+   # dev.off()
 
    if(verbose){ message('Plotting perf heatmap...') }
    pdf(paste0(plots_dir,'/perf_heatmap.pdf'), 11, 8.5)
@@ -182,10 +191,10 @@ gatherCvOutput <- function(
    })
    dev.off()
 
-   if(verbose){ message('Plotting false negative rates...') }
-   pdf(paste0(plots_dir,'/fnr_heatmap.pdf'), 11, 8)
-   plot( plotFnr(test_set$actual, test_set$prob) )
-   dev.off()
+   # if(verbose){ message('Plotting false negative rates...') }
+   # pdf(paste0(plots_dir,'/fnr_heatmap.pdf'), 11, 8)
+   # plot( plotFnr(test_set$actual, test_set$prob) )
+   # dev.off()
 
 }
 
