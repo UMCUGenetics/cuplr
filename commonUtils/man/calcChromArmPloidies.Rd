@@ -15,7 +15,6 @@ calcChromArmPloidies(
   max.rel.cum.segment.size.diff = 0.1,
   keep.chroms = paste0("chr", c(1:22, "X")),
   one.armed.chroms = c(13, 14, 15, 21, 22),
-  tag.features = F,
   verbose = F
 )
 }
@@ -37,8 +36,6 @@ with the highest segment support (as is done above).}
 \item{keep.chroms}{Which chromosomes to keep?}
 
 \item{one.armed.chroms}{Which chromosomes are considered to have only one arm?}
-
-\item{tag.features}{If TRUE, will tag the value names with the feature type}
 
 \item{verbose}{Show progress messages?}
 }

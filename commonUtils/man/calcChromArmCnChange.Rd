@@ -2,12 +2,23 @@
 % Please edit documentation in R/calcChromArmPloidies.R
 \name{calcChromArmCnChange}
 \alias{calcChromArmCnChange}
+\alias{calcChromArmCnChange.numeric}
+\alias{calcChromArmCnChange.matrix}
+\alias{calcChromArmCnChange.data.frame}
 \title{Calculate change in chrom arm copy number compared to genome copy number}
 \usage{
-calcChromArmCnChange(x)
+calcChromArmCnChange(x, ...)
+
+\method{calcChromArmCnChange}{numeric}(x, direction)
+
+\method{calcChromArmCnChange}{matrix}(m, direction)
+
+\method{calcChromArmCnChange}{data.frame}(m, direction)
 }
 \arguments{
 \item{x}{Output from calcChromArmPloidies() as a matrix or vector}
+
+\item{direction}{Can be'gain' or 'loss'}
 }
 \value{
 A matrix or vector
