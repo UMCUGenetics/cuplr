@@ -1,4 +1,4 @@
-#========= Load default paths on package load =========#
+## Load default paths on package load ================================
 .onLoad <- function(libname, pkgname){
 
    ## Paths within the package
