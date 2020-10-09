@@ -1,86 +1,84 @@
-#' Extract SV features from PURPLE and LINX output
+#' Extract features for CUPLR
 #'
+#' @param germ.vcf.path Path to germline SNV/indel vcf
+#' @param som.vcf.path Path to somatic SNV/indel vcf
+#' @param sv.vcf.path Path to GRIDSS SV vcf
 #' @param purple.cnv.path Path to purple cnv file
-#' @param purple.purity.path Path to purple.purity.tsv file
+#' @param purple.purity.path Path to purple.purity.tsv file 
 #' @param linx.fusion.path Path to LINX txt file containing fusion data
-#' @param linx.viral.inserts.path Path to txt file with the columns: SampleId, 
-#' SvId, VirusId, VirusName
-#' @param driver.catalog.path Path to LINX driver catalog txt file
-#' @param out.dir Path to output dir
-#' @param sample.name If provided, will write output to path as a 1 column dataframe with the 
-#' sample.name as the column name and feature names as the row names
+#' @param linx.viral.inserts.path Path to txt file with the columns: SampleId,  
+#' @param linx.vis.sv.data.path Path to the LINX txt file containing the annotated SVs
+#' @param out.dir out.dir Path to output dir
+#' @param sample.name A character string indicating the sample name
 #' @param verbose Show messages?
 #'
 #' @return A 1-row data.frame
 #' @export
 #'
 extractFeaturesCuplr <- function(
-   purple.cnv.path, purple.purity.path,
-   linx.fusion.path, linx.viral.inserts.path, driver.catalog.path,
-   out.dir, sample.name, verbose=1
+   ## vcfs
+   germ.vcf.path,
+   som.vcf.path,
+   sv.vcf.path,
+   
+   ## PURPLE output
+   purple.cnv.path,
+   purple.purity.path,
+   
+   ## LINX output
+   linx.fusion.path,
+   linx.viral.inserts.path,
+   linx.vis.sv.data.path,
+   
+   out.dir, sample.name, 
+   verbose=1
 ){
    ## Debugging --------------------------------
-   if(F){
-      manifest <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/linx_manifest/manifest_linx_pipeline.txt.gz')
-      
-      counter <- 0
-      manifest <- as.data.frame(lapply(manifest, function(i){
-         counter <<- counter + 1
-         if(counter==1){ return(i) }
-         paste0('/Users/lnguyen/',i)
-      }))
-      
-      ##
-      sample.name <- 'XXXXXXXX'
-      germ.vcf.path=manifest[manifest$sample==sample.name,'germ_vcf']
-      som.vcf.path=manifest[manifest$sample==sample.name,'som_vcf']
-      purple.cnv.path=manifest[manifest$sample==sample.name,'purple_cnv']
-      
-      purple.purity.path=manifest[manifest$sample==sample.name,'purple_purity']
-      linx.fusion.path=manifest[manifest$sample==sample.name,'linx.fusion']
-      linx.viral.inserts.path=manifest[manifest$sample==sample.name,'linx.viral_inserts']
-      linx.vis.sv.data.path=manifest[manifest$sample==sample.name,'linx.vis_sv_data']
-
-      out.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/'
-      
-      verbose=2
-      
-      devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CHORD/processed/scripts_main/mutSigExtractor/')
-      devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/commonUtils/')
-      devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/')
-      devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/')
-   }
+   # if(F){
+   #    
+   #    devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CHORD/processed/scripts_main/mutSigExtractor/')
+   #    devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/commonUtils/')
+   #    devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/')
+   #    devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/')
+   #    
+   #    manifest <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/linx_manifest/manifest_linx_pipeline.txt.gz')
+   #    
+   #    counter <- 0
+   #    manifest <- as.data.frame(lapply(manifest, function(i){
+   #       counter <<- counter + 1
+   #       if(counter==1){ return(i) }
+   #       paste0('/Users/lnguyen/',i)
+   #    }))
+   #    
+   #    ##
+   #    sample.name <- 'XXXXXXXX' ## Prostate
+   #    sample.name <- 'XXXXXXXX' ## CRC
+   #    germ.vcf.path=manifest[manifest$sample==sample.name,'germ_vcf']
+   #    som.vcf.path=manifest[manifest$sample==sample.name,'som_vcf']
+   #    sv.vcf.path=manifest[manifest$sample==sample.name,'sv_vcf']
+   #    
+   #    purple.cnv.path=manifest[manifest$sample==sample.name,'purple_cnv']
+   #    purple.purity.path=manifest[manifest$sample==sample.name,'purple_purity']
+   #    
+   #    linx.fusion.path=manifest[manifest$sample==sample.name,'linx.fusion']
+   #    linx.viral.inserts.path=manifest[manifest$sample==sample.name,'linx.viral_inserts']
+   #    linx.vis.sv.data.path=manifest[manifest$sample==sample.name,'linx.vis_sv_data']
+   # 
+   #    out.dir=paste0(
+   #       '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/',
+   #       sample.name,'/'
+   #    )
+   #    dir.create(out.dir, showWarnings=F)
+   #    
+   #    verbose=2
+   # }
    
    ##--------------------------------
    features <- list()
    
    ##--------------------------------
-   gene_drivers_dir <- paste0(out.dir,'/gene_drivers/')
-   dir.create(gene_drivers_dir, showWarnings=F)
-   
-   gene_diplotypes_path <- paste0(gene_drivers_dir,'/gene_diplotypes.txt.gz')
-   
-   if(!file.exists(gene_diplotypes_path)){
-      if(verbose){ message('> Performing gene driver annotation...') }
-      detGeneStatuses(
-         out.dir=gene_drivers_dir,
-         input.file.paths=c(germ_vcf=germ.vcf.path, som_vcf=som.vcf.path, cnv=purple.cnv.path),
-         sample.name=sample.name,
-         do.snpeff.ann=F,
-         verbose=(verbose==2)
-      )
-   } else {
-      if(verbose){ message('> Skipping gene driver annotation. gene_diplotypes.txt.gz exists') }
-   }
-   
-   #gene_diplotypes <- read.delim(gene_diplotypes_path)
-   gene_drivers <- getDrivers(gene.diplotypes.path=gene_diplotypes_path)
-   features$gene_amp <- gene_drivers$amp
-   features$gene_def <- gene_drivers$def
-   
-   ##--------------------------------
-   if(verbose){ message('> Extracting signatures/contexts...') }
-   features$sigs <- (function(){
+   if(verbose){ message('> Extracting signatures/contexts') }
+   features[['sigs']] <- (function(){
       contexts <- extractContextsSmnvIndel(
          vcf.file=som.vcf.path,
          sample.name=sample.name,
@@ -112,23 +110,14 @@ extractFeaturesCuplr <- function(
       do.call(c, contexts_trans)
    })()
    
-   if(verbose){ message('> Counting kataegis foci...') }
-   features$kataegis <- detectKataegis(vcf.file=som.vcf.path, output.type='count')
-   
-   if(verbose){ message('> Extracting regional mutational density...') }
-   genome_bins <- read.delim(GENOME_BINS)
-   features$rmd <- extractRmd(
-      som.vcf.path, 
-      genome.bins=genome_bins,
-      verbose=(verbose==2)
-   )[,1]
-   features$rmd <- features$rmd / sum(features$rmd )
+   if(verbose){ message('\n> Counting kataegis foci...') }
+   features[['kataegis']] <- detectKataegis(vcf.file=som.vcf.path, output.type='count')
    
    ##--------------------------------
-   if(verbose){ message('> Calculating chrom arm aneuploidy...') }
+   if(verbose){ message('\n> Calculating chrom arm aneuploidy...') }
    arm_ploidy <- calcChromArmPloidies(purple.cnv.path)
    
-   features$aneuploidy <- (function(){
+   features[['aneuploidy']] <- (function(){
       v <- arm_ploidy[-length(arm_ploidy)] / arm_ploidy[length(arm_ploidy)]
       v[!is.finite(v)] <- 0
       return(v)
@@ -138,60 +127,155 @@ extractFeaturesCuplr <- function(
    # features$arm_gain <- calcChromArmCnChange(arm_ploidy,'gain')
    
    ##--------------------------------
+   gene_drivers_dir <- paste0(out.dir,'/gene_drivers/')
+   dir.create(gene_drivers_dir, showWarnings=F)
+   
+   gene_diplotypes_path <- paste0(gene_drivers_dir,'/gene_diplotypes.txt.gz')
+   
+   if(!file.exists(gene_diplotypes_path)){
+      if(verbose){ message('> Performing gene driver annotation...') }
+      detGeneStatuses(
+         out.dir=gene_drivers_dir,
+         input.file.paths=c(germ_vcf=germ.vcf.path, som_vcf=som.vcf.path, cnv=purple.cnv.path),
+         sample.name=sample.name,
+         do.snpeff.ann=F,
+         verbose=(verbose==2)
+      )
+   } else {
+      if(verbose){ message('> Skipping gene driver annotation. gene_diplotypes.txt.gz exists') }
+   }
+   
+   #gene_diplotypes <- read.delim(gene_diplotypes_path)
+   gene_drivers <- getDrivers(gene.diplotypes.path=gene_diplotypes_path)
+   features[['gene_amp']] <- gene_drivers$amp
+   features[['gene_def']] <- gene_drivers$def
+   
+   ##--------------------------------
    if(verbose){ message('> Getting PURPLE gender and whole genome duplication status...') }
-   features$purple <- rbind(getPurplePurityData(purple.purity.path), deparse.level=0)
+   features[['purple']] <- getPurplePurityData(purple.purity.path)
    
    ##--------------------------------
    if(verbose){ message('> Extracting LINX SV contexts...') }
-   features$sv_types <- extractContextsSvLinx(linx.vis.sv.data.path)
+   features[['sv_types']] <- extractContextsSvLinx(linx.vis.sv.data.path)
    
    ##--------------------------------
    if(verbose){ message('> Identifying viral inserts...') }
-   features$viral_inserts <- getViralInsertions(linx.viral.inserts.path)
+   features[['viral_ins']] <- getViralInsertions(linx.viral.inserts.path)
    
    ##--------------------------------
    if(verbose){ message('> Identifying gene fusions...') }
-   features$fusions <- getGeneFusions(linx.fusion.path)
+   features[['fusion']] <- getGeneFusions(linx.fusion.path)
    
+   if(verbose){ message('> Counting repetitive element insertions...') }
+   features[['rep_elem']] <- countRepElemInsertions(sv.vcf.path)
    
    ##--------------------------------
-   if(verbose){ message('> Making final feature vector...') }
+   if(verbose){ message('\n> Extracting regional mutational density...') }
+   genome_bins <- read.delim(GENOME_BINS)
+   features[['rmd']] <- (function(){
+      v <- extractRmd(
+         som.vcf.path, 
+         genome.bins=genome_bins,
+         verbose=(verbose==2)
+      )[,1]
+      
+      v <- v / sum(v)
+      v[is.na(v)] <- 0
+      return(v)
+   })()
    
-   lapply(features, function(i){
-      rbind(i)
-   })
+   ##--------------------------------
+   if(verbose){ message('> Making final feature dataframe...') }
+   df_features <- do.call(cbind, lapply(unname(features), function(i){
+      as.data.frame(rbind(i))
+   }))
+   colnames(df_features) <- unlist(lapply(names(features), function(i){
+      paste0(i,'.',names(features[[i]]))
+   }))
    
-   
-   out <- do.call(c, unname(features))
-
-   if(is.null(out.path)){
-      return(out)
-   } else {
-      sample_name <- if(!is.null(sample.name)){ sample.name } else { basename(purple.cnv.path) }
-      write.table(
-         matrix( out, dimnames=list(names(out), sample_name) ), 
-         out.path, sep='\t', row.names=F, quote=F
-      )
-   }
-   
-   # out <- lapply(features, function(i){
-   #    if(is.vector(i)){ as.data.frame(rbind(i)) }
-   #    else { return(i) }
-   # })
-   # 
-   # out <- do.call(cbind, unname(out))
-   # rownames(out) <- NULL
-   # 
-   # if(is.null(out.path)){
-   #    return(out)
-   # } else {
-   #    write.table(out, out.path, sep='\t', row.names=F, quote=F)
-   # }
+   write.table(
+      df_features, gzfile(paste0(out.dir,'/features.txt.gz')),
+      sep='\t', row.names=F, quote=F
+   )
 }
+
+# if(F){
+#    extractFeaturesCuplr(
+#       germ.vcf.path,
+#       som.vcf.path,
+#       sv.vcf.path,
+# 
+#       ## PURPLE output
+#       purple.cnv.path,
+#       purple.purity.path,
+# 
+#       ## LINX output
+#       linx.fusion.path,
+#       linx.viral.inserts.path,
+#       linx.vis.sv.data.path,
+# 
+#       out.dir, sample.name, verbose=2
+#    )
+# }
+
+####################################################################################################
+#' Read and format features for CUPLR
+#' 
+#' @description Read features from a features.txt.gz file and assign factor levels for categorical
+#' features
+#'
+#' @param features.path Path to features.txt.gz file
+#'
+#' @return A 1-row dataframe
+#' @export
+#'
+readFeaturesCuplr <- function(features.path){
+   
+   features <- read.delim(features.path, check.names=F)
+   
+   features_split <- splitFeaturesByGroup(features)
+   
+   ## Assign factor levels
+   features_split$gene_def <- as.factor.data.frame(
+      features_split$gene_def,
+      c("none","mut","mut,mut","loh,mut","loh_arm,mut","loh_chrom,mut","deep_deletion")
+   )
+   features_split$purple$purple.gender <- factor(features_split$purple$purple.gender, c('female','male'))
+   
+   ## Merge back into one dataframe
+   do.call(cbind, unname(features_split))
+}
+
+# if(F){
+#    sample.name='XXXXXXXX' ## Prostate
+#    sample.name='XXXXXXXX' ## CRC
+#    features.path=sprintf(
+#       '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/%s/features.txt.gz',
+#       sample.name
+#    )
+#    #file.exists(features.path)
+# 
+#    devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/')
+#    cuplr <- readRDS('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.09c_originalFeatures/model.rds')
+#    cuplr <- readRDS(CUPLR)
+# 
+#    features_allSamples <- readFeaturesCuplr('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.09c_originalFeatures/features/features_allSamples.txt.gz')
+#    pred1 <- predict.randomForestEnsemble(cuplr, features_allSamples, type='prob')
+#    pred1[sample.name,]
+# 
+#    #colnames(features_allSamples)[ !(colnames(features_allSamples) %in% colnames(features)) ]
+#    #colnames(features)
+#    features <- readFeaturesCuplr(features.path)
+#    predict.randomForestEnsemble(cuplr, features, type='prob')
+# }
+
+
+
+
 
 
 ####################################################################################################
-#' Execute an extraction function from hmfSvFeatureExtractor over a list of files
+#' Execute an extraction function from featureExtractor over a list of files
 #'
 #' @param file.paths A vector of file paths that will be passed to `func`
 #' @param sample.names A vector of sample names
