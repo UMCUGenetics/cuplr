@@ -18,8 +18,6 @@ variant calling pipeline.
 
   - Genes bed file; with the chromosome/start/end coordinates, and
     ENSEMBL gene IDs of the desired genes
-  - Exons bed file; similar as above, additionally with the ENSEMBL exon
-    IDs
 
 <!-- end list -->
 
@@ -30,6 +28,11 @@ variant calling pipeline.
     ## 4    10  27035422  27150116   11320        ABI1 ENSG00000136754
     ## 5     9 133589233 133763162      76        ABL1 ENSG00000097007
     ## 6     1 179068362 179198919      77        ABL2 ENSG00000143322
+
+  - Exons bed file; similar as above, additionally with the ENSEMBL exon
+    IDs
+
+<!-- end list -->
 
     ##   chrom    start      end ensembl_exon_id hgnc_symbol ensembl_gene_id
     ## 1    10 52570800 52570936 ENSE00001093113        A1CF ENSG00000148584
@@ -63,12 +66,9 @@ specify the path to a `bed.file`, but if unspecified, the one included
 in this package will be used. The user may also optionally specify the
 path to the java binary (`java.path`; default is the one installed on
 the system), as well as the path to the SnpSift jar (`snpsift.path`;
-default is the jar included at
+default is the jar included at `inst/dep/SnpSift.jar`).
 
-~~~~ inst/dep/snpsift.jar```).
-
-
-```r
+``` r
 detGeneStatuses(
    out.dir='/path/to/write/output/files/', 
    input.file.paths=c(
@@ -91,7 +91,7 @@ detGeneStatuses(
    
    verbose=T
 )
-~~~~
+```
 
 The output is a table where each row contains (1) data about copy number
 gains at the chromosome arm level relative to the genome ploidy, and
