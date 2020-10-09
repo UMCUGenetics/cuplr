@@ -1,0 +1,4 @@
+LINE/L1
+Satellite/centr
+Simple_repeat
+SINE/Alu
