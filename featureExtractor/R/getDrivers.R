@@ -20,30 +20,31 @@ getDrivers <- function(
       gene.diplotypes <- read.delim(gene.diplotypes.path)
    }
    
-   driver_summary <- gene.diplotypes[,c('hgnc_symbol','biall_type','hit_score','gain_type','gain_ratio_focal','gain_ratio_genome')]
+   df <- gene.diplotypes[,c('hgnc_symbol','biall_type','hit_score','gain_type','gain_ratio_focal','gain_ratio_genome')]
    
    gene_amp_whitelist <- read.table(gene.amp.whitelist.path, header=F, stringsAsFactors=F)[,1]
    gene_def_whitelist <- read.table(gene.def.whitelist.path, header=F, stringsAsFactors=F)[,1]
    
    ## Amp
-   driver_summary$gain_type[driver_summary$gain_ratio_genome < 3] <- 'none' ## select confident amp
-   driver_summary$gain_type[driver_summary$gain_type!='focal'] <- 'none'
-   driver_summary$gain_ratio_focal[gene.diplotypes$gain_type!='focal'] <- 0
+   df$gain_type[df$gain_ratio_genome < 3] <- 'none' ## select confident amp
+   df$gain_type[df$gain_type!='focal'] <- 'none'
+   df$gain_ratio_focal[gene.diplotypes$gain_type!='focal'] <- 0
+   df$gain_ratio_focal[!is.finite(gene.diplotypes$gain_ratio_focal)] <- 0
    
    ## Def
-   driver_summary$biall_type[driver_summary$hit_score < 9] <- 'none' ## select confident biall loss
+   df$biall_type[df$hit_score < 9] <- 'none' ## select confident biall loss
    
    out <- list()
    
    out$amp <- (function(){
-      df <- driver_summary[driver_summary$hgnc_symbol %in% gene_amp_whitelist,]
-      #structure(df$gain_type=='focal', names=df$hgnc_symbol)
-      structure(df$gain_ratio_focal, names=df$hgnc_symbol)
+      df_ss <- df[df$hgnc_symbol %in% gene_amp_whitelist,]
+      #structure(df_ss$gain_type=='focal', names=df_ss$hgnc_symbol)
+      structure(df_ss$gain_ratio_focal, names=df_ss$hgnc_symbol)
    })()
    
    out$def <- (function(){
-      df <- driver_summary[driver_summary$hgnc_symbol %in% gene_def_whitelist,]
-      structure(df$biall_type, names=df$hgnc_symbol)
+      df_ss <- df[df$hgnc_symbol %in% gene_def_whitelist,]
+      structure(df_ss$biall_type, names=df_ss$hgnc_symbol)
    })()
    
    return(out)
