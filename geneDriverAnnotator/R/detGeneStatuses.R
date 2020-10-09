@@ -263,6 +263,7 @@ detGeneStatuses <- function(
       mut_profile$gene_cnv <- mkMutProfileGeneCnv(
          cnv.file=input.file.paths$cnv,
          sel.cols=sel.cols.cnv,
+         exons.bed.file=exons.bed.file,
          verbose=verbose
       )
       
