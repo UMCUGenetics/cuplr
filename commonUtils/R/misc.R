@@ -13,36 +13,23 @@ rle2Clusters <- function(x){
 }
 
 ####################################################################################################
-#' Combine feature columns by summing them together
+#' Write tsv file
 #'
-#' @param x A matrix or dataframe
-#' @param target.features A character vector of column (feature) names
-#' @param regex Instead of target.features, a regex can be specified
-#' @param target.name A name to assign the new feature. If unspecified, will use the name of the
-#' first old feature
+#' @param x The object to be written, preferably a matrix or data frame. If not, it is attempted to
+#' coerce x to a data frame.
+#' @param file Path to the output file. If file ends with .gz, a gzip compressed file will be written
+#' @param ... Arguments that can be passed to write.table()
 #'
-#' @return The original matrix or dataframe with the indicated features combined
+#' @return
 #' @export
 #'
-combineFeatures <- function(x, target.features=NULL, regex=NULL, target.name=NULL){
-
-   if(!is.null(regex)){
-      target.features <- grep(regex,colnames(x),value=T)
-      if(length(target.features)==0){ stop('No features match the regex pattern') }
-   }
-
-   target_col <- target.features[1]
-
-   x[,target_col] <- rowSums(x[,target.features])
-
-   rm_cols <- target.features[target.features!=target_col]
-   x <- x[,!(colnames(x) %in% rm_cols)]
-
-   if(!is.null(target.name)){
-      colnames(x)[colnames(x)==target_col] <- target.name
-   }
-
-   return(x)
+write.tsv <- function(x, file, ...){
+   write.table(
+      x,
+      if(grepl('[.]gz$',file)){ gzfile(file) } else { file },
+      sep='\t', quote=F, row.names=F,
+      ...
+   )
 }
 
 ####################################################################################################
@@ -66,26 +53,6 @@ insertRow <- function(df, row.num, new.row=NULL, offset=1) {
    df[row.num+offset,] <- new.row
 
    return(df)
-}
-
-####################################################################################################
-#' Write tsv file
-#'
-#' @param x The object to be written, preferably a matrix or data frame. If not, it is attempted to
-#' coerce x to a data frame.
-#' @param file Path to the output file. If file ends with .gz, a gzip compressed file will be written
-#' @param ... Arguments that can be passed to write.table()
-#'
-#' @return
-#' @export
-#'
-write.tsv <- function(x, file, ...){
-   write.table(
-      x,
-      if(grepl('[.]gz$',file)){ gzfile(file) } else { file },
-      sep='\t', quote=F, row.names=F,
-      ...
-   )
 }
 
 ####################################################################################################
@@ -116,9 +83,40 @@ insColAfter <- function(df, v, after, colname=NULL){
    return(df_new)
 }
 
+####################################################################################################
+#' Return first rows and columns of a matrix or dataframe
+#'
+#' @param m A matrix or dataframe
+#' @param rows Number of rows
+#' @param cols Number of cols
+#'
+#' @return The subsetted matrix or dataframe
+#' @export
+#'
+head2 <- function(m, rows=10, cols=10){
+   m[1:rows,1:cols]
+}
 
+####################################################################################################
+#' Convert all columns of a dataframe into factors
+#'
+#' @param df A dataframe
+#' @param levels A character vector of factor levels
+#' @param ... Arguments that can be passed to factor()
+#'
+#' @return A factor dataframe
+#' @export
+#'
+as.factor.data.frame <- function(df, levels, ...){
+   #df=features$gene_def
+   #levels=c("none","mut","mut,mut","loh,mut","loh_arm,mut","loh_chrom,mut","deep_deletion")
 
-
+   out <- as.data.frame(lapply(df, function(i){
+      factor(i, levels, ...)
+   }))
+   dimnames(out) <- dimnames(df)
+   return(out)
+}
 
 
 
