@@ -55,24 +55,24 @@ detBiallStatus <- function(gene.diplotypes){
    with(gene.diplotypes,{
       unlist(Map(function(a1.eff, a2.eff, a1.max_score, a2.max_score){
          if(a1.eff=='deep_deletion'){ 
-            return('8;deep_deletion') 
+            return('deep_deletion') 
          }
          
          if(grepl('^loh',a1.eff)){
-            if(a2.max_score==5){ return('7;loh,mut_pathogenic') }
-            if(a2.max_score==4){ return('6;loh,mut_likely_pathogenic') }
-            if(a2.max_score==3){ return('5;loh,mut_vus') }
-            return('3;loh_only')
+            if(a2.max_score==5){ return('loh,mut_pathogenic') }
+            if(a2.max_score==4){ return('loh,mut_likely_pathogenic') }
+            if(a2.max_score==3){ return('loh,mut_vus') }
+            return('loh_only')
          }
          
          if(a1.eff!='loh' & a1.max_score==5 & a2.max_score==5){ 
-            return('4;2x_mut_pathogenic') 
+            return('2x_mut_pathogenic') 
          } ## germ+som and som+som cases
          
-         if(a1.max_score==5 | a2.max_score==5){ return('2;mut_pathogenic') }
-         if(a1.max_score==4 | a2.max_score==4){ return('1;mut_likely_pathogenic') }
+         if(a1.max_score==5 | a2.max_score==5){ return('mut_pathogenic') }
+         if(a1.max_score==4 | a2.max_score==4){ return('mut_likely_pathogenic') }
          
-         return('0;none')
+         return('none')
       }, a1.eff, a2.eff, a1.max_score, a2.max_score, USE.NAMES=F))
    })
 }
@@ -82,20 +82,25 @@ detBiallType <- function(gene.diplotypes){
    with(gene.diplotypes,{
       unlist(Map(function(a1.eff, a2.eff, a1.max_score, a2.max_score, diplotype_origin){
          
-         if(a1.eff=='deep_deletion'){ return('6;deep_deletion') }
+         if(a1.eff=='deep_deletion'){ return('deep_deletion') }
          
          ## LOH
-         if(a1.eff=='loh' & a2.max_score>=4){ return('5;loh,mut') }
-         if(a1.eff=='loh_arm' & a2.max_score>=4){ return('4;loh_arm,mut') }
-         if(a1.eff=='loh_chrom' & a2.max_score>=4){ return('3;loh_chrom,mut') }
+         if(a1.eff=='loh' & a2.max_score>=4){ return('loh,mut') }
+         if(a1.eff=='loh_arm' & a2.max_score>=4){ return('loh_arm,mut') }
+         if(a1.eff=='loh_chrom' & a2.max_score>=4){ return('loh_chrom,mut') }
          
          ## germ+som and som+som cases
-         if(diplotype_origin %in% c('germ_som','som_som')){
-            if(a1.max_score==5 & a2.max_score==5){ return('2;mut,mut') }
-            if(a1.max_score>=5 | a2.max_score>=5){ return('1;mut') }
+         if(diplotype_origin=='som_som'){
+            if(a1.max_score==5 & a2.max_score==5){ return('mut,mut') }
+            if(a1.max_score>=5 | a2.max_score>=5){ return('mut') }
          }
          
-         return('0;none')
+         if(diplotype_origin=='germ_som'){
+            if(a1.max_score==5 & a2.max_score==5){ return('mut,mut') }
+            if(a2.max_score>=5){ return('mut') }
+         }
+         
+         return('none')
       }, a1.eff, a2.eff, a1.max_score, a2.max_score, diplotype_origin, USE.NAMES=F))
    })
 }

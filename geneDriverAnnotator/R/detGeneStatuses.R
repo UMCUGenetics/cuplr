@@ -386,7 +386,6 @@ detGeneStatuses <- function(
          c('gain_type','gain_ratio_genome','gain_ratio_arm','gain_ratio_focal','gain_ratio_max')
       ]
       df$gain_type <- factor(df$gain_type, c('none','chrom','arm','focal'))
-      levels(df$gain_type) <- paste0(0:3,';',levels(df$gain_type))
       return(df)
    })()
    
