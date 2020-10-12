@@ -49,9 +49,9 @@ BiocManager::install("GenomeInfoDb")
 install.packages("devtools")
 ```
 
-`geneDriverAnnotator` also requires SnpEff/SnpSift and java. However,
-these have been embedded at `geneDriverAnnotator/dep/` and do not need
-to be installed separately
+`geneDriverAnnotator` also requires `SnpEff`/`SnpSift` and `java`.
+However, these have been embedded at `geneDriverAnnotator/dep/` and do
+not need to be installed separately
 
 In bash, run the following commands to download CUPLR and
 mutSigExtractor:
