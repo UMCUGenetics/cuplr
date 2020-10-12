@@ -60,7 +60,7 @@ mutSigExtractor:
     git clone https://github.com/UMCUGenetics/cuplr/
     git clone https://github.com/UMCUGenetics/mutSigExtractor/
 
-## Running CUPLR
+## Loading CUPLR
 
 In R, load CUPLR and its dependencies:
 
@@ -83,6 +83,8 @@ devtools::load_all('cuplr/cuplr/')
 devtools::load_all('cuplr/featureExtractor/')
 devtools::load_all('cuplr/geneDriverAnnotator/')
 ```
+
+## Extract features
 
 Extract the features from the HMF pipeline outputs. Note that the gene
 driver annotation takes some time (\~2-5min). The other features take in
@@ -113,18 +115,41 @@ extractFeaturesCuplr(
 ```
 
 This will generate `features.txt.gz` within `out.dir`, a 1-row dataframe
-with feature name header. Use `readFeaturesCuplr()` to read
-`features.txt.gz` into R. This function will load the txt file as a
-dataframe and assign factor levels to categorical features
-(e.g. `gene_def`).
+with feature name header.
 
-Below is what the first few columns look like. Feature names in the
-header follow the regex format `^feature_type.feature_name`.
+Use `readFeaturesCuplr()` to read `features.txt.gz` into R. This
+function will load the txt file as a dataframe and assign factor levels
+to categorical features (e.g. `gene_def`). Below is what the first few
+columns look like. Feature names in the header follow the regex format
+`^feature_type.feature_name`.
 
 ``` r
-features <- readFeaturesCuplr('/path/to/features.txt.gz')
+devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/commonUtils/')
+devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/')
+devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/')
+features <- readFeaturesCuplr('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/CPCT02020731T/features.txt.gz')
 features[,1:5]
 ```
 
     ##   sigs.snv.SBS1 sigs.snv.SBS2 sigs.snv.SBS3 sigs.snv.SBS4 sigs.snv.SBS5
     ## 1      613.0238      135.3868             0      70.66962      813.3634
+
+## Predict cancer type
+
+First load CUPLR with `readRDS()`. Then use
+`predict.randomForestEnsemble()` to obtain the probabilities for each
+cancer type.
+
+``` r
+cuplr <- readRDS(CUPLR) ## `CUPLR` refers to the default path to the random forest model
+predict.randomForestEnsemble(cuplr, features, type='prob')
+```
+
+    ##   Biliary Bone_SoftTissue Breast Colon_Rectum Gastric Head_and_neck Kidney
+    ## 1       0               0      0            0       0             0  0.002
+    ##   Liver Lung Lymphoid Mesothelioma Nervous_system Neuroendocrine Ovary Pancreas
+    ## 1     0    0        0            0              0              0     0        0
+    ##   Prostate Skin Urinary_tract Uterus
+    ## 1    0.996    0         0.002      0
+    ## attr(,"class")
+    ## [1] "matrix" "votes"
