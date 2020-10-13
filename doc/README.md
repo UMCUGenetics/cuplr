@@ -123,16 +123,13 @@ to categorical features (e.g. `gene_def`). Below is what the first few
 columns look like. Feature names in the header follow the regex format
 `^feature_type.feature_name`.
 
-``` r
-devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/commonUtils/')
-devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/')
-devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/')
-features <- readFeaturesCuplr('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/CPCT02020731T/features.txt.gz')
-features[,1:5]
-```
-
     ##   sigs.snv.SBS1 sigs.snv.SBS2 sigs.snv.SBS3 sigs.snv.SBS4 sigs.snv.SBS5
     ## 1      613.0238      135.3868             0      70.66962      813.3634
+
+``` r
+features <- readFeaturesCuplr('/path/to/features.txt.gz')
+features[,1:5]
+```
 
 ## Predict cancer type
 
