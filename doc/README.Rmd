@@ -113,11 +113,16 @@ as a dataframe and assign factor levels to categorical features (e.g. `gene_def`
 first few columns look like. Feature names in the header follow the regex format 
 `^feature_type.feature_name`.
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, echo=FALSE}
 devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/commonUtils/')
 devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/')
 devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/')
 features <- readFeaturesCuplr('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/XXXXXXXX/features.txt.gz')
+features[,1:5]
+```
+
+```{r eval=FALSE, error=FALSE}
+features <- readFeaturesCuplr('/path/to/features.txt.gz')
 features[,1:5]
 ```
 
