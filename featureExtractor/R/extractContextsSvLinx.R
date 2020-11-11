@@ -50,111 +50,6 @@ countBinnedSvLen <- function(v.sv.len, bins=c(0, 10^c(3:7), Inf)){
 }
 
 ####################################################################################################
-#' Assign COMPLEX SV subtypes
-#'
-#' @param df A dataframe of the *vis_sv_data.tsv file
-#' @param verbose Show progress?
-#'
-#' @return A data.frame or character vector
-#' @export
-#'
-annotateComplexSVs <- function(df, verbose=F){
-   #df=df_complex[df_complex$SampleId=='XXXXXXXX',]
-   
-   df$Ploidy[df$Ploidy < 0 ] <- 0
-   df$Ploidy <- round(df$Ploidy)
-   
-   df_split <- split(df, factor(df$ClusterId, unique(df$ClusterId)))
-   if(verbose){ 
-      message('Calculating stats for each cluster...') 
-      pb <- txtProgressBar(max=length(df_split), style=3)
-      counter <- 0
-   }
-   
-   cluster_ann <- do.call(rbind, lapply(df_split, function(i){
-      #i=df_split[[2]]
-      
-      if(verbose){ 
-         counter <<- counter + 1
-         setTxtProgressBar(pb,counter) 
-      }
-      
-      n_sv <- nrow(i)
-      
-      ## Chrom
-      tab_chrom <- sort(table(i$ChrStart), decreasing=T)
-      n_chrom <- length(tab_chrom)
-      chrom_prop <- structure(
-         round(tab_chrom[1:3] / n_sv, 3),
-         names=paste0('chrom_',1:3,'_prop')
-      )
-      
-      ## CN states
-      tab_cn <- sort(table(i$Ploidy), decreasing=T)
-      n_cn_states <- length(tab_cn)
-      cn_state_prop <- structure(
-         round(tab_cn[1:3] / n_sv, 3),
-         names=paste0('cn_state_',1:3,'_prop')
-      )
-      
-      foldback_prop <- round(sum(i$InfoStart=='FOLDBACK') / n_sv, 3)
-      max_cn <- max(i$Ploidy)
-      
-      c(
-         n_sv=n_sv,
-         foldback_prop=foldback_prop, 
-         
-         n_chrom=n_chrom, 
-         chrom_prop,
-         
-         max_cn=max_cn, 
-         n_cn_states=n_cn_states,
-         cn_state_prop
-      )
-   }))
-   cluster_ann[is.na(cluster_ann)] <- 0
-   
-   cluster_ann <- cbind(
-      ClusterId=rownames(cluster_ann),
-      as.data.frame(cluster_ann)
-   )
-   rownames(cluster_ann) <- NULL
-   
-   if(verbose){ message('\nDetermining complex type...') }
-   complex_type <- data.frame(
-      foldbacks = with(cluster_ann,{ 
-         foldback_prop>=0.6 &
-            n_sv>=5
-      }),
-      
-      hiSvLoad = cluster_ann$n_sv>=50,
-      
-      fewChrom_ploidyOscill = with(cluster_ann,{ 
-         n_sv>=10 &
-            n_chrom<=2 & 
-            n_cn_states>=2 & 
-            (cn_state_1_prop + cn_state_2_prop)>=0.8
-      }),
-      
-      multiChrom_ploidyStable = with(cluster_ann,{ 
-         n_chrom>=3 & 
-            cn_state_1_prop>=0.8 & 
-            chrom_1_prop>=0.2 & chrom_2_prop>=0.2
-      }),
-      
-      ploidyUnstable = cluster_ann$n_cn_states >= 10
-   )
-   complex_type$other <- !apply(complex_type, 1, any)
-   
-   cluster_ann$type <- colnames(complex_type)[ max.col(complex_type) ]
-   cluster_ann$type <- factor(cluster_ann$type, colnames(complex_type))
-   
-   return(cluster_ann)
-}
-
-COMPLEX_SVTYPES <- c('foldbacks','hiSvLoad','fewChrom_ploidyOscill','multiChrom_ploidyStable','ploidyUnstable','other')
-
-####################################################################################################
 #' Extract SV contexts from LINX
 #'
 #' @param vis.sv.data.path Path to the *vis_sv_data.tsv file
@@ -163,8 +58,9 @@ COMPLEX_SVTYPES <- c('foldbacks','hiSvLoad','fewChrom_ploidyOscill','multiChrom_
 #' @param len.bins.dup A numeric vector specifying the interval breaks to bin DUP lengths
 #' @param resolved.type.annotations.path Path to the txt file containing annotations for each LINX
 #' ResolvedType
-#' @param split.complex If TRUE, COMPLEX SVs will be split into foldbacks, hiSvLoad, 
-#' fewChrom_ploidyOscill, multiChrom_ploidyStable, ploidyUnstable, and other
+#' @param sel.cols A character vector with the names: ResolvedType, ClusterId, PosStart, PosEnd.
+#' The value corresponding to each name should refer to a column name in the txt file. This is used 
+#' to translate the column names in the txt file to the column names that the function will use.
 #'
 #' @return An integer vector of counts
 #' @export
@@ -173,17 +69,22 @@ extractContextsSvLinx <- function(
    vis.sv.data.path=NULL, df=NULL, 
    len.bins.del=c(0, 10^c(3:7), Inf), len.bins.dup=len.bins.del,
    resolved.type.annotations.path=RESOLVED_TYPE_ANNOTATIONS,
-   split.complex=F
+   sel.cols=NULL
 ){
    #vis.sv.data.path='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/analysis/Arne/HMF_linx/sv-linx2/181114_HMFregXXXXXXXX/sv-linx/XXXXXXXX.linx.vis_sv_data.tsv'
    #vis.sv.data.path='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/analysis/Arne/HMF_linx/sv-linx2/160805_HMFregXXXXXXXX/sv-linx/XXXXXXXX.linx.vis_sv_data.tsv'
+   #vis.sv.data.path="/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/COLO829/raw//COLO829v003T.linx.vis_sv_data.tsv"
    #df=vis_sv_data[vis_sv_data$SampleId=='XXXXXXXX',]
    #len.bins.del=c(0, 10^c(3:7), Inf)
    #len.bins.dup=len.bins.del
    #resolved.type.annotations.path=RESOLVED_TYPE_ANNOTATIONS
    
+   ## Load inputs --------------------------------
    if(!is.null(vis.sv.data.path)){ df <- read.delim(vis.sv.data.path, stringsAsFactors=F) }
    
+   required_cols <- c('ResolvedType','ClusterId','PosStart','PosEnd')
+   df <- selectRequiredCols(df, required.cols=required_cols, sel.cols=sel.cols)
+
    resolved_type_annotations <- read.delim(resolved.type.annotations.path, stringsAsFactors=F)
    
    ## Initialize output --------------------------------
@@ -196,7 +97,7 @@ extractContextsSvLinx <- function(
    feature_names <- c(
       interval_names_del,
       interval_names_dup,
-      if(split.complex){ paste0('COMPLEX_',COMPLEX_SVTYPES) } else { 'COMPLEX' },
+      'COMPLEX',
       other_feature_names
    )
    
@@ -224,24 +125,19 @@ extractContextsSvLinx <- function(
    
    counts[names(sv_type_len)] <- sv_type_len
    
-   ## Split complex --------------------------------
-   complex_types <- table( annotateComplexSVs(df)$type )
-   names(complex_types) <- paste0('COMPLEX_',names(complex_types))
-
-   if(split.complex){
-      counts[names(complex_types)] <- complex_types
-   } else {
-      counts['COMPLEX'] <- sum(complex_types)
-   }
+   ## Count complex events --------------------------------
+   df_complex <- df[df$ResolvedType=='COMPLEX',]
+   counts['COMPLEX'] <- length(unique(df_complex[,'ClusterId'])) ## Consider each event cluster as one event
+   
 
    ## Other resolved types --------------------------------
-   df_ss <- df[
+   df_other <- df[
       df$ResolvedType %in% other_feature_names,
       c('ClusterId','ResolvedType')
    ]
    
-   df_ss <- unique(df_ss)
-   tab <- table(df_ss$ResolvedType)
+   df_other <- unique(df_other)
+   tab <- table(df_other$ResolvedType)
    
    counts[names(tab)] <- as.numeric(tab)
    
