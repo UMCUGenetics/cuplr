@@ -3,21 +3,30 @@
 #' @param linx.fusion.path Path to LINX txt file containing fusion data
 #' @param gene.fusion.whitelist.path Path to txt file with list of gene fusions
 #'
+#' @param sel.cols A character vector with the names: Name, ReportedType. The value corresponding 
+#' to each name should refer to a column name in the txt file. This is used to translate the column 
+#' names in the txt file to the column names that the function will use.
+#' 
 #' @return A (0,1) vector
 #' @export
 #' 
 getGeneFusions <- function(
-   linx.fusion.path, gene.fusion.whitelist.path=GENE_FUSION_WHITELIST
+   linx.fusion.path, 
+   gene.fusion.whitelist.path=GENE_FUSION_WHITELIST, sel.cols=NULL
 ){
    #linx.fusion.path='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/analysis/Arne/HMF_linx/sv-linx2/180502_HMFregXXXXXXXX/sv-linx/XXXXXXXX.linx.fusion.tsv'
    #linx.fusion.path='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/analysis/Arne/HMF_linx/sv-linx2/161118_HMFregXXXXXXXX/sv-linx/XXXXXXXX.linx.fusion.tsv'
    #linx.fusion.path='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/analysis/Arne/HMF_linx/sv-linx2/160725_HMFregXXXXXXXX/sv-linx/XXXXXXXX.linx.fusion.tsv'
    
+   ## Load inputs
    gene_fusion_whitelist <- read.table(gene.fusion.whitelist.path, header=F, stringsAsFactors=F)[,1]
    
    fusions <- read.delim(linx.fusion.path, check.names=F, stringsAsFactors=F)
-   fusions$ReportedType[is.na(fusions$ReportedType)] <- ''
+   required_cols <- c('Name','ReportedType')
+   fusions <- selectRequiredCols(fusions, required.cols=required_cols, sel.cols=sel.cols)
    
+   fusions$ReportedType[is.na(fusions$ReportedType)] <- ''
+
    if(nrow(fusions)==0){
       out <- structure(
          rep(FALSE, length(gene_fusion_whitelist)),
@@ -26,7 +35,7 @@ getGeneFusions <- function(
       
       return(out)
    }
-      
+   
    ## Identify intragenic fusions
    fusions <- (function(){
       l <- lapply(strsplit(fusions$Name,'_'),`[`,1:2)
