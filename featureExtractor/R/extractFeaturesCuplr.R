@@ -14,7 +14,10 @@
 #' character vector, where names correspond to the colnames required by CUPLR, and values correspond
 #' to the colnames in the input tables
 #' @param out.dir out.dir Path to output dir
-#' @param sample.name A character string indicating the sample name
+#' @param sample.name A character string indicating the sample name. If NULL, will use the basename
+#' of `som.vcf.path`
+#' @param return.features If TRUE, will return the dataframe of features which can be used directly
+#' in R
 #' @param verbose Show messages?
 #'
 #' @return A 1-row data.frame
@@ -31,8 +34,7 @@ extractFeaturesCuplr <- function(
    linx.fusion.path, linx.viral.inserts.path, linx.vis.sv.data.path,
    
    colname.translations=list(),
-   
-   out.dir, sample.name, 
+   out.dir, sample.name, return.features=FALSE, 
    verbose=1
 ){
    ## Debugging --------------------------------
@@ -102,7 +104,7 @@ extractFeaturesCuplr <- function(
    
    ##--------------------------------
    features <- list()
-   
+
    ##--------------------------------
    if(verbose){ message('> Extracting signatures/contexts') }
    features[['sigs']] <- (function(){
@@ -218,6 +220,8 @@ extractFeaturesCuplr <- function(
       paste0(i,'.',names(features[[i]]))
    }))
    
+   if(is.null(out.dir)){ return(df_features) }
+   
    write.table(
       df_features, gzfile(paste0(out.dir,'/features.txt.gz')),
       sep='\t', row.names=F, quote=F
@@ -249,14 +253,20 @@ extractFeaturesCuplr <- function(
 #' @description Read features from a features.txt.gz file and assign factor levels for categorical
 #' features
 #'
-#' @param features.path Path to features.txt.gz file
+#' @param x Path to the features.txt.gz file, or the output dataframe from `extractFeaturesCuplr()`
 #'
 #' @return A 1-row dataframe
 #' @export
 #'
-readFeaturesCuplr <- function(features.path){
+readFeaturesCuplr <- function(x){
    
-   features <- read.delim(features.path, check.names=F)
+   if(is.character(x)){
+      features <- read.delim(x, check.names=F)
+   } else if(is.data.frame(x)){
+      features <- x
+   } else {
+      stop("x must be the path to the features.txt.gz file, or the output dataframe from extractFeaturesCuplr()")
+   }
    
    features_split <- splitFeaturesByGroup(features)
    
