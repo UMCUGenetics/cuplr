@@ -76,14 +76,24 @@ extractRmd <- function(
    if(nrow(df)!=0){
       df <- df[df$chrom %in% genome.bins$chrom,]
       df$bin_name <- (function(){
+         #counter <- 0
          l <- Map(function(chrom,pos){
+            #counter <<- counter + 1
+            #print(counter)
             which(
                chrom==genome.bins$chrom &
                pos>=genome.bins$start &
                pos<=genome.bins$end
             )
          }, df$chrom, df$pos)
-         l[sapply(l,length)==0] <- NA
+         
+         item_lengths <- sapply(l,length)
+         
+         if(any(item_lengths>1)){ 
+            stop("Some variants fall into multiple bins (overlapping bin coordinates)") 
+         }
+         
+         l[item_lengths==0] <- NA
          genome.bins$bin_name[ unlist(l, use.names=F) ]
       })()
       
