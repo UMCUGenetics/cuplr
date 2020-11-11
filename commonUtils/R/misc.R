@@ -94,6 +94,10 @@ insColAfter <- function(df, v, after, colname=NULL){
 #' @export
 #'
 head2 <- function(m, rows=10, cols=10){
+
+   if(nrow(m)<rows){ rows <- nrow(m) }
+   if(ncol(m)<cols){ cols <- ncol(m) }
+
    m[1:rows,1:cols]
 }
 
