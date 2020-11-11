@@ -8,6 +8,11 @@
 #' @param linx.fusion.path Path to LINX txt file containing fusion data
 #' @param linx.viral.inserts.path Path to txt file with the columns: SampleId,  
 #' @param linx.vis.sv.data.path Path to the LINX txt file containing the annotated SVs
+#' @param colname.translations Used to translate input table colnames to colnames that are
+#' compatible with CUPLR. This is provided as a list with one or more of the following names:
+#' purple.cnv, linx.vis.sv.data, linx.viral.inserts, linx.fusion. Each object should be a named 
+#' character vector, where names correspond to the colnames required by CUPLR, and values correspond
+#' to the colnames in the input tables
 #' @param out.dir out.dir Path to output dir
 #' @param sample.name A character string indicating the sample name
 #' @param verbose Show messages?
@@ -17,61 +22,83 @@
 #'
 extractFeaturesCuplr <- function(
    ## vcfs
-   germ.vcf.path,
-   som.vcf.path,
-   sv.vcf.path,
+   germ.vcf.path, som.vcf.path, sv.vcf.path,
    
    ## PURPLE output
-   purple.cnv.path,
-   purple.purity.path,
+   purple.cnv.path, purple.purity.path,
    
    ## LINX output
-   linx.fusion.path,
-   linx.viral.inserts.path,
-   linx.vis.sv.data.path,
+   linx.fusion.path, linx.viral.inserts.path, linx.vis.sv.data.path,
+   
+   colname.translations=list(),
    
    out.dir, sample.name, 
    verbose=1
 ){
    ## Debugging --------------------------------
-   # if(F){
-   #    
-   #    devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CHORD/processed/scripts_main/mutSigExtractor/')
-   #    devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/commonUtils/')
-   #    devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/')
-   #    devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/')
-   #    
-   #    manifest <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/linx_manifest/manifest_linx_pipeline.txt.gz')
-   #    
-   #    counter <- 0
-   #    manifest <- as.data.frame(lapply(manifest, function(i){
-   #       counter <<- counter + 1
-   #       if(counter==1){ return(i) }
-   #       paste0('/Users/lnguyen/',i)
-   #    }))
-   #    
-   #    ##
-   #    sample.name <- 'XXXXXXXX' ## Prostate
-   #    sample.name <- 'XXXXXXXX' ## CRC
-   #    germ.vcf.path=manifest[manifest$sample==sample.name,'germ_vcf']
-   #    som.vcf.path=manifest[manifest$sample==sample.name,'som_vcf']
-   #    sv.vcf.path=manifest[manifest$sample==sample.name,'sv_vcf']
-   #    
-   #    purple.cnv.path=manifest[manifest$sample==sample.name,'purple_cnv']
-   #    purple.purity.path=manifest[manifest$sample==sample.name,'purple_purity']
-   #    
-   #    linx.fusion.path=manifest[manifest$sample==sample.name,'linx.fusion']
-   #    linx.viral.inserts.path=manifest[manifest$sample==sample.name,'linx.viral_inserts']
-   #    linx.vis.sv.data.path=manifest[manifest$sample==sample.name,'linx.vis_sv_data']
-   # 
-   #    out.dir=paste0(
-   #       '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/',
-   #       sample.name,'/'
-   #    )
-   #    dir.create(out.dir, showWarnings=F)
-   #    
-   #    verbose=2
-   # }
+   if(F){
+
+      devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CHORD/processed/scripts_main/mutSigExtractor/')
+      devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/commonUtils/')
+      devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/')
+      devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/')
+
+      ## COLO 829 ----
+      colo.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/COLO829/raw/'
+      sample.name <- 'COLO829'
+      germ.vcf.path='/Users/lnguyen/Downloads/COLO829v003R.germline.vcf.gz'
+      som.vcf.path=paste0(colo.dir,'/COLO829v003T.purple.somatic.vcf.gz')
+      sv.vcf.path=paste0(colo.dir,'/COLO829v003T.purple.sv.vcf.gz')
+      
+      purple.cnv.path=paste0(colo.dir,'/COLO829v003T.purple.cnv.somatic.tsv')
+      purple.purity.path=paste0(colo.dir,'/COLO829v003T.purple.purity.tsv')
+      
+      linx.fusion.path=paste0(colo.dir,'/COLO829v003T.linx.fusion.tsv')
+      linx.viral.inserts.path=paste0(colo.dir,'/COLO829v003T.linx.viral_inserts.tsv')
+      linx.vis.sv.data.path=paste0(colo.dir,'/COLO829v003T.linx.vis_sv_data.tsv')
+      
+      out.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/COLO829/'
+      dir.create(out.dir, showWarnings=F)
+      verbose=2
+      
+      colname.translations=list(
+         purple.cnv=c(chrom='chromosome',start='start',end='end',total_cn='copyNumber',major_cn='majorAlleleCopyNumber',minor_cn='minorAlleleCopyNumber')
+         #linx.vis.sv.data=c(ResolvedType='ResolvedType',ClusterId='ClusterId',PosStart='PosStart',PosEnd='PosEnd'),
+         #linx.viral.inserts=c(VirusId='VirusId'),
+         #linx.fusion=c(Name='Name',ReportedType='ReportedType')
+      )
+      
+      ## HMF samples ----
+      manifest <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/linx_manifest/manifest_linx_pipeline.txt.gz')
+
+      counter <- 0
+      manifest <- as.data.frame(lapply(manifest, function(i){
+         counter <<- counter + 1
+         if(counter==1){ return(i) }
+         paste0('/Users/lnguyen/',i)
+      }))
+
+      sample.name <- 'XXXXXXXX' ## Prostate
+      sample.name <- 'XXXXXXXX' ## CRC
+      germ.vcf.path=manifest[manifest$sample==sample.name,'germ_vcf']
+      som.vcf.path=manifest[manifest$sample==sample.name,'som_vcf']
+      sv.vcf.path=manifest[manifest$sample==sample.name,'sv_vcf']
+
+      purple.cnv.path=manifest[manifest$sample==sample.name,'purple_cnv']
+      purple.purity.path=manifest[manifest$sample==sample.name,'purple_purity']
+
+      linx.fusion.path=manifest[manifest$sample==sample.name,'linx.fusion']
+      linx.viral.inserts.path=manifest[manifest$sample==sample.name,'linx.viral_inserts']
+      linx.vis.sv.data.path=manifest[manifest$sample==sample.name,'linx.vis_sv_data']
+
+      out.dir=paste0(
+         '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/',
+         sample.name,'/'
+      )
+      dir.create(out.dir, showWarnings=F)
+
+      verbose=2
+   }
    
    ##--------------------------------
    features <- list()
@@ -88,7 +115,7 @@ extractFeaturesCuplr <- function(
       contexts_trans <- splitFeaturesByGroup(contexts, rm.tags=T)
       
       contexts_trans$snv <- (function(){
-         v <- fitToSignatures(SBS_SIGNATURE_PROFILES_V3, contexts_trans$snv)
+         v <- fitToSignatures(mut.context.counts=contexts_trans$snv, signature.profiles=SBS_SIGNATURE_PROFILES_V3)
          
          v <- combineFeatures(v, regex='^SBS7', target.name='SBS7')
          v <- combineFeatures(v, regex='^SBS10', target.name='SBS10')
@@ -115,16 +142,13 @@ extractFeaturesCuplr <- function(
    
    ##--------------------------------
    if(verbose){ message('\n> Calculating chrom arm aneuploidy...') }
-   arm_ploidy <- calcChromArmPloidies(purple.cnv.path)
+   arm_ploidy <- calcChromArmPloidies(purple.cnv.path, sel.cols=colname.translations$purple.cnv)
    
    features[['aneuploidy']] <- (function(){
       v <- arm_ploidy[-length(arm_ploidy)] / arm_ploidy[length(arm_ploidy)]
       v[!is.finite(v)] <- 0
       return(v)
    })()
-   
-   # features$arm_loss <- calcChromArmCnChange(arm_ploidy,'loss')
-   # features$arm_gain <- calcChromArmCnChange(arm_ploidy,'gain')
    
    ##--------------------------------
    gene_drivers_dir <- paste0(out.dir,'/gene_drivers/')
@@ -137,6 +161,7 @@ extractFeaturesCuplr <- function(
       detGeneStatuses(
          out.dir=gene_drivers_dir,
          input.file.paths=c(germ_vcf=germ.vcf.path, som_vcf=som.vcf.path, cnv=purple.cnv.path),
+         sel.cols.cnv=colname.translations$purple.cnv,
          sample.name=sample.name,
          do.snpeff.ann=F,
          verbose=(verbose==2)
@@ -156,15 +181,15 @@ extractFeaturesCuplr <- function(
    
    ##--------------------------------
    if(verbose){ message('> Extracting LINX SV contexts...') }
-   features[['sv_types']] <- extractContextsSvLinx(linx.vis.sv.data.path)
+   features[['sv_types']] <- extractContextsSvLinx(linx.vis.sv.data.path, sel.cols=colname.translations$linx.vis.sv.data)
    
    ##--------------------------------
    if(verbose){ message('> Identifying viral inserts...') }
-   features[['viral_ins']] <- getViralInsertions(linx.viral.inserts.path)
+   features[['viral_ins']] <- getViralInsertions(linx.viral.inserts.path, sel.cols=colname.translations$linx.viral.inserts)
    
    ##--------------------------------
    if(verbose){ message('> Identifying gene fusions...') }
-   features[['fusion']] <- getGeneFusions(linx.fusion.path)
+   features[['fusion']] <- getGeneFusions(linx.fusion.path, sel.cols=colname.translations$linx.fusion)
    
    if(verbose){ message('> Counting repetitive element insertions...') }
    features[['rep_elem']] <- countRepElemInsertions(sv.vcf.path)
