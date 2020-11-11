@@ -10,7 +10,7 @@ extractContextsSvLinx(
   len.bins.del = c(0, 10^c(3:7), Inf),
   len.bins.dup = len.bins.del,
   resolved.type.annotations.path = RESOLVED_TYPE_ANNOTATIONS,
-  split.complex = F
+  sel.cols = NULL
 )
 }
 \arguments{
@@ -25,8 +25,9 @@ extractContextsSvLinx(
 \item{resolved.type.annotations.path}{Path to the txt file containing annotations for each LINX
 ResolvedType}
 
-\item{split.complex}{If TRUE, COMPLEX SVs will be split into foldbacks, hiSvLoad,
-fewChrom_ploidyOscill, multiChrom_ploidyStable, ploidyUnstable, and other}
+\item{sel.cols}{A character vector with the names: ResolvedType, ClusterId, PosStart, PosEnd.
+The value corresponding to each name should refer to a column name in the txt file. This is used
+to translate the column names in the txt file to the column names that the function will use.}
 }
 \value{
 An integer vector of counts

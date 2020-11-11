@@ -8,7 +8,7 @@ getViralInsertions(
   linx.viral.inserts.path,
   viral.host.ref.path = VIRAL_HOST_REF,
   return.counts = F,
-  tag.features = T
+  sel.cols = NULL
 )
 }
 \arguments{
@@ -20,6 +20,10 @@ virus_name, feature_group, cancer_associated}
 
 \item{return.counts}{If TRUE, returns the actual number of viral inserts
 found in a sample}
+
+\item{sel.cols}{A character vector with the names: VirusId. The value corresponding to each name
+should refer to a column name in the txt file. This is used to translate the column names in the
+txt file to the column names that the function will use.}
 }
 \value{
 An integer vector

@@ -13,6 +13,7 @@ extractFeaturesCuplr(
   linx.fusion.path,
   linx.viral.inserts.path,
   linx.vis.sv.data.path,
+  colname.translations = list(),
   out.dir,
   sample.name,
   verbose = 1
