@@ -1,82 +1,3 @@
-####################################################################################################
-#' Create annotations to the germline/somatic tables originating from HMF germline/somatic vcfs
-#'
-#' @description Primarily used to determine
-#'
-#' @param df.snv.indel A germline/somatic table originating from HMF germline/somatic vcfs
-#' @param scoring A list containing the scoring for snpeff, clinvar, and enigma annotation values
-#' @param keep.only.first.eff Only keep first snpeff_eff (items are separated by '&')?
-#' @param verbose Show messages?
-#'
-#' @return The original input dataframe with annotation columns
-#' @export
-#'
-mkMutProfileSnvIndel <- function(
-   df.snv.indel, 
-   scoring=SCORING_MUT,
-   keep.only.first.eff=T,
-   filter.no.impact.variants=T,
-   verbose=T
-){
-   
-   #--------- Sanity checks ---------#
-   if(nrow(df.snv.indel)==0){ 
-      return(data.frame()) 
-   }
-   #df.snv.indel=input_tables$som_txt
-   #df.snv.indel=input_tables$germ_txt
-   
-   #--------- Score annotations ---------#
-   if(verbose){ message('Getting snpEff scores...') }
-   snpeff_eff <- sapply(strsplit(df.snv.indel$snpeff_eff,'&'),`[[`,1)
-   
-   snpeff_score <- unname(scoring$snpeff)[ match(snpeff_eff,names(scoring$snpeff)) ]
-   snpeff_score[is.na(snpeff_score)] <- 0 ## If annotation not found in snpeff table, return 0
-   
-   if(verbose){ message('Getting ClinVar scores...') }
-   clinvar_score <- unname(scoring$clinvar)[ match(df.snv.indel$clinvar_sig,names(scoring$clinvar)) ]
-   clinvar_score[is.na(clinvar_score)] <- 0
-   
-   if(verbose){ message('Assigning hotspot score...') }
-   hotspot_score <- ifelse(df.snv.indel$is_hotspot_mut,5,0)
-   
-   #--------- Calculate max score and which database it came from ---------#
-   if(verbose){ message('Calculating max scores...') }
-   sig_scores <- data.frame(clinvar_score, hotspot_score, snpeff_score, stringsAsFactors=F)
-   
-   sig_scores$max_score <- unlist(Map(function(clinvar_score, hotspot_score, snpeff_score){
-      if(clinvar_score != 0){ return(clinvar_score) }
-      if(hotspot_score != 0){ return(hotspot_score) }
-      if(snpeff_score != 0){ return(snpeff_score) }
-      return(0)
-   }, clinvar_score, hotspot_score, snpeff_score, USE.NAMES=F))
-   
-   sig_scores$max_score_origin <- unlist(Map(function(clinvar_score, hotspot_score, snpeff_score){
-      if(clinvar_score != 0){ return('clinvar') }
-      if(hotspot_score != 0){ return('hotspot') }
-      if(snpeff_score != 0){ return('snpeff') }
-      return('none')
-   }, clinvar_score, hotspot_score, snpeff_score, USE.NAMES=F))
-   
-   #--------- Output ---------#
-   out <- cbind(df.snv.indel, sig_scores)
-   
-   ## Deal with multiple sneff effs
-   if(keep.only.first.eff){
-      if(verbose){ message('Keeping only first snpeff_eff...') }
-      out$snpeff_eff <- gsub('&.+$','',out$snpeff_eff)
-   }
-   
-   if(filter.no.impact.variants){
-      out$snpeff_eff[ 
-         !(out$snpeff_eff %in% names(scoring$snpeff)) & out$max_score==0
-      ] <- 'no_impact_variant'
-   }
-   
-   return(out)
-}
-
-####################################################################################################
 #' Determine gene copy number gains and losses
 #'
 #' @description Annotations deep deletions, truncations, LOH, and amplifications
@@ -102,7 +23,8 @@ mkMutProfileSnvIndel <- function(
 #' @export
 #'
 mkMutProfileGeneCnv <- function(
-   cnv.file,
+   cnv.file=NULL, 
+   #gene.cnv.file=NULL,
    sel.cols=c(chrom='chromosome',start='start',end='end',total_cn='copyNumber',major_cn='majorAllelePloidy',minor_cn='minorAllelePloidy'),
    exons.bed.file=EXONS_BED_FILE, genes.bed.file=NULL, 
    
@@ -112,6 +34,9 @@ mkMutProfileGeneCnv <- function(
    
    deep.del.max.min.copy.number=0.3, 
    loh.max.min.minor.allele.ploidy=0.2,
+   
+   ## Legacy args
+   #genes.enst2ensg.file=GENES_ENST2ENSG,
    
    ## Misc
    verbose=T
@@ -131,20 +56,32 @@ mkMutProfileGeneCnv <- function(
    #sel.cols=c(chrom='chromosome',start='start',end='end',total_cn='total_cn',major_cn='major_cn',minor_cn='minor_cn')
    #cnv.file<-input.file.paths['cnv']
    
-   ## Subsetting for genes ------------------------
-   if(verbose){ message('Reading cnv file...') }
-   cnv <- read.delim(cnv.file, stringsAsFactors=F, check.names=F)
-   colnames(cnv) <- sub('#','', colnames(cnv))
-   cnv <- cnv[,sel.cols]
-   colnames(cnv) <- names(sel.cols)
-   GenomeInfoDb::seqlevelsStyle(cnv$chrom)<- 'NCBI'
-   
+   ## ------------------------
    if(verbose){ message('Reading bed file...') }
    if(!is.null(exons.bed.file)){
       bed <- read.delim(exons.bed.file, stringsAsFactors=F)
+      gene_info <- bed[,c('chrom','gene_start','gene_end','hgnc_symbol','ensembl_gene_id')]
+      colnames(gene_info)[2:3] <- c('start','end')
    } else {
       bed <- read.delim(genes.bed.file, stringsAsFactors=F)
+      gene_info <- bed[,c('chrom','start','end','hgnc_symbol','ensembl_gene_id')]
    }
+   gene_info <- gene_info[!duplicated(gene_info$ensembl_gene_id),]
+   gene_info$chrom_arm <- getChromArm(gene_info[,c('chrom','start','end')], seq.levels.style='NCBI')
+   
+   ## Subsetting for genes ------------------------
+   #if(is.null(gene.cnv.file)){
+   if(verbose){ message('Reading cnv file...') }
+   cnv <- read.delim(cnv.file, stringsAsFactors=F, check.names=F)
+   colnames(cnv) <- sub('#','', colnames(cnv))
+
+   cnv <- selectRequiredCols(
+      df=cnv,
+      required.cols=c('chrom','start','end','total_cn','major_cn','minor_cn'),
+      sel.cols=sel.cols
+   )
+   
+   GenomeInfoDb::seqlevelsStyle(cnv$chrom)<- 'NCBI'
    
    if(verbose){ message('Finding CNVs that overlap with bed file exons...') }
    overlaps <- isOverlappingChromPos(
@@ -212,25 +149,47 @@ mkMutProfileGeneCnv <- function(
    gene_cnv$max_copy_number[!is.finite(gene_cnv$max_copy_number)] <- NA
    gene_cnv$min_minor_allele_ploidy[!is.finite(gene_cnv$min_minor_allele_ploidy)] <- NA
    
-   if(!is.null(exons.bed.file)){
-      gene_info <- bed[,c('chrom','gene_start','gene_end','hgnc_symbol','ensembl_gene_id')]
-      colnames(gene_info)[2:3] <- c('start','end')
-   } else {
-      gene_info <- bed[,c('chrom','start','end','hgnc_symbol','ensembl_gene_id')]
-   }
-   gene_info <- gene_info[!duplicated(gene_info$ensembl_gene_id),]
-   gene_info$chrom_arm <- getChromArm(gene_info[,c('chrom','start','end')], seq.levels.style='NCBI')
-   
    gene_cnv <- cbind(
       gene_info,
       gene_cnv[match(gene_info$ensembl_gene_id, gene_cnv$ensembl_gene_id),-1]
    )
+   # } else {
+   #    gene_cnv_pre <- read.delim(gene.cnv.file, check.names=F)
+   #    
+   #    ## Format columns
+   #    sel_cols=c(
+   #       chrom='Chromosome',start='Start',end='End',
+   #       min_copy_number='MinCopyNumber',max_copy_number='MaxCopyNumber',
+   #       min_minor_allele_ploidy='MinMinorAllelePloidy',
+   #       ensembl_transcript_id='TranscriptId'
+   #    )
+   #    gene_cnv_pre <- gene_cnv_pre[sel_cols]
+   #    colnames(gene_cnv_pre) <- names(sel_cols)
+   #    
+   #    ## Get ENSG ids
+   #    genes_enst2ensg <- read.delim(GENES_ENST2ENSG)
+   #    ins_cols <- genes_enst2ensg[
+   #       match(gene_cnv_pre$ensembl_transcript_id, genes_enst2ensg$ensembl_transcript_id),
+   #       c('ensembl_gene_id','hgnc_symbol')
+   #    ]
+   #    gene_cnv <- cbind(gene_cnv_pre,ins_cols)
+   #    gene_cnv <- gene_cnv[gene_cnv$ensembl_gene_id %in% bed$ensembl_gene_id,]
+   #    gene_cnv <- gene_cnv[order(gene_cnv$hgnc_symbol),]
+   #    
+   #    ## Load CNV 
+   #    cnv <- read.delim(cnv.file, stringsAsFactors=F, check.names=F)
+   #    colnames(cnv) <- sub('#','', colnames(cnv))
+   #    cnv <- cnv[,sel.cols]
+   #    colnames(cnv) <- names(sel.cols)
+   #    GenomeInfoDb::seqlevelsStyle(cnv$chrom)<- 'NCBI'
+   # }
    
    ## ----------------------------------------------------------------
    if(verbose){ message('Calculating arm ploidies...') }
+   sel_cols <- structure(colnames(cnv), names=colnames(cnv)) 
    arm_ploidies <- data.frame(
-      total_cn=calcChromArmPloidies(cnv=cnv, mode='total_cn'),
-      minor_cn=calcChromArmPloidies(cnv=cnv, mode='minor_cn')
+      total_cn=calcChromArmPloidies(cnv=cnv, mode='total_cn', sel.cols=sel_cols),
+      minor_cn=calcChromArmPloidies(cnv=cnv, mode='minor_cn', sel.cols=sel_cols)
    )
    genome_ploidy <- unlist(arm_ploidies['genome',])
    arm_ploidies <- arm_ploidies[rownames(arm_ploidies) != 'genome',]
@@ -298,7 +257,7 @@ mkMutProfileGeneCnv <- function(
    #    gains[gains$hgnc_symbol %in% linx_genes & gains$gain_type!='none',]
    # }
 
-   #--------- Losses ---------#
+   ## ----------------------------------------------------------------
    if(verbose){ message('> Losses...') }
    losses <- gene_cnv
    
