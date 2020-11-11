@@ -8,7 +8,7 @@ Description: Determines gene amplifications and biallelic losses from HMF pipeli
 License: MIT
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 Depends:
 	seqminer
 Suggests:
