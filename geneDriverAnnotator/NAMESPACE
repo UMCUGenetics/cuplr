@@ -3,6 +3,7 @@
 export(annotateVariantType)
 export(detBiallStatus)
 export(detGeneStatuses)
+export(detIsHotspotMut)
 export(ensgToHgncSymbol)
 export(extractVcfFields)
 export(filterVcf)
