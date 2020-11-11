@@ -17,6 +17,7 @@ extractFeaturesCuplr(
   out.dir,
   sample.name,
   return.features = FALSE,
+  write.features = TRUE,
   verbose = 1
 )
 }
@@ -50,6 +51,8 @@ of \code{som.vcf.path}}
 
 \item{return.features}{If TRUE, will return the dataframe of features which can be used directly
 in R}
+
+\item{write.features}{If TRUE, will write the extracted features to features.txt.gz at \code{out.dir}}
 
 \item{verbose}{Show messages?}
 }
