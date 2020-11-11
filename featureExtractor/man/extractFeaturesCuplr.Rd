@@ -18,6 +18,7 @@ extractFeaturesCuplr(
   sample.name,
   return.features = FALSE,
   write.features = TRUE,
+  rm.tmp.files = FALSE,
   verbose = 1
 )
 }
@@ -53,6 +54,8 @@ of \code{som.vcf.path}}
 in R}
 
 \item{write.features}{If TRUE, will write the extracted features to features.txt.gz at \code{out.dir}}
+
+\item{rm.tmp.files}{If TRUE, will remove temporary files from \code{out.dir}}
 
 \item{verbose}{Show messages?}
 }
