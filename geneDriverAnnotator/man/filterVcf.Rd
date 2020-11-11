@@ -21,7 +21,7 @@ filterVcf(
 \item{mode}{Can be 'germ' or 'som'}
 
 \item{bed.file}{Path to bed file specifying the genome intervals to keep (defaults ot the one 
-stored in this package)}
+stored in this package). If NULL, vcf will not be subsetting for bed file regions.}
 
 \item{java.path}{Path to java binary (defaults to the installed JRE location)}
 

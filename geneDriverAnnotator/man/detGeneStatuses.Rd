@@ -16,18 +16,17 @@ detGeneStatuses(
   do.filter.vcf = T,
   do.snpeff.ann = F,
   keep.chroms = c(1:22, "X"),
-  sel.cols.cnv = c(chrom = "chromosome", start = "start", end = "end", total_cn =
-    "copyNumber", major_cn = "majorAllelePloidy", minor_cn = "minorAllelePloidy"),
+  sel.cols.cnv = NULL,
   verbose = T
 )
 }
 \arguments{
 \item{out.dir}{Path to output dir}
 
-\item{input.file.paths}{A list or vector supplying the path output files from the HMF pipeline.}
-
-\item{sample.name}{Name of the sample
+\item{input.file.paths}{A list or vector supplying the path output files from the HMF pipeline.
 This list should be in the form c(germ_vcf='', som_vcf='', cnv='')}
+
+\item{sample.name}{Name of the sample}
 
 \item{genes.bed.file}{Path to the bed file containing the genes of interest. This bed file should 
 also contain the column ensembl_gene_id}
@@ -40,8 +39,14 @@ also contain the column ensembl_gene_id}
 
 \item{snpeff.path}{Path to snpEff.jar}
 
+\item{do.filter.vcf}{Filter vcf for PASS variants and select gene regions?}
+
 \item{do.snpeff.ann}{Annotate SNV/indels variant type with snpeff?
 calcChromArmPloidies().}
+
+\item{keep.chroms}{A character vector indicating which chromosomes to keep}
+
+\item{sel.cols.cnv}{A named character vector}
 
 \item{verbose}{Show progress messages?}
 }

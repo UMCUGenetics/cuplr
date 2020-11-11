@@ -4,7 +4,7 @@
 \alias{getClinSig}
 \title{Get clinical significance by querying a tabix indexed bed file}
 \usage{
-getClinSig(df, db.path, verbose = T)
+getClinSig(df, db.path, col.index = "clinsig", verbose = T)
 }
 \arguments{
 \item{df}{A bed file like dataframe containing the columns: chrom, pos, ref, alt}
