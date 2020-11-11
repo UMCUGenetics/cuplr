@@ -4,10 +4,10 @@
 \alias{readFeaturesCuplr}
 \title{Read and format features for CUPLR}
 \usage{
-readFeaturesCuplr(features.path)
+readFeaturesCuplr(x)
 }
 \arguments{
-\item{features.path}{Path to features.txt.gz file}
+\item{x}{Path to the features.txt.gz file, or the output dataframe from \code{extractFeaturesCuplr()}}
 }
 \value{
 A 1-row dataframe

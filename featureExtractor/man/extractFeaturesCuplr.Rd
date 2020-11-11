@@ -16,6 +16,7 @@ extractFeaturesCuplr(
   colname.translations = list(),
   out.dir,
   sample.name,
+  return.features = FALSE,
   verbose = 1
 )
 }
@@ -44,7 +45,11 @@ to the colnames in the input tables}
 
 \item{out.dir}{out.dir Path to output dir}
 
-\item{sample.name}{A character string indicating the sample name}
+\item{sample.name}{A character string indicating the sample name. If NULL, will use the basename
+of \code{som.vcf.path}}
+
+\item{return.features}{If TRUE, will return the dataframe of features which can be used directly
+in R}
 
 \item{verbose}{Show messages?}
 }
