@@ -2,16 +2,19 @@
 #'
 #' @param out.dir Path to output dir
 #' @param input.file.paths A list or vector supplying the path output files from the HMF pipeline.
-#' @param sample.name Name of the sample
 #' This list should be in the form c(germ_vcf='', som_vcf='', cnv='')
+#' @param sample.name Name of the sample
 #' @param genes.bed.file Path to the bed file containing the genes of interest. This bed file should 
 #' also contain the column ensembl_gene_id
 #' @param exons.bed.file Path to the bed file containing the exons from the genes of interest.
 #' @param java.path Path the the java binary
 #' @param snpsift.path Path to the SnpSift.jar
 #' @param snpeff.path Path to snpEff.jar
+#' @param do.filter.vcf Filter vcf for PASS variants and select gene regions?
 #' @param do.snpeff.ann Annotate SNV/indels variant type with snpeff?
 #' calcChromArmPloidies().
+#' @param keep.chroms A character vector indicating which chromosomes to keep
+#' @param sel.cols.cnv A named character vector
 #' @param verbose Show progress messages?
 #'
 #' @return Writes a diplotypes table to the output dir
@@ -28,7 +31,7 @@ detGeneStatuses <- function(
    ## Defaults for HMF pipeline output
    do.filter.vcf=T, do.snpeff.ann=F,
    keep.chroms=c(1:22,'X'),
-   sel.cols.cnv=c(chrom='chromosome',start='start',end='end',total_cn='copyNumber',major_cn='majorAllelePloidy',minor_cn='minorAllelePloidy'),
+   sel.cols.cnv=NULL,
    
    verbose=T
 ){
@@ -51,7 +54,8 @@ detGeneStatuses <- function(
       sample.name <- 'XXXXXXXX' ## BRCA1 LOH + false hotspot
       
       #out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/test/output/'
-      out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/HMF_DR104/gene_ann_2/'
+      #out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/HMF_DR104/gene_ann_2/'
+      out.parent.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/HMF_DR104/scripts/annotate_genes_jesko/raw/'
       out.dir <- paste0(out.parent.dir,'/',sample.name,'/')
       dir.create(out.dir, recursive=T, showWarnings=F)
 
@@ -91,7 +95,9 @@ detGeneStatuses <- function(
 
       ## Common args
       genes.bed.file=GENES_BED_FILE
+      #genes.bed.file='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/HMF_DR104/scripts/annotate_genes_jesko/genes.txt.gz'
       exons.bed.file=EXONS_BED_FILE
+      #exons.bed.file='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/HMF_DR104/scripts/annotate_genes_jesko/exons.txt.gz'
       java.path=JAVA_PATH
       snpsift.path='/Users/lnguyen/Documents/R_cache/snpEff/SnpSift.jar'
       snpeff.path='/Users/lnguyen/Documents/R_cache/snpEff/snpEff.jar'
@@ -103,11 +109,10 @@ detGeneStatuses <- function(
       stop('out.dir does not exist: ',out.dir)
    }
    
-   if(!all(c('germ_vcf','som_vcf','cnv') %in% names(input.file.paths))){
-      stop("input.file.paths must have the names 'germ_vcf','som_vcf','cnv'")
-   }
-   
    input.file.paths <- as.list(input.file.paths)
+   if(!all(c('germ_vcf','som_vcf') %in% names(input.file.paths)) & !any(c('cnv','gene_cnv') %in% names(input.file.paths))){
+      stop("input.file.paths must have the names: 'germ_vcf','som_vcf'; 'cnv',or 'gene_cnv'")
+   }
    
    ## Pre-process somatic/germline vcfs ========================================================
    preproc_dir <- paste0(out.dir,'/preproc/')
@@ -116,8 +121,8 @@ detGeneStatuses <- function(
    preproc_files <- list()
    
    bed_file <- read.delim(genes.bed.file, stringsAsFactors=F, check.names=F)
-
-   #input.file.paths['som_vcf'] <- '/Users/lnguyen/hpc/cog_bioinf/cuppen/project_data/Luan_projects/datasets/PCAWG_2020/scripts/merge_snv_indel_vcfs/test.vcf.gz'
+   #print(genes.bed.file)
+   #print(exons.bed.file)
    
    preprocSnvIndelVcfs <- function(mut_type=c('germ','som')){
       # mut_type='som'
@@ -262,10 +267,13 @@ detGeneStatuses <- function(
       if(verbose){ message('\n## Annotating gene CNV table...') }
       mut_profile$gene_cnv <- mkMutProfileGeneCnv(
          cnv.file=input.file.paths$cnv,
+         #gene.cnv.file=input.file.paths$gene_cnv,
          sel.cols=sel.cols.cnv,
          exons.bed.file=exons.bed.file,
+         genes.bed.file=genes.bed.file,
          verbose=verbose
       )
+      write.tsv(mut_profile$gene_cnv,mut_profile_paths$gene_cnv)
       
       if(verbose){ message('\n## Annotating germline and somatic mutations...') }
       if(verbose){ message('> som...') }
@@ -277,6 +285,7 @@ detGeneStatuses <- function(
          filter.no.impact.variants=F,
          verbose=verbose
       )
+      write.tsv(mut_profile$som,mut_profile_paths$som)
       
       if(!is.na(input.file.paths$germ_vcf)){
          if(verbose){ message('> germ...') }
@@ -288,12 +297,7 @@ detGeneStatuses <- function(
             filter.no.impact.variants=F,
             verbose=verbose
          )
-      }
-      
-      ## Write output
-      if(verbose){ message('\n## Exporting mutation profiles...') }
-      for(i in names(mut_profile)){
-         write.tsv(mut_profile[[i]],mut_profile_paths[[i]])
+         write.tsv(mut_profile$germ,mut_profile_paths$germ)
       }
    }
    
