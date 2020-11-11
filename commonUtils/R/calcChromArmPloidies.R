@@ -6,7 +6,13 @@
 #' highest cumulative segment size
 #'
 #' @param cnv.file Path to purple cnv file
+#' @param cnv purple cnv file loaded as a dataframe
 #' @param out.file Path to output file. If NULL, returns a named vector
+#' @param sel.cols A character vector with the names: chrom, start, end, total_cn, major_cn,
+#' minor_cn. The value corresponding to each name should refer to a column name in the txt file.
+#' This is used to translate the column names in the txt file to the column names that the function
+#' will use.
+#' @param mode Can be total_cn (for determining arm CN changes) or minor_cn (for determining arm LOH)
 #' @param min.rel.cum.segment.size If a chrom arm has a CN category that covers >0.5 (i.e 50%;
 #' default) of a chrom arm, this CN is the copy number of the arm
 #' @param max.rel.cum.segment.size.diff This value (default 0.1) determines whether which CN
@@ -25,8 +31,7 @@
 #'
 calcChromArmPloidies <- function(
    ## I/O
-   cnv.file=NULL, cnv=NULL, out.file=NULL,
-   sel.cols=c(chrom='chromosome',start='start',end='end',total_cn='copyNumber',major_cn='majorAllelePloidy',minor_cn='minorAllelePloidy'),
+   cnv.file=NULL, cnv=NULL, out.file=NULL, sel.cols=NULL,
 
    ## Params
    mode=c('total_cn','minor_cn'),
@@ -38,10 +43,24 @@ calcChromArmPloidies <- function(
    one.armed.chroms=c(13,14,15,21,22),
    verbose=F
 ){
+
+   ## Load data --------------------------------
    if(!is.null(cnv.file)){
-      cnv <- read.delim(cnv.file, check.names=F, stringsAsFactors=F)[,sel.cols]
+      cnv <- read.delim(cnv.file, check.names=F, stringsAsFactors=F)
    }
-   colnames(cnv) <- names(sel.cols)
+
+   if(is.null(sel.cols)){
+      sel.cols <- c(
+         chrom='chromosome',start='start',end='end',
+         total_cn='copyNumber',major_cn='majorAllelePloidy',minor_cn='minorAllelePloidy'
+      )
+   }
+   
+   cnv <- selectRequiredCols(
+      df=cnv,
+      required.cols=c('chrom','start','end','total_cn','major_cn','minor_cn'),
+      sel.cols=sel.cols
+   )
 
    GenomeInfoDb::seqlevelsStyle(cnv$chrom)<- 'NCBI'
    if(!is.null(keep.chroms)){
