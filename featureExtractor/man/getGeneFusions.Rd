@@ -6,13 +6,18 @@
 \usage{
 getGeneFusions(
   linx.fusion.path,
-  gene.fusion.whitelist.path = GENE_FUSION_WHITELIST
+  gene.fusion.whitelist.path = GENE_FUSION_WHITELIST,
+  sel.cols = NULL
 )
 }
 \arguments{
 \item{linx.fusion.path}{Path to LINX txt file containing fusion data}
 
 \item{gene.fusion.whitelist.path}{Path to txt file with list of gene fusions}
+
+\item{sel.cols}{A character vector with the names: Name, ReportedType. The value corresponding
+to each name should refer to a column name in the txt file. This is used to translate the column
+names in the txt file to the column names that the function will use.}
 }
 \value{
 A (0,1) vector
