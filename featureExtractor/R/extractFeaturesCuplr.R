@@ -19,6 +19,7 @@
 #' @param return.features If TRUE, will return the dataframe of features which can be used directly
 #' in R
 #' @param write.features If TRUE, will write the extracted features to features.txt.gz at `out.dir`
+#' @param rm.tmp.files If TRUE, will remove temporary files from `out.dir`
 #' @param verbose Show messages?
 #'
 #' @return A 1-row data.frame
@@ -37,7 +38,7 @@ extractFeaturesCuplr <- function(
    ## Misc args
    colname.translations=list(),
    out.dir, sample.name, 
-   return.features=FALSE, write.features=TRUE,
+   return.features=FALSE, write.features=TRUE, rm.tmp.files=FALSE,
    verbose=1
 ){
    ## Debugging --------------------------------
@@ -105,7 +106,15 @@ extractFeaturesCuplr <- function(
       verbose=2
    }
    
-   ##--------------------------------
+   ## Init --------------------------------
+   if(!dir.exists(out.dir)){ 
+      stop("out.dir does not exist: ", out.dir) 
+   }
+   
+   if(!return.features & !write.features){ 
+      stop("Both return.features and write.features are FALSE. No output will be generated") 
+   }
+   
    features <- list()
 
    ##--------------------------------
@@ -223,14 +232,23 @@ extractFeaturesCuplr <- function(
       paste0(i,'.',names(features[[i]]))
    }))
    
+   if(rm.tmp.files){
+      if(verbose){ message('> Removing temporary files...') }
+      unlink(gene_drivers_dir, recursive=T)
+   }
+   
    if(write.features){
+      if(verbose){ message('> Writing output...') }
       write.table(
          df_features, gzfile(paste0(out.dir,'/features.txt.gz')),
          sep='\t', row.names=F, quote=F
       )
    }
    
-   if(return.features){ return(df_features) }
+   if(return.features){ 
+      if(verbose){ message('> Returning output...') }
+      return(df_features) 
+   }
    
    return(NULL)
 }
