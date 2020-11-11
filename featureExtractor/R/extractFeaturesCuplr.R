@@ -18,6 +18,7 @@
 #' of `som.vcf.path`
 #' @param return.features If TRUE, will return the dataframe of features which can be used directly
 #' in R
+#' @param write.features If TRUE, will write the extracted features to features.txt.gz at `out.dir`
 #' @param verbose Show messages?
 #'
 #' @return A 1-row data.frame
@@ -33,8 +34,10 @@ extractFeaturesCuplr <- function(
    ## LINX output
    linx.fusion.path, linx.viral.inserts.path, linx.vis.sv.data.path,
    
+   ## Misc args
    colname.translations=list(),
-   out.dir, sample.name, return.features=FALSE, 
+   out.dir, sample.name, 
+   return.features=FALSE, write.features=TRUE,
    verbose=1
 ){
    ## Debugging --------------------------------
@@ -220,12 +223,16 @@ extractFeaturesCuplr <- function(
       paste0(i,'.',names(features[[i]]))
    }))
    
-   if(is.null(out.dir)){ return(df_features) }
+   if(write.features){
+      write.table(
+         df_features, gzfile(paste0(out.dir,'/features.txt.gz')),
+         sep='\t', row.names=F, quote=F
+      )
+   }
    
-   write.table(
-      df_features, gzfile(paste0(out.dir,'/features.txt.gz')),
-      sep='\t', row.names=F, quote=F
-   )
+   if(return.features){ return(df_features) }
+   
+   return(NULL)
 }
 
 # if(F){
