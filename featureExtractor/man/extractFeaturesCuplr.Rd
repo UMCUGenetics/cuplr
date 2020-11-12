@@ -13,9 +13,12 @@ extractFeaturesCuplr(
   linx.fusion.path,
   linx.viral.inserts.path,
   linx.vis.sv.data.path,
-  colname.translations = list(),
+  java.path = JAVA_PATH,
+  snpsift.path = SNPSIFT_PATH,
+  snpeff.path = SNPEFF_PATH,
   out.dir,
   sample.name,
+  colname.translations = list(),
   return.features = FALSE,
   write.features = TRUE,
   rm.tmp.files = FALSE,
@@ -39,16 +42,22 @@ extractFeaturesCuplr(
 
 \item{linx.vis.sv.data.path}{Path to the LINX txt file containing the annotated SVs}
 
-\item{colname.translations}{Used to translate input table colnames to colnames that are
-compatible with CUPLR. This is provided as a list with one or more of the following names:
-purple.cnv, linx.vis.sv.data, linx.viral.inserts, linx.fusion. Each object should be a named
-character vector, where names correspond to the colnames required by CUPLR, and values correspond
-to the colnames in the input tables}
+\item{java.path}{Path the the java binary}
+
+\item{snpsift.path}{Path to the SnpSift.jar}
+
+\item{snpeff.path}{Path to snpEff.jar}
 
 \item{out.dir}{out.dir Path to output dir}
 
 \item{sample.name}{A character string indicating the sample name. If NULL, will use the basename
 of \code{som.vcf.path}}
+
+\item{colname.translations}{Used to translate input table colnames to colnames that are
+compatible with CUPLR. This is provided as a list with one or more of the following names:
+purple.cnv, linx.vis.sv.data, linx.viral.inserts, linx.fusion. Each object should be a named
+character vector, where names correspond to the colnames required by CUPLR, and values correspond
+to the colnames in the input tables}
 
 \item{return.features}{If TRUE, will return the dataframe of features which can be used directly
 in R}
