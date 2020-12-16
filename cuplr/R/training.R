@@ -17,31 +17,24 @@ if(F){
    devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/cuplr/'))
    library(mltoolkit)
 
-   training_data <- (function(){
-      df <- read.delim(
-         '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.09c_originalFeatures/features/features.txt.gz',
-         check.names=F
-      )
+   features <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.10f_rmd1mbSigs/features/features.txt.gz')
+   features$response <- as.factor(features$response)
+   fold_indexes <- readRDS('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.10f_rmd1mbSigs/cv_out/01/fold_indexes.rds')
+}
 
-      #y <- df[,1]
-      #y <- as.factor(y)
-      y <- df[,1]=='Head_and_neck'
 
-      x <- df[,-1]
-      x_split <- splitFeaturesByGroup(x)
-      x_split$gene_def <- as.factor.data.frame(
-         x_split$gene_def,
-         c("none","mut","mut,mut","loh,mut","loh_arm,mut","loh_chrom,mut","deep_deletion")
-      )
-      x_split$purple$purple.gender <- factor(x_split$purple$purple.gender, c('female','male'))
-      x <- do.call(cbind, unname(x_split))
-
-      training_data <- cbind(response=y, x)
-   })()
-
-   tests <- univarFeatSel(x, y, output.type='raw', verbose=T)
-
-   folds <- createCvTrainTestSets(training_data)
+####################################################################################################
+#' Remove columns by name
+#'
+#' @param df A dataframe or matrix
+#' @param columns Column names
+#' @param drop If TRUE the result is coerced to the lowest possible dimension
+#'
+#' @return A dataframe or matrix
+#'
+rmColumns <- function(df, columns, drop=F){
+   if(!is.character(columns)){ stop('`columns must be a character vector`') }
+   df[,!(colnames(df) %in% columns), drop=drop]
 }
 
 ####################################################################################################
@@ -90,10 +83,11 @@ crossValidate <- function(
       fold_seed <- as.integer(paste0(seed,i))
       set.seed(fold_seed)
 
+      cv_msg_prefixt <- paste0('[Fold: ',i,']')
       out <- do.call(
          train.func,
          c(
-            list(train=fold$train, test=fold$test, fold.num=i, verbose=verbose),
+            list(train=fold$train, test=fold$test, msg.prefix=i, verbose=verbose),
             train.func.args
          )
       )
@@ -132,8 +126,6 @@ crossValidate <- function(
 #' @param feat.sel.max.pvalue Only features with p-value lower than this will be kept
 #' @param feat.sel.min.effect.size Effect size threshold for keeping features. Default: 3
 #' (applies to both +3 and -3 effect sizes)
-#' @param feat.sel.min.effect.size.support Minimum number of samples supporting the +ve/-ve effect
-#' sizes. Default: 5
 #' @param feat.sel.top.n.features Only keep the top number of features
 #' @param n.resamples.true Number of resampling values to generate for the TRUE class
 #' @param n.resamples.false Number of resampling values to generate for the FALSE class
@@ -146,8 +138,7 @@ crossValidate <- function(
 #' @param ntree Number of decision trees in the random forest
 #' @param get.local.increments If TRUE, get local increments to calculate feature contributions
 #' @param seed Random seed as an integer
-#' @param fold.num Cross validation fold number. Only used in the prefix of progress messages. If
-#' not specified, no prefix will be displayed.
+#' @param msg.prefix Add prefix to progress messages. If not specified, no prefix will be displayed.
 #' @param verbose Show progress? Can be 0, 1, 2 (increasing verbosity)
 #'
 #' @return A list containing the training output
@@ -160,7 +151,7 @@ trainRandomForest <- function(
    do.feat.sel=T,
    feat.sel.v.alternative=NULL,
    feat.sel.max.pvalue=0.01,
-   feat.sel.min.effect.size=3, feat.sel.min.effect.size.support=5,
+   feat.sel.min.effect.size=3,
    feat.sel.top.n.features=NULL,
 
    ## class balancing
@@ -168,8 +159,8 @@ trainRandomForest <- function(
    n.resamples.true=4, n.resamples.false=4, midpoint.type='geometric',
    min.size.diff=NULL, max.upsample.ratio=10,
 
-   ntree=500, get.local.increments=T,
-   seed=NULL, fold.num=NULL, verbose=1
+   ntree=500, get.local.increments=T, model.tmp.path=NULL,
+   seed=NULL, msg.prefix=NULL, verbose=1
 ){
    if(F){
       #train=folds[[1]]$train
@@ -179,24 +170,24 @@ trainRandomForest <- function(
       ## univariate feature slection
       do.feat.sel=T; feat.sel.v.alternative=NULL;
       feat.sel.max.pvalue=0.01;
-      feat.sel.min.effect.size=NULL; feat.sel.min.effect.size.support=NULL;
-      feat.sel.top.n.features=200;
+      feat.sel.min.effect.size=0.1;
+      feat.sel.top.n.features=300;
 
       ## class balancing
-      balance.classes=T; k.inner=5;
+      balance.classes=F; k.inner=5;
       n.resamples.true=4; n.resamples.false=4; midpoint.type='geometric';
       min.size.diff=NULL; max.upsample.ratio=10;
 
       ntree=500; get.local.increments=T;
-      seed=NULL; fold.num=NULL; verbose=3
+      seed=NULL; msg.prefix=NULL; verbose=3
    }
 
    if(!is.null(seed)){ set.seed(seed) }
 
-   msg_prefix <- if(!is.null(fold.num)){ paste0('[[',fold.num,']] ') } else { '' }
+   msg_prefix <- if(!is.null(msg.prefix)){ msg.prefix } else { '' }
 
    ##----------------------------------------------------------------------
-   if(verbose>=1){message(msg_prefix,'> Preparing input features and response variable...')}
+   if(verbose>=1){message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Preparing input features and response variable...')}
    train_data <- dfToFeaturesAndResponse(train, colname.response=colname.response)
 
    if(any(sapply(train_data$x, is.character))){
@@ -212,124 +203,140 @@ trainRandomForest <- function(
 
    ##----------------------------------------------------------------------
    y <- train_data$y
-   #y <- train_data$y=='Biliary'
+   #y <- train_data$y=='Head_and_neck'
 
    x <- train_data$x
 
    if(do.feat.sel){
-      if(verbose>=1){ message(msg_prefix,'> Performing feature selection...') }
-      x <- univarFeatSel(
+      if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Performing feature selection...') }
+      keep_features <- univarFeatSel(
          x, y,
          v.alternative=feat.sel.v.alternative,
          max.pvalue=feat.sel.max.pvalue,
          min.effect.size=feat.sel.min.effect.size,
-         min.effect.size.support=feat.sel.min.effect.size.support,
          sel.top.n.features=feat.sel.top.n.features,
+         output.type='features',
          verbose=(verbose>=3)
       )
+      x <- x[,keep_features,drop=F]
    }
 
    ##----------------------------------------------------------------------
    out <- list()
    out$model <- NA ## placeholder
 
-   if(balance.classes){
-      if(verbose>=1){ message(msg_prefix,'> Balancing classes...') }
-      resampling_grid <- resamplingGrid(
-         a=sum(y==TRUE), b=sum(y==FALSE),
-         breaks.a=n.resamples.true, breaks.b=n.resamples.false,
-         min.size.diff=min.size.diff, midpoint.type=midpoint.type, max.upsample.ratio=max.upsample.ratio
-      )
-
-      train_new <- structure(cbind(y, x), names=c(colname.response, colnames(x)))
-      perfs_inner_cv <- lapply(1:nrow(resampling_grid), function(i){
-         #i=1
-         size_true <- resampling_grid[i,'size_a']
-         size_false <- resampling_grid[i,'size_b']
-
-         if(verbose>=2){
-            ratio_true <- round(resampling_grid[i,'ratio_a'], 2)
-            ratio_false <- round(resampling_grid[i,'ratio_b'], 2)
-            message(msg_prefix,'>> TRUE, FALSE: ',ratio_true,'x, ', ratio_false,'x')
-         }
-
-         inner_folds <- mltoolkit::createCvTrainTestSets(train_new, stratify.by.col=colname.response, k=k.inner)
-
-         for(j in 1:length(inner_folds)){
-            #j=1
-            inner_folds[[j]]$train <- resampleClasses(
-               df=inner_folds[[j]]$train, colname.response=colname.response,
-               target.sample.sizes=c('TRUE'=size_true,'FALSE'=size_false)
-            )
-         }
-
-         inner_cv <- crossValidate(
-            folds=inner_folds, colname.response=colname.response,
-            train.func=trainRandomForest,
-            train.func.args=list(ntree=ntree, do.feat.sel=F, get.local.increments=F),
-            verbose=(verbose>=3)
-         )
-
-         unlist(lapply(inner_cv, function(j){
-            #j=inner_cv[[1]]
-            pred <- cbind(
-               as.data.frame(j$test_set$probabilities),
-               response=j$test_set$actual
-            )
-
-            confusion <- mltoolkit::confusionMatrix(
-               predicted=pred[,'TRUE'],
-               actual=pred[,'response']
-            )
-
-            perf <- mltoolkit::calcPerfCompound(confusion, compound.metric='pr', metric.names.as.x.y=T)
-            mltoolkit::calcAUC(x=perf[,'x'], y=perf[,'y'])
-         }))
-      })
-
-      resampling_grid$perf <- sapply(perfs_inner_cv, mean)
-      resampling_grid$sd <- sapply(perfs_inner_cv, sd)
-      resampling_grid$best <- FALSE
-      resampling_grid$best[ which.max(resampling_grid$perf) ] <- TRUE
-
-      # resampling_grid$index <- 1:nrow(resampling_grid)
-      # ggplot(resampling_grid, aes(x=index, y=perf)) +
-      #    geom_bar(stat='identity') +
-      #    geom_linerange(aes(ymin=perf-sd, ymax=perf+sd))
-
-      ## Apply class resampling
-      train_new <- resampleClasses(
-         df=train_new, colname.response=colname.response,
-         target.sample.sizes=
-            structure(
-               unlist(subset(resampling_grid, best, c(size_a,size_b))),
-               names=c('TRUE','FALSE')
-            )
-      )
-      x <- train_new[,colnames(train_new)!=colname.response]
-      y <- train_new[,colname.response]
-      rm(train_new)
-
-      out$resampling_grid <- resampling_grid
+   if(!is.null(model.tmp.path) && file.exists(model.tmp.path)){
+      model <- readRDS(model.tmp.path)
    }
 
-   ##----------------------------------------------------------------------
-   if(verbose>=1){ message(msg_prefix,'> Training random forest...') }
-   model <- randomForest::randomForest(
-      x=x,
-      y=if(is.logical(y)){ factor(y, c('TRUE','FALSE')) } else { y }, strata=y,
-      proximity=F, ntree=ntree, importance=T,
-      keep.inbag=T, replace=F, ## required for calculating local increments
-      na.action=na.roughfix,
-      do.trace=F
-   )
+   else {
 
-   if(get.local.increments){
-      if(verbose>=1){ message(msg_prefix,'> Getting local increments...') }
-      ## Used for calculating per sample feature contributions
-      invisible(capture.output(
-         model$localIncrements <- rfFC::getLocalIncrements(model, x)
-      ))
+      ##----------------------------------------------------------------------
+      out <- list()
+      if(balance.classes){
+         if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Balancing classes...') }
+         resampling_grid <- resamplingGrid(
+            a=sum(y==TRUE), b=sum(y==FALSE),
+            breaks.a=n.resamples.true, breaks.b=n.resamples.false,
+            min.size.diff=min.size.diff, midpoint.type=midpoint.type, max.upsample.ratio=max.upsample.ratio
+         )
+
+         train_new <- structure(cbind(y, x), names=c(colname.response, colnames(x)))
+
+         perfs_inner_cv <- lapply(1:nrow(resampling_grid), function(i){
+            #i=1
+            size_true <- resampling_grid[i,'size_a']
+            size_false <- resampling_grid[i,'size_b']
+
+            if(verbose>=2){
+               ratio_true <- round(resampling_grid[i,'ratio_a'], 2)
+               ratio_false <- round(resampling_grid[i,'ratio_b'], 2)
+               message(msg_prefix,'[',format(Sys.time(), "%X"),'] >> TRUE, FALSE: ',ratio_true,'x, ', ratio_false,'x')
+            }
+
+            inner_folds <- mltoolkit::createCvTrainTestSets(train_new, stratify.by.col=colname.response, k=k.inner)
+
+            for(j in 1:length(inner_folds)){
+               #j=1
+               inner_folds[[j]]$train <- resampleClasses(
+                  df=inner_folds[[j]]$train, colname.response=colname.response,
+                  target.sample.sizes=c('TRUE'=size_true,'FALSE'=size_false)
+               )
+            }
+
+            inner_cv <- crossValidate(
+               folds=inner_folds, colname.response=colname.response,
+               train.func=trainRandomForest,
+               train.func.args=list(ntree=ntree, do.feat.sel=F, get.local.increments=F),
+               verbose=(verbose>=3)
+            )
+
+            unlist(lapply(inner_cv, function(j){
+               #j=inner_cv[[1]]
+               pred <- cbind(
+                  as.data.frame(j$test_set$probabilities),
+                  response=j$test_set$actual
+               )
+
+               confusion <- mltoolkit::confusionMatrix(
+                  predicted=pred[,'TRUE'],
+                  actual=pred[,'response']
+               )
+
+               perf <- mltoolkit::calcPerfCompound(confusion, compound.metric='pr', metric.names.as.x.y=T)
+               mltoolkit::calcAUC(x=perf[,'x'], y=perf[,'y'])
+            }))
+         })
+
+         resampling_grid$perf <- sapply(perfs_inner_cv, mean)
+         resampling_grid$sd <- sapply(perfs_inner_cv, sd)
+         resampling_grid$best <- FALSE
+         resampling_grid$best[ which.max(resampling_grid$perf) ] <- TRUE
+
+         # resampling_grid$index <- 1:nrow(resampling_grid)
+         # ggplot(resampling_grid, aes(x=index, y=perf)) +
+         #    geom_bar(stat='identity') +
+         #    geom_linerange(aes(ymin=perf-sd, ymax=perf+sd))
+
+         ## Apply class resampling
+         train_new <- resampleClasses(
+            df=train_new, colname.response=colname.response,
+            target.sample.sizes=
+               structure(
+                  unlist(subset(resampling_grid, best, c(size_a,size_b))),
+                  names=c('TRUE','FALSE')
+               )
+         )
+         x <- train_new[,colnames(train_new)!=colname.response,drop=F]
+         y <- train_new[,colname.response]
+         rm(train_new)
+
+         out$resampling_grid <- resampling_grid
+      }
+
+      ##----------------------------------------------------------------------
+      if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Training random forest...') }
+      model <- randomForest::randomForest(
+         x=x,
+         y=if(is.logical(y)){ factor(y, c('TRUE','FALSE')) } else { y }, strata=y,
+         proximity=F, ntree=ntree, importance=T,
+         keep.inbag=T, replace=F, ## required for calculating local increments
+         na.action=na.roughfix,
+         do.trace=F
+      )
+
+      if(get.local.increments){
+         if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Getting local increments...') }
+         ## Used for calculating per sample feature contributions
+         invisible(capture.output(
+            model$localIncrements <- rfFC::getLocalIncrements(model, x)
+         ))
+      }
+
+      if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Saving tmp model...') }
+      if(!is.null(model.tmp.path)){
+         saveRDS(model, model.tmp.path)
+      }
    }
 
    out$model <- model
@@ -342,16 +349,17 @@ trainRandomForest <- function(
    out$categorical_lvls <- categorical_lvls
 
    ##----------------------------------------------------------------------
-   if(verbose>=1){ message(msg_prefix,'> Calculating feature importance...') }
+   if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Calculating feature importance...') }
    out$imp <- sort(
-      randomForest::importance(model, type=1)[,1],
+      #randomForest::importance(model, type=1)[,1],
+      model$importance[,'MeanDecreaseAccuracy'],
       decreasing=T
    )
 
    ##----------------------------------------------------------------------
    if(!is.null(test)){
       if(verbose>=1){
-         message(msg_prefix,'> Predicting on test set...')
+         message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Predicting on test set...')
       }
       out$test_set <- list(
          probabilities = randomForest:::predict.randomForest(model, test_data$x, type='prob'),
@@ -365,13 +373,6 @@ trainRandomForest <- function(
             levels=colnames(probabilities)
          )
       })
-      # df <- cbind(
-      #    as.data.frame(out$test_set$probabilities),
-      #    class=out$test_set$actual,
-      #    response=out$test_set$actual=='Stomach'
-      # )
-      # df[order(df$response, decreasing=T),]
-      # df[order(df[,'TRUE'], decreasing=T),]
    }
 
    out$seed <- seed
@@ -440,6 +441,22 @@ predict.randomForestEnsemble <- function(object, newdata, type='response', verbo
    rownames(x) <- rownames(newdata)
    colnames(x) <- colnames(newdata)
 
+   ## Fit RMD profiles
+   if(is.matrix(object$rmd_sig_profiles)){
+      x <- (function(){
+         m1 <- object$rmd_sig_profiles
+         m2 <- t(x[,rownames(m1)])
+
+         fit <- NNLM::nnlm(m1, m2)
+         fit <- as.data.frame(t(fit$coefficients))
+         cbind(
+            fit,
+            x[,rownames(m1)],
+            rmColumns( x, grep('^rmd',colnames(x), value=T) )
+         )
+      })()
+   }
+
    if(verbose){ counter <- 0 }
    raw_probs <- do.call(cbind, lapply(object$ensemble, function(i){
       #i=object$ensemble$Breast
@@ -480,10 +497,13 @@ print.randomForestEnsemble <- function(object){
 #' @param test A dataframe containing the training features and response column. Used for testing
 #' the performance of the trained model
 #' @param colname.response The column name of the response variable (i.e. training labels)
+#' @param do.rmd.nmf Perform NMF to convert RMD bins to RMD signatures?
 #' @param args.trainRandomForest A list of arguments that can be passed to `trainRandomForest()`
 #' @param seed Random seed as an integer
 #' @param fold.num Cross validation fold number. Only used in the prefix of progress messages. If
 #' not specified, no prefix will be displayed.
+#' @param tmp.dir A path a temporary directory, which if provided, enables resume capability
+#' @param rm.tmp.dir If TRUE will remove the tmp dir if training completes successfully
 #' @param multi.core Use multiple cores?
 #' @param verbose Show progress? Can be 0, 1, 2 (increasing verbosity)
 #'
@@ -492,9 +512,11 @@ print.randomForestEnsemble <- function(object){
 #'
 trainRandomForestEnsemble <- function(
    train, test=NULL, colname.response='response',
-   args.trainRandomForestEnsemble=list(),
-   inner.holdout.fraction=c(1,4),
-   seed=NULL, fold.num=NULL, tmp.dir=NULL,
+   do.rmd.nmf=F,
+   args.trainRandomForest=list(),
+   inner.holdout.fraction=c(1,3),
+   seed=NULL, msg.prefix=NULL,
+   tmp.dir=NULL, rm.tmp.dir=T,
    multi.core=F, verbose=1
 ){
    if(F){
@@ -509,20 +531,28 @@ trainRandomForestEnsemble <- function(
       inner.holdout.fraction=c(1,3)
 
       seed=NULL
-      fold.num=1
+      msg.prefix=1
       verbose=2
    }
 
+
+   ## Init --------------------------------------------------------
    if(!is.null(seed)){ set.seed(seed) }
 
-   msg_prefix <- if(!is.null(fold.num)){ paste0('[[',fold.num,']] ') } else { '' }
+   msg_prefix <- if(!is.null(msg.prefix)){ msg.prefix } else { '' }
 
    if(!is.null(tmp.dir)){
       dir.create(tmp.dir, showWarnings=F, recursive=T)
    }
 
+   ## Output list
+   out <- list()
+   class(out) <- c('list','randomForestEnsemble')
+   out$ensemble <- NA
+   out$prob_weigher <- NA
+
    ##----------------------------------------------------------------------
-   if(verbose>=1){message(msg_prefix,'> Selecting data for training main ensemble and prob weigher...')}
+   if(verbose>=1){message(msg_prefix,'[',format(Sys.time(), "%X"),'] Selecting data for training main ensemble and prob weigher...')}
    #inner.holdout.fraction=c(1,4)
 
    ## Convert labels to factors
@@ -541,7 +571,44 @@ trainRandomForestEnsemble <- function(
       }
    }
 
-   ## Make holdout set for training porbability weigher
+   ##----------------------------------------------------------------------
+   out$rmd_sig_profiles <- NA
+
+   if(do.rmd.nmf){
+      if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Performing NMF on RMD features...') }
+
+      if(!is.null(tmp.dir)){ dir.create(paste0(tmp.dir,'/nmf/'), showWarnings=T) }
+
+      rmd_sig_profiles <- nmfPerClass(
+         A=train[,grep('^rmd',colnames(train))],
+         response=train[,colname.response],
+         tmp.dir=paste0(tmp.dir,'/nmf/'),
+         #tmp.dir='/Users/lnguyen/Desktop/tmp/',
+         multi.core=multi.core,
+         verbose=verbose
+      )
+
+      out$rmd_sig_profiles <- t(rmd_sig_profiles$sig_profiles)
+      rm(rmd_sig_profiles)
+
+      train <- (function(){
+         m1 <- out$rmd_sig_profiles
+         m2 <- t(train[,rownames(m1)])
+
+         fit <- NNLM::nnlm(m1, m2)
+         fit <- as.data.frame(t(fit$coefficients))
+         colnames(fit) <- paste0('rmd.', colnames(fit))
+
+         cbind(
+            response=train[,colname.response],
+            fit,
+            rmColumns( train, c(grep('^rmd',colnames(train), value=T), colname.response) )
+         )
+      })()
+   }
+
+   ##----------------------------------------------------------------------
+   if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Splitting data for training main ensemble and probability weigher...') }
    inner_folds_indexes <- mltoolkit::createCvTrainTestSets(
       train, k=inner.holdout.fraction[2],
       stratify.by.col=colname.response, return.data=F
@@ -563,56 +630,71 @@ trainRandomForestEnsemble <- function(
    ,]
 
    ##----------------------------------------------------------------------
-   if(verbose){ message(msg_prefix,'> Training random forests; main ensemble...') }
+   if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Training random forests; main ensemble...') }
    y_ohe <- oneHotEncode(as.factor(train_data$ensemble[,colname.response]))
    #y_ohe <- y_ohe[,c('Lymphoid','Prostate')]
 
-   main <- function(i){
-      #i=16
-      #i='Lymphoid'
+   if(!is.null(tmp.dir)){ dir.create(paste0(tmp.dir,'/class_models/'), showWarnings=F) }
 
-      if(verbose==2){ message(msg_prefix, '[',i,'/',ncol(y_ohe),']: ', colnames(y_ohe)[i] ) }
+   doTrain <- function(i){
+      #i=8
+      #i='Gallbladder'
 
-      tmp_rds <- paste0(tmp.dir,'/',colnames(y_ohe)[i],'.rds')
+      #if(verbose==2){ message(msg_prefix, '[',i,'/',ncol(y_ohe),']: ', colnames(y_ohe)[i] ) }
 
-      if(!is.null(tmp.dir) & file.exists(tmp_rds)){
-         rf <- readRDS(tmp_rds)
-         return(rf)
-      }
+      tmp_rds <- paste0(tmp.dir,'/class_models/',colnames(y_ohe)[i],'.rds')
+
+      # if(!is.null(tmp.dir) & file.exists(tmp_rds)){
+      #    rf <- readRDS(tmp_rds)
+      #    return(rf)
+      # }
 
       y <- unname(y_ohe[,i])
       train_new <- train_data$ensemble
       train_new$response <- y_ohe[,i]
 
+      msg_prefix_ct <- paste0('[',i,'/',ncol(y_ohe),': ',colnames(y_ohe)[i],'] ')
       rf <- do.call(
          trainRandomForest,
-         c(list(train=train_new), args.trainRandomForestEnsemble)
+         c(
+            list(
+               train=train_new,
+               msg.prefix=msg_prefix_ct,
+               model.tmp.path=tmp_rds
+            ),
+            args.trainRandomForest
+         )
       )
 
-      if(!is.null(tmp.dir)){ saveRDS(rf, tmp_rds) }
+      #if(!is.null(tmp.dir)){ saveRDS(rf, tmp_rds) }
 
       return(rf)
    }
 
    if(!multi.core){
-      ensemble <- lapply(1:ncol(y_ohe), main)
+      ensemble <- lapply(1:ncol(y_ohe), doTrain)
    } else {
       require(foreach)
       require(parallel)
       require(doParallel)
 
-      #cores <- Sys.getenv("SLURM_NTASKS_PER_NODE")
       cores <- parallel::detectCores()
       if(verbose){ message('Multicore: ',cores,' cores') }
 
       registerDoParallel(cores=cores)
-      ensemble <- foreach(i=1:ncol(y_ohe)) %dopar% { main(i) }
-      #stopCluster(cl)
+      ensemble <- foreach(i=1:ncol(y_ohe)) %dopar% { doTrain(i) }
    }
    names(ensemble) <- colnames(y_ohe)
 
-   out <- list()
-   class(out) <- c('list','randomForestEnsemble')
+   # if(F){
+   #    tmp.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.10a_rmdTad/cv_out/01/tmp/'
+   #    rds_files <- list.files(tmp.dir, pattern='rds$',full.names=T)
+   #    names(rds_files) <- gsub('[.]rds$','',basename(rds_files))
+   #    ensemble <- lapply(rds_files, function(i){
+   #       message(i)
+   #       readRDS(i)
+   #    })
+   # }
 
    out$ensemble <- ensemble
 
@@ -624,9 +706,8 @@ trainRandomForestEnsemble <- function(
    #ensemble <- out$ensemble
 
    ##----------------------------------------------------------------------
-   if(verbose){ message(msg_prefix,'> Training random forest; probability weigher...') }
+   if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Training random forest; probability weigher...') }
    #ensemble <- readRDS('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/training/models/0.06a_ownDrivers/model.rds')$model
-   rmColumns <- function(df, columns){ df[,!(colnames(df) %in% columns)] }
 
    holdout_probs <- do.call(cbind, lapply(ensemble, function(i){
       #i=ensemble$Breast
@@ -641,19 +722,6 @@ trainRandomForestEnsemble <- function(
       response=train_data$prob_weigher[,colname.response],
       as.data.frame(holdout_probs)
    )
-
-   ##
-   # if(F){
-   #    holdout_probs <- readRDS('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/training/models/0.06a_ownDrivers/test_set.rds')
-   #    holdout_probs <- do.call(rbind, lapply(holdout_probs, function(i){
-   #       cbind(
-   #          response=i$actual,
-   #          as.data.frame(i$probabilities)
-   #       )
-   #    }))
-   #    subset(holdout_probs, response=='Biliary')
-   # }
-   ##
 
    prob_weigher <- randomForest::randomForest(
       x=rmColumns(holdout_probs, colname.response),
@@ -675,7 +743,7 @@ trainRandomForestEnsemble <- function(
    out$prob_weigher <- prob_weigher
 
    ##----------------------------------------------------------------------
-   if(verbose){ message(msg_prefix,'> Storing levels from categorical features...') }
+   if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Storing levels from categorical features...') }
    categorical_lvls <- lapply(rmColumns(train_data$prob_weigher, colname.response), levels)
    categorical_lvls <- categorical_lvls[ !sapply(categorical_lvls, is.null) ]
    categorical_lvls <- categorical_lvls[
@@ -685,7 +753,7 @@ trainRandomForestEnsemble <- function(
    out$categorical_lvls <- categorical_lvls
 
    ##----------------------------------------------------------------------
-   if(verbose){ message(msg_prefix,'> Calculating feature importance...') }
+   if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Calculating feature importance...') }
    exist_features <- unique(unlist(lapply(ensemble, function(i){
       names(i$model$forest$ncat)
    })))
@@ -706,12 +774,12 @@ trainRandomForestEnsemble <- function(
    ##----------------------------------------------------------------------
    if(!is.null(test)){
       if(verbose){
-         message(msg_prefix,'> Predicting on test set...')
+         message(msg_prefix,'[',format(Sys.time(), "%X"),'] Predicting on test set...')
       }
       out$test_set <- list(
          probabilities = predict.randomForestEnsemble(
             out,
-            test[,!(colnames(test) %in% colname.response)],
+            rmColumns(test, colname.response),
             type='prob'
          ),
          predicted = NA,
@@ -727,6 +795,10 @@ trainRandomForestEnsemble <- function(
    }
 
    out$seed <- seed
+
+   if(rm.tmp.dir & !is.null(tmp.dir)){
+      unlink(tmp.dir, recursive=T)
+   }
 
    return(out)
 }
