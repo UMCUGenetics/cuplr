@@ -1,11 +1,52 @@
-#' Faster fisher's exact tests
+#' Create multiple contingency matrices
+#'
+#' @param x A logical matrix
+#' @param y A logical vector indicating the case/control group (i.e. response)
+#' @param use.totals Should case/control totals be used instead of case.false and ctrl.false?
+#'
+#' @return A matrix with the columns: case.true, case.false, ctrl.true, ctrl.false. Each row is
+#' thus one contingency matrix
+#' @export
+#'
+contingencyMatrix <- function(x, y, use.totals=FALSE){
+
+   if(!is.logical(x)){ stop('x must be a logical matrix or vector') }
+   if(!is.logical(y)){ stop('y must be a logical vector') }
+
+   if(!is.matrix(x)){ x <- matrix(x, ncol=1) }
+
+   case <- x[y,,drop=F]
+   ctrl <- x[!y,,drop=F]
+
+   case.true <- colSums(case)
+   case.false <- nrow(case) - case.true
+
+   ctrl.true <- colSums(ctrl)
+   ctrl.false <- nrow(ctrl) - ctrl.true
+
+   if(!use.totals){
+      cbind(
+         case.true, case.false,
+         ctrl.true, ctrl.false
+      )
+   } else {
+      cbind(
+         case.true,
+         case.total=nrow(case), ## Use case totals instead
+         ctrl.true,
+         case.total=nrow(ctrl) ## Use ctrl totals instead
+      )
+   }
+}
+
+#' Fast fisher's exact tests
 #'
 #' @rdname fisherTest
 #'
-#' @param xpos Group 'x' responders
-#' @param xneg Group 'x' non responders
-#' @param ypos Group 'y' responders
-#' @param yneg Group 'y' non responders
+#' @param case.true Case group (treated) responders
+#' @param case.false Case group (treated) non responders
+#' @param ctrl.true Control group (untreated) responders
+#' @param ctrl.false Control group (untreated) non responders
 #' @param m A matrix containing the 4 columns corresponding to a contingency matrix:
 #'
 #' @param verbose Show progress?
@@ -20,17 +61,20 @@ fisherTest <- function (x, ...) {
 
 #' @rdname fisherTest
 #' @method fisherTest default
-fisherTest.default <- function(xpos, xneg, ypos, yneg, alternative='two.sided', verbose=F){
+fisherTest.default <- function(
+   case.true, case.false, ctrl.true, ctrl.false,
+   alternative='two.sided', verbose=F
+){
 
    ## Based on:
    ## https://stats.stackexchange.com/questions/454248/fisher-test-alternative-problem-in-r
-   x <- xpos
-   m <- xpos + xneg
-   n <- ypos + yneg
-   k <- xpos + ypos
+   x <- case.true
+   m <- case.true + case.false
+   n <- ctrl.true + ctrl.false
+   k <- case.true + ctrl.true
 
    if(verbose){
-      pb <- txtProgressBar(max=length(xpos), style=3L)
+      pb <- txtProgressBar(max=length(case.true), style=3L)
       counter <- 0L
    }
    unlist(
@@ -69,6 +113,74 @@ fisherTest.matrix <- function(m, ...){
    )
 }
 fisherTest.data.frame <- fisherTest.matrix
+
+
+#' Fast chi-squared test for 2x2 matrices (similar to a fisher test)
+#'
+#' @rdname fisherChi2
+#'
+#' @param case.true Group 'x' responders
+#' @param case.false Group 'x' non responders
+#' @param ctrl.true Group 'y' responders
+#' @param ctrl.false Group 'y' non responders
+#' @param m A matrix containing the 4 columns corresponding to a contingency matrix
+#'
+#' @param verbose Show progress?
+#' @param ... Arguments that can be passed to fisherChi2.default()
+#'
+#' @return A numeric vector of pvalues or chi-squared statistics
+#' @export
+#'
+fisherChi2 <- function (x, ...) {
+   UseMethod("fisherChi2", x)
+}
+
+#' @rdname fisherChi2
+#' @method fisherChi2 default
+fisherChi2.default <- function(case.true, case.false, ctrl.true, ctrl.false, correct=TRUE, return.statistic=FALSE){
+   ## Adapted from stats::chisq.test()
+   # if(F){
+   #    #x=matrix(c(50,60,30,200),nrow=2)
+   #    case.true=c(50,50,10)
+   #    case.false=c(60,60,20)
+   #    ctrl.true=c(30,30,200)
+   #    ctrl.false=c(200,200,1000)
+   # }
+
+   m <- cbind(case.true, case.false, ctrl.true, ctrl.false)
+   n <- rowSums(m)
+
+   sums <- data.frame(
+      row1=case.true + ctrl.true,
+      row2=case.false + ctrl.false,
+      col1=case.true + case.false,
+      col2=ctrl.true + ctrl.false
+   )
+
+   E <- do.call(rbind, Map(function(row1,row2,col1,col2, n){
+      as.vector(outer(c(row1,row2), c(col1,col2), "*")/n)
+   }, sums$row1,sums$row2,sums$col1,sums$col2, n))
+
+   m_minus_E <- abs(m - E)
+
+   YATES <- 0
+   if(correct){
+      YATES <- apply( cbind(0.5, m_minus_E),1,min )
+   }
+
+   STATISTIC <- rowSums((m_minus_E - YATES)^2/E)
+   if(return.statistic){ return(STATISTIC) }
+
+   pchisq(STATISTIC, 1, lower.tail = FALSE)
+}
+
+#' @rdname fisherChi2
+#' @method fisherChi2 matrix
+fisherChi2.matrix <- function(m, ...){
+   if(ncol(m)!=4){ stop('Input matrix must have 4 columns corresponding to a flattened contingency matrix') }
+   fisherChi2.default(m[,1],m[,2],m[,3],m[,4])
+}
+fisherChi2.data.frame <- fisherChi2.matrix
 
 
 ####################################################################################################
@@ -412,125 +524,6 @@ wilcoxTest.default <- function(x, y, ...){
    y <- matrix(y, ncol=1L)
    wilcoxTest.matrix(x,y, ...)
 }
-
-
-####################################################################################################
-#' Fast chi-squared test for 2x2 matrices (similar to a fisher test)
-#'
-#' @rdname fisherChi2
-#'
-#' @param xpos Group 'x' responders
-#' @param xneg Group 'x' non responders
-#' @param ypos Group 'y' responders
-#' @param yneg Group 'y' non responders
-#' @param m A matrix containing the 4 columns corresponding to a contingency matrix
-#'
-#' @param verbose Show progress?
-#' @param ... Arguments that can be passed to fisherChi2.default()
-#'
-#' @return A numeric vector of pvalues or chi-squared statistics
-#' @export
-#'
-fisherChi2 <- function (x, ...) {
-   UseMethod("fisherChi2", x)
-}
-
-#' @rdname fisherChi2
-#' @method fisherChi2 default
-fisherChi2.default <- function(xpos, xneg, ypos, yneg, correct=TRUE, return.statistic=FALSE){
-   ## Adapted from stats::chisq.test()
-   # if(F){
-   #    #x=matrix(c(50,60,30,200),nrow=2)
-   #    xpos=c(50,50,10)
-   #    xneg=c(60,60,20)
-   #    ypos=c(30,30,200)
-   #    yneg=c(200,200,1000)
-   # }
-
-   m <- cbind(xpos, xneg, ypos, yneg)
-   n <- rowSums(m)
-
-   sums <- data.frame(
-      row1=xpos+ypos,
-      row2=xneg+yneg,
-      col1=xpos+xneg,
-      col2=ypos+yneg
-   )
-
-   E <- do.call(rbind, Map(function(row1,row2,col1,col2, n){
-      as.vector(outer(c(row1,row2), c(col1,col2), "*")/n)
-   }, sums$row1,sums$row2,sums$col1,sums$col2, n))
-
-   m_minus_E <- abs(m - E)
-
-   YATES <- 0
-   if(correct){
-      YATES <- apply( cbind(0.5, m_minus_E),1,min )
-   }
-
-   STATISTIC <- rowSums((m_minus_E - YATES)^2/E)
-   if(return.statistic){ return(STATISTIC) }
-
-   pchisq(STATISTIC, 1, lower.tail = FALSE)
-}
-
-#' @rdname fisherChi2
-#' @method fisherChi2 matrix
-fisherChi2.matrix <- function(m, ...){
-   if(ncol(m)!=4){ stop('Input matrix must have 4 columns corresponding to a flattened contingency matrix') }
-   fisherChi2.default(m[,1],m[,2],m[,3],m[,4])
-}
-fisherChi2.data.frame <- fisherChi2.matrix
-
-
-# set.seed(1)
-# repeats <- 10
-# xpos=sample(1:100, repeats, replace=T)
-# xneg=sample(1:100, repeats, replace=T)
-# ypos=sample(1:100, repeats, replace=T)
-# yneg=sample(1:100, repeats, replace=T)
-#
-# cbind(xpos, xneg, ypos, yneg)
-#
-# system.time({
-#    fisherChi2(xpos,xneg,ypos,yneg, return.statistic=T)
-# })
-#
-# system.time({
-#    unlist(Map(function(xpos,xneg,ypos,yneg){
-#       mat <- matrix(c(xpos,xneg,ypos,yneg),nrow=2)
-#       chisq.test(mat)$statistic
-#    },xpos,xneg,ypos,yneg))
-# })
-#
-#
-# mat <- matrix(c(50,60,30,200),nrow=2)
-# #chiSquared(mat)
-# chisq.test(mat)$p.value
-# #fisher.test(mat)$p.value
-
-
-
-## Phi
-# x2 <- fisherChi2(1000,1001,1,200, return.statistic=T)
-# sqrt(x2/sum(1000,1001,1,200))
-
-## Cohen's H
-# cohenH.default <- function(xpos,xneg,ypos,yneg){
-#    Px <- xpos / (xpos+xneg)
-#    Py <- ypos / (ypos+yneg)
-#    phi_x = 2 * asin(sqrt(Px))
-#    phi_y = 2 * asin(sqrt(Py))
-#    phi_x - phi_y
-# }
-#
-
-# data.frame(
-#    xpos,xneg,ypos,yneg,
-#    Px=xpos / (xpos+xneg),
-#    Py=ypos / (ypos+yneg),
-#    cohen_h=cohenH.default(xpos,xneg,ypos,yneg)
-# )
 
 
 
