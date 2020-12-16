@@ -59,7 +59,7 @@ cliffDelta.default <- function(x,y){
 
 #' @rdname cliffDelta
 #' @method cliffDelta matrix
-cliffDelta.matrix  <- function(x, y, method=1){
+cliffDelta.matrix  <- function(x, y){
    #x=m_true
    #y=m_false
 
@@ -85,6 +85,9 @@ cliffDelta.matrix  <- function(x, y, method=1){
       cliffd(x[,i],y[,i])
    }), use.names=F)
 }
+
+#' @rdname cliffDelta
+#' @method cliffDelta dataframe
 cliffDelta.data.frame <- cliffDelta.matrix
 
 ####################################################################################################
@@ -159,10 +162,15 @@ oddsRatio.default <- function(xpos,xneg,ypos,yneg, trans.method='none', logistic
    return(or)
 }
 
+#' @rdname oddsRatio
+#' @method oddsRatio matrix
 oddsRatio.matrix <- function(m, ...){
    if(ncol(m)!=4){ stop('Input matrix must have 4 columns corresponding to a flattened contingency matrix') }
    oddsRatio.default(m[,1],m[,2],m[,3],m[,4])
 }
+
+#' @rdname oddsRatio
+#' @method oddsRatio dataframe
 oddsRatio.data.frame <- oddsRatio.matrix
 
 
