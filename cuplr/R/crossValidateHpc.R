@@ -30,8 +30,8 @@ spawnCvJobs <- function(
 ){
    if(F){
       #train.data.path='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/training/models/0.06d_probWeighRf_balanceClasses_slurm/features/features.rds'
-      train.data.path='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/training/models/0.08b_probWeighRf_balanceClasses/features/features.rds'
-      train.script.path='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/training/models/0.08b_probWeighRf_balanceClasses/do_train.R'
+      train.data.path='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.10c_rmdTad_DR104update/features/features.txt.gz'
+      train.script.path='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.10c_rmdTad_DR104update/do_train.R'
       colname.response='response'
       k=20
       seed=1
@@ -44,7 +44,7 @@ spawnCvJobs <- function(
    if(verbose){ message('Creating jobs @: ', cv.out.dir) }
    dir.create(cv.out.dir, showWarnings=F, recursive=T)
 
-   if(is.null(df)){
+   if(!is.data.frame(df)){
       if(verbose){ message('Reading training data: ', train.data.path) }
       if(grepl('.rds$',train.data.path)){
          df <- readRDS(train.data.path)
@@ -185,9 +185,12 @@ gatherCvOutput <- function(
    # dev.off()
 
    if(verbose){ message('Plotting perf heatmap...') }
-   pdf(paste0(plots_dir,'/perf_heatmap.pdf'), 11, 8.5)
+   pdf(paste0(plots_dir,'/perf_heatmap.pdf'), 12, 10)
    suppressWarnings({
-      plot( plotPerfHeatmap(test_set$actual, test_set$predicted, show.weighted.mean=T) )
+      plot(plotPerfHeatmap(
+         test_set$actual, test_set$predicted, show.weighted.mean=T,
+         rel.heights=c(0.3, 0.12, 1)
+      ))
    })
    dev.off()
 
