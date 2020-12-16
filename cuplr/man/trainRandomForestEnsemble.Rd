@@ -8,16 +8,14 @@ trainRandomForestEnsemble(
   train,
   test = NULL,
   colname.response = "response",
-  do.feat.sel = TRUE,
-  feat.sel.max.qvalue = 0.01,
-  feat.sel.max.pvalue = 1,
-  feat.sel.top.n.features = NULL,
-  calc.imp = T,
-  imp.metric = "mda",
-  ntree = 500,
-  get.local.increments = TRUE,
+  do.rmd.nmf = F,
+  args.trainRandomForest = list(),
+  inner.holdout.fraction = c(1, 3),
   seed = NULL,
-  fold.num = NULL,
+  msg.prefix = NULL,
+  tmp.dir = NULL,
+  rm.tmp.dir = T,
+  multi.core = F,
   verbose = 1
 )
 }
@@ -29,30 +27,22 @@ the performance of the trained model}
 
 \item{colname.response}{The column name of the response variable (i.e. training labels)}
 
-\item{do.feat.sel}{Perform univariate feature selection?}
+\item{do.rmd.nmf}{Perform NMF to convert RMD bins to RMD signatures?}
 
-\item{feat.sel.max.qvalue}{Only features with q-value (from univariate feature selection) lower
-than this will be kept}
-
-\item{feat.sel.max.pvalue}{Only features with p-value (from univariate feature selection) lower
-than this will be kept}
-
-\item{feat.sel.top.n.features}{Only keep the top number of features}
-
-\item{calc.imp}{Calculate feature importance?}
-
-\item{imp.metric}{Which type of feature importance to calculate}
-
-\item{ntree}{Number of decision trees in the random forest}
-
-\item{get.local.increments}{If TRUE, get local increments to calculate feature contributions}
+\item{args.trainRandomForest}{A list of arguments that can be passed to `trainRandomForest()`}
 
 \item{seed}{Random seed as an integer}
 
-\item{fold.num}{Cross validation fold number. Only used in the prefix of progress messages. If
-not specified, no prefix will be displayed.}
+\item{tmp.dir}{A path a temporary directory, which if provided, enables resume capability}
+
+\item{rm.tmp.dir}{If TRUE will remove the tmp dir if training completes successfully}
+
+\item{multi.core}{Use multiple cores?}
 
 \item{verbose}{Show progress? Can be 0, 1, 2 (increasing verbosity)}
+
+\item{fold.num}{Cross validation fold number. Only used in the prefix of progress messages. If
+not specified, no prefix will be displayed.}
 }
 \value{
 A list containing the training output

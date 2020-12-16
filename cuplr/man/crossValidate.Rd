@@ -5,7 +5,8 @@
 \title{Perform cross validation}
 \usage{
 crossValidate(
-  df,
+  df = NULL,
+  folds = NULL,
   train.func,
   train.func.args = list(),
   colname.response = "response",
@@ -17,6 +18,10 @@ crossValidate(
 }
 \arguments{
 \item{df}{A dataframe containing the training features and response column.}
+
+\item{folds}{Alternative input to df. A list with the structure: `l[[1]][c('train','test')]`
+where 'train' and 'test' are dataframes which features and a response column. This is the output
+from `createCvTrainTestSets()`}
 
 \item{train.func}{A training function.}
 

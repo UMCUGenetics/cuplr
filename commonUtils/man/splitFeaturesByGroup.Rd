@@ -2,15 +2,15 @@
 % Please edit documentation in R/splitFeatures.R
 \name{splitFeaturesByGroup}
 \alias{splitFeaturesByGroup}
+\alias{splitFeaturesByGroup.default}
 \alias{splitFeaturesByGroup.data.frame}
-\alias{splitFeaturesByGroup.vector}
 \title{Split a dataframe into feature groups}
 \usage{
 splitFeaturesByGroup(x, ...)
 
-\method{splitFeaturesByGroup}{dataframe}(x, rm.tags = F)
+\method{splitFeaturesByGroup}{default}(x, rm.tags = F)
 
-\method{splitFeaturesByGroup}{vector}(x, rm.tags = F)
+\method{splitFeaturesByGroup}{dataframe}(x, rm.tags = F)
 }
 \arguments{
 \item{rm.tags}{Remove feature group tags?}

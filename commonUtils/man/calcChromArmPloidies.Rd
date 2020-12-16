@@ -8,8 +8,7 @@ calcChromArmPloidies(
   cnv.file = NULL,
   cnv = NULL,
   out.file = NULL,
-  sel.cols = c(chrom = "chromosome", start = "start", end = "end", total_cn =
-    "copyNumber", major_cn = "majorAllelePloidy", minor_cn = "minorAllelePloidy"),
+  sel.cols = NULL,
   mode = c("total_cn", "minor_cn"),
   min.rel.cum.segment.size = if (mode[1L] == "minor_cn") {     0.9 } else {     0.5 },
   max.rel.cum.segment.size.diff = 0.1,
@@ -21,7 +20,16 @@ calcChromArmPloidies(
 \arguments{
 \item{cnv.file}{Path to purple cnv file}
 
+\item{cnv}{purple cnv file loaded as a dataframe}
+
 \item{out.file}{Path to output file. If NULL, returns a named vector}
+
+\item{sel.cols}{A character vector with the names: chrom, start, end, total_cn, major_cn,
+minor_cn. The value corresponding to each name should refer to a column name in the txt file.
+This is used to translate the column names in the txt file to the column names that the function
+will use.}
+
+\item{mode}{Can be total_cn (for determining arm CN changes) or minor_cn (for determining arm LOH)}
 
 \item{min.rel.cum.segment.size}{If a chrom arm has a CN category that covers >0.5 (i.e 50%;
 default) of a chrom arm, this CN is the copy number of the arm}
