@@ -29,7 +29,7 @@ forceDfOrder <- function(df){
 #' @export
 #'
 dfToFeaturesAndResponse <- function(df, colname.response='response'){
-   x <- df[,colnames(df)!=colname.response]
+   x <- df[,colnames(df)!=colname.response,drop=F]
    #x <- as.matrix(x)
 
    if(is.logical(df[,colname.response])){
