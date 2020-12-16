@@ -344,7 +344,7 @@ plotHeatmapFromMatrix <- function(
 #'
 plotPerfHeatmap <- function(
    actual=NULL, predicted=NULL, cv_out=NULL,
-   rel.heights=c(0.3, 0.05, 1),
+   rel.heights=c(0.3, 0.15, 1),
 
    ## Confusion heatmap
    sort=F, rel.values=T,
@@ -442,7 +442,7 @@ plotPerfHeatmap <- function(
    ## Combine --------------------------------
    cowplot::plot_grid(
       p_perf, p_counts, p_heatmap,
-      ncol=1, align='v', axis='tblr', rel_heights=c(0.3, 0.15, 1)
+      ncol=1, align='v', axis='tblr', rel_heights=rel.heights
    )
 
 }
