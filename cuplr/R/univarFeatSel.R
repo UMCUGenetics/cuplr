@@ -16,10 +16,8 @@
 #' @param v.alternative A vector containing 'two.sided','greater' or 'less', corresponding to each
 #' feature
 #' @param max.pvalue pvalue threshold for keeping features. Default: 0.01
-#' @param min.effect.size Effect size threshold for keeping features. Default: 3
-#' (applies to both +3 and -3 effect sizes)
-#' @param min.effect.size.support Minimum number of samples supporting the +ve/-ve effect sizes.
-#' Default: 5
+#' @param min.effect.size 0 to 1 (default: 0.2). Cliff delta threshold for keeping features. Applies
+#' to both +ve and -ve cliff delta values
 #' @param sel.top.n.features Limit the total number of features that are selected
 #' @param output.type Can be 'raw','new.x','features'
 #' @param verbose Show progress messages?
@@ -31,99 +29,35 @@
 univarFeatSel <- function(
    x, y,
    v.alternative=NULL,
-   max.pvalue=0.01, min.effect.size=3, min.effect.size.support=5, sel.top.n.features=NULL,
+   max.pvalue=0.01, min.effect.size=0.1, sel.top.n.features=NULL,
    output.type='new.x', verbose=F
 ){
    if(F){
+      base_dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/'
+      devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/commonUtils/'))
+      devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/cuplr/'))
+      devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/featureExtractor/'))
+
+      training_data <- readFeaturesCuplr(paste0(base_dir,'/CUPs_classifier/processed/cuplr/cuplr/models/0.09c_originalFeatures/features/features.txt.gz'))
+      x=training_data[,-1]
+      y=training_data[,1]=='Breast'
+
       max.pvalue=0.01
-      min.effect.size=3
-      min.effect.size.support=5
+      min.effect.size=0.1
       verbose=T
 
       v.alternative <- rep('greater', ncol(x))
       v.alternative[ grep('(^purple)|(^rmd)',colnames(x)) ] <- 'two.sided'
    }
 
-   if(!is.logical(y)){ stop('`y` must be a logical vector') }
+   ## Checks --------------------------------
+   if(!is.data.frame(x)){ stop('x must be a dataframe') }
+   if(!is.logical(y)){ stop('y must be a logical vector') }
+   if(any(sapply(x, is.character))){ stop('characters must be converted to factors') }
+   if(is.null(colnames(x))){ stop('x must have colnames') }
+   if(!(output.type %in% c('new.x','raw','features'))){ stop("output.type must be 'new.x', 'raw', or 'features'") }
 
-   ## Different test per data type --------------------------------
-   pairwiseTest <- function (x, ...) {
-      UseMethod("pairwiseTest", x)
-   }
-
-   pairwiseTest.numeric <- function(v, alternative='two.sided'){
-      #v=df$sigs.snv.SBS15
-
-      a <- v[y]
-      b <- v[!y]
-
-      ## Contingency matrix
-      amid <- median(a)
-      bmid <- median(b)
-
-      apos <- sum(v >  bmid)
-      aneg <- sum(v <= bmid)
-      bpos <- sum(v >  amid)
-      bneg <- sum(v <= amid)
-
-      ## Test
-      data.frame(
-         apos,aneg,bpos,bneg,
-         effect_size=effectSize(apos,aneg,bpos,bneg),
-         pvalue=wilcox.test(a, b, alternative=alternative)$p.value,
-         alternative
-      )
-   }
-
-   pairwiseTest.logical <- function(v, alternative='two.sided'){
-      #v=df$fusion.TMPRSS2_ERG
-
-      apos <- sum(y & v)
-      aneg <- sum(y & !v)
-
-      bpos <- sum(!y & v)
-      bneg <- sum(!y & !v)
-
-      data.frame(
-         apos,aneg,bpos,bneg,
-         effect_size=effectSize(apos,aneg,bpos,bneg),
-
-         ## Fisher test with a modified contingency matrix
-         pvalue=fisher.test( matrix(c(apos, aneg+apos, bpos, bneg+bpos),nrow=2), alternative=alternative )$p.value,
-
-         alternative
-      )
-   }
-
-   pairwiseTest.factor <- function(v, alternative='two.sided'){
-      #v=x$purple.gender
-
-      neg_category <- levels(v)[1]
-
-      apos <- sum(y & v!=neg_category)
-      aneg <- sum(y & v==neg_category)
-
-      bpos <- sum(!y & v!=neg_category)
-      bneg <- sum(!y & v==neg_category)
-
-      ## Fisher test with a modified contingency matrix
-      data.frame(
-         apos,aneg,bpos,bneg,
-         effect_size=effectSize(apos,aneg,bpos,bneg),
-
-         ## Fisher test with a modified contingency matrix
-         pvalue=fisher.test( matrix(c(apos, aneg+apos, bpos, bneg+bpos),nrow=2), alternative=alternative )$p.value,
-
-         alternative
-      )
-   }
-
-   #pairwiseTest(df$sigs.snv.SBS15)
-   #pairwiseTest(df$fusion.TMPRSS2_ERG)
-   #pairwiseTest(x$purple.gender)
-
-   ## Main --------------------------------
-
+   ## Initialize alternative --------------------------------
    if(is.null(v.alternative)){
       v.alternative <- rep('two.sided',ncol(x))
    } else {
@@ -135,13 +69,63 @@ univarFeatSel <- function(
          stop("`v.alternative` must be the same length as the number of features")
       }
    }
+   names(v.alternative) <- colnames(x)
 
-   counter <- 0
-   tests <- do.call(rbind, lapply(x, function(i){
-      counter <<- counter + 1
-      if(verbose){ message('[',counter,'] ', colnames(x)[[counter]] ) }
-      pairwiseTest(i, alternative=v.alternative[counter])
-   }))
+   ## Convert factors to logicals --------------------------------
+   if(output.type=='new.x'){ x_raw <- x }
+
+   ## Assume 1st factor level to be the negative effect
+   x <- lapply(x, function(i){
+      if(is.factor(i)){ return(as.integer(i)>1) }
+      return(i)
+   })
+   x <- as.data.frame(x, check.names=F)
+
+   ## Wilcox test on numeric features --------------------------------
+   is_numeric <- sapply(x, is.numeric)
+   x_numeric <- x[,is_numeric, drop=F]
+
+   pvalues_numeric <- NULL
+   if(ncol(x_numeric)!=0){
+      if(verbose){ message('Performing wilcox tests on numerical features...') }
+      pvalues_numeric <- wilcoxTest.data.frame(
+         x_numeric[y,],
+         x_numeric[!y,],
+         alternative = v.alternative[colnames(x_numeric)]
+      )
+      pvalues_numeric[is.na(pvalues_numeric)] <- 1
+      names(pvalues_numeric) <- colnames(x_numeric)
+   }
+
+   ## Fisher test on logical/categorical features --------------------------------
+   x_logical <- x[,!is_numeric,drop=F]
+
+   pvalues_logical <- NULL
+   if(ncol(x_logical)!=0){
+      if(verbose){ message('Performing fisher tests on logical/categorical features...') }
+      x_logical <- as.matrix(as.data.frame(x_logical, check.names=F))
+      #table(x_logical[,'fusion.TMPRSS2_ERG'])
+
+      conting <- contingencyMatrix(x_logical, y, use.totals=F)
+      pvalues_logical <- fisherTest.data.frame(
+         conting,
+         alternative = v.alternative[colnames(x_logical)]
+      )
+      names(pvalues_logical) <- colnames(x_logical)
+   }
+
+   pvalues <- c(pvalues_numeric, pvalues_logical)
+   pvalues <- pvalues[colnames(x)] ## Preserve original feature order
+
+   ## Post-processing --------------------------------
+   tests <- data.frame(
+      pvalue=pvalues,
+      alternative=v.alternative
+   )
+
+   if(verbose){ message('Calculating cliff delta effect size...') }
+   tests$cliff_delta <- cliffDelta.data.frame(x[y,], x[!y,])
+
    tests <- tests[order(tests$pvalue),]
 
    ## Select features
@@ -150,135 +134,29 @@ univarFeatSel <- function(
       pvalue < max.pvalue
    )
 
-   if(!is.null(min.effect.size) & !is.null(min.effect.size.support)){
+   if(!is.null(min.effect.size)){
       tests_ss <- subset(
          tests_ss,
-            (alternative %in% c('two.sided','greater') & effect_size >=  min.effect.size & apos >= min.effect.size.support) |
-            (alternative %in% c('two.sided','less')    & effect_size <= -min.effect.size & bpos >= min.effect.size.support)
+         (alternative %in% c('two.sided','greater') & cliff_delta >=  min.effect.size) |
+         (alternative %in% c('two.sided','less')    & cliff_delta <= -min.effect.size)
       )
    }
 
    keep_features <- rownames(tests_ss)
-
    if(!is.null(sel.top.n.features)){
-      keep_features <- keep_features[1:sel.top.n.features]
-      keep_features <- na.exclude(keep_features)
+      keep_features <- keep_features[ 1:min(length(keep_features), sel.top.n.features, ncol(x)) ]
    }
 
+   if(output.type=='new.x'){
+      return(x_raw[,keep_features,drop=F])
+   }
    if(output.type=='raw'){
       return(tests)
-   } else if(output.type=='features'){
+   }
+
+   if(output.type=='features'){
       return(keep_features)
    }
-   return(x[,keep_features,drop=F])
 }
-
-
-# univarFeatSel <- function(
-#    x, y,
-#    max.qvalue=0.01, max.pvalue=NULL, sel.top.n.features=NULL,
-#    return.new.x=T, verbose=F
-# ){
-#    # colname.response='response'
-#    # x <- df[,colnames(df)!=colname.response]
-#    # y <- as.factor(df[,colname.response])
-#    # y <- y=='Prostate'
-#
-#    if( !(is.logical(y) | is.factor(y)) ){
-#       stop('`y` must be a logical or factor')
-#    }
-#    #if(is.logical(y)){ y <- factor(y,c('TRUE','FALSE')) }
-#
-#    main <- function(v, y.logical){
-#       #y.logical=y
-#
-#       ## Numeric data: wilcox text
-#       if(is.numeric(v)){
-#          #v=x$viral_ins.Hepatitis_C_virus
-#          #v=x$rmd.14q_107
-#          v_split <- split(v, y.logical)
-#          wilcox.test(v_split[['TRUE']], v_split[['FALSE']])$p.value
-#
-#          ## Categorical data: fisher test
-#       } else {
-#          #v=ifelse(x$purple.gender,'male','female')
-#          #v=unname(m[,'AR'])
-#          #v=x$gene_def.VHL
-#          #y=metadata[ match(rownames(m), metadata$sample),'cancer_type' ]
-#          #y.logical <- y=='Prostate'
-#
-#          neg_category <- levels(as.factor(v))[1]
-#          #v=rep('0;none',length(v))
-#
-#          fisher.test(
-#             matrix(
-#                c(
-#                   sum(v!=neg_category & y.logical), sum(y.logical),
-#                   sum(v!=neg_category & !y.logical), length(y.logical)
-#                ),
-#                nrow=2
-#             )
-#          )$p.value
-#       }
-#    }
-#
-#    ## Binary classification
-#    if(is.logical(y)){
-#       if(verbose){ counter <- 0 }
-#       p_values <- unlist(lapply(as.data.frame(x), function(i){
-#          if(verbose){
-#             counter <<- counter + 1
-#             message('[',counter,'] ', colnames(x)[[counter]] )
-#          }
-#          main(i, y)
-#       }))
-#       p_values <- sort(p_values)
-#       q_values <- p.adjust(p_values, method='bonferroni')
-#
-#       if(!is.null(max.pvalue)){
-#          keep_features <- names(p_values)[ p_values < max.pvalue ]
-#       } else {
-#          keep_features <- names(q_values)[ q_values < max.qvalue ]
-#       }
-#
-#       if(!is.null(sel.top.n.features)){ keep_features <- keep_features[1:sel.top.n.features] }
-#       keep_features <- na.exclude(keep_features)
-#
-#       ## Multiclass classification
-#    } else {
-#       y_logicals <- lapply(levels(y), function(i){ y==i })
-#       names(y_logicals) <- levels(y)
-#
-#       if(verbose){ counter <- 0 }
-#       m_p_values <- do.call(cbind, lapply(y_logicals, function(y_logical){
-#          if(verbose){
-#             counter <<- counter + 1
-#             message('[',counter,'] ', names(y_logicals)[[counter]] )
-#          }
-#          unlist(lapply(as.data.frame(x), function(feature){ main(feature, y_logical) }))
-#       }))
-#       m_q_values <- apply(m_p_values, 2, p.adjust, method='bonferroni')
-#
-#       if(!is.null(max.pvalue)){
-#          keep_features <- unlist(apply(m_p_values, 2, function(i){
-#             names(i)[ i<max.pvalue ]
-#          }), use.names=F)
-#       } else {
-#          keep_features <- unlist(apply(m_q_values, 2, function(i){
-#             names(i)[ i<max.qvalue ]
-#          }), use.names=F)
-#       }
-#
-#       keep_features <- unique(na.exclude(keep_features))
-#    }
-#
-#    if(return.new.x){
-#       return(x[,keep_features,drop=F])
-#    }
-#    return(keep_features)
-# }
-
-
-
 
 
