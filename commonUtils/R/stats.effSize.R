@@ -67,7 +67,8 @@ cliffDelta.matrix  <- function(x, y){
    x <- as.matrix(x); dimnames(x) <- NULL
    y <- as.matrix(y); dimnames(y) <- NULL
 
-   if(!is.numeric(x) | !is.numeric(y)){ stop('x and y must be numeric matrices') }
+   if(!is.numeric(x) & !is.logical(x)){ stop('x must be a numeric or logical matrix') }
+   if(!is.numeric(y) & !is.logical(y)){ stop('y must be a numeric or logical matrix') }
 
    # ## R implementation
    # outer_sign_sum <- unlist(lapply(1L:ncol(x), function(i){
