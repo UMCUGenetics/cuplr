@@ -85,13 +85,13 @@ extractContextsSmnvIndel <- function(
    l <- list()
    
    if(verbose){ message('\n## Extracting SNV contexts...') }
-   l$snv <- extractSigsSnv(df=df, output='contexts',verbose=verbose)[,1]
+   l$snv <- mutSigExtractor::extractSigsSnv(df=df, output='contexts',verbose=verbose)[,1]
    
    if(verbose){ message('\n## Extracting indel contexts...') }
-   l$indel <- extractSigsIndel(df=df, verbose=verbose)[,1]
+   l$indel <- mutSigExtractor::extractSigsIndel(df=df, output='contexts', method='PCAWG', verbose=verbose)[,1]
    
    if(verbose){ message('\n## Extracting DBS contexts...') }
-   l$dbs <- extractSigsDbs(df=df, output='contexts', verbose=verbose)[,1]
+   l$dbs <- mutSigExtractor::extractSigsDbs(df=df, output='contexts', verbose=verbose)[,1]
    
    if(verbose){ message('\n## Counting MNVs...') }
    ## excluding DBSs
