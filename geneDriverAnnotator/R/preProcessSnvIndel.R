@@ -39,6 +39,8 @@ filterVcf <- function(
       'OUT_FILE=',out.file,'\n',
       'FILTER_STRING=',filter_string,'\n',
       
+      'echo $VCF_FILE \n',
+      
       'gunzip -c $VCF_FILE | \n',
       if(!is.null(mode)){ '$JAVA -jar $SNPSIFT filter -v "$FILTER_STRING" | \n' } else { '' },
       if(!is.null(bed.file)){ '$JAVA -jar $SNPSIFT intervals -verbose $BED_FILE | \n' } else { '' },
@@ -156,6 +158,11 @@ extractVcfFields <- function(
 #'
 getClinSig <- function(df, db.path, col.index='clinsig', verbose=T){
 
+   if(F){
+      df=read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/datasets/processed/PCAWG_pipeline5/scripts/gene_ann_ber_ner//output//DO220860//preproc//DO220860.som.txt.gz')
+      db.path='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/geneDriverAnnotator/inst/db/clinvar.txt.bgz'
+   }
+   
    ##
    if(verbose){ message('Querying database using coords from df...') }
    coords <- paste0(df$chrom,':',df$pos,'-',df$pos)
@@ -173,7 +180,7 @@ getClinSig <- function(df, db.path, col.index='clinsig', verbose=T){
    ##
    if(verbose){ message('Separating df rows with/without entry in database...') }
    tabix_coords <- paste0(tabix_out$chrom,':',tabix_out$pos,'-',tabix_out$pos)
-   df_split <- split(df, coords %in% tabix_coords)
+   df_split <- split(df, factor(coords %in% tabix_coords, c('FALSE','TRUE')))
    names(df_split) <- c(
       'na', ## These rows don't have an entry in the tabix output
       'proc' ## These rows have the coords, but need to check for ref and alt match
