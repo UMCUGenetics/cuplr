@@ -30,6 +30,8 @@ extractContextsSmnvIndel <- function(
 
    if(F){
       vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/171002_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
+      vcf.file='/Users/lnguyen/hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor//DO217817-from-jar//purple25/DO217817T.purple.somatic.vcf.gz'
+      vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor//DO218019-from-jar//purple25/DO218019T.purple.somatic.vcf.gz'
       
       vcf.filter='PASS'
       keep.chroms=c(1:22,'X')
@@ -56,7 +58,11 @@ extractContextsSmnvIndel <- function(
       #    ref.genome=ref.genome, verbose=verbose
       # )
       
-      if(clonal.variants.only){
+      if(nrow(df)==0){
+         df <- data.frame(chrom=character(), pos=numeric(), ref=character(), alt=character())
+      }
+      
+      if(clonal.variants.only & nrow(df)!=0){
          if(verbose){ message('Selecting clonal variants') }
          ## Split clonal/subclonal variants
          df$subclonal_prob <- as.numeric(getInfoValues(df$info,'SUBCL')[,1])
@@ -93,13 +99,13 @@ extractContextsSmnvIndel <- function(
    if(verbose){ message('\n## Extracting DBS contexts...') }
    l$dbs <- mutSigExtractor::extractSigsDbs(df=df, output='contexts', verbose=verbose)[,1]
    
-   if(verbose){ message('\n## Counting MNVs...') }
-   ## excluding DBSs
-   df$ref_len <- nchar(df$ref)
-   df$alt_len <- nchar(df$alt)
-   l$mnv <- c(
-      counts=sum(with(df,{ (ref_len>=3 & alt_len>=2) | (ref_len>=2 & alt_len>=3) }))
-   )
+   # if(verbose){ message('\n## Counting MNVs...') }
+   # ## excluding DBSs
+   # df$ref_len <- nchar(df$ref)
+   # df$alt_len <- nchar(df$alt)
+   # l$mnv <- c(
+   #    counts=sum(with(df,{ (ref_len>=3 & alt_len>=2) | (ref_len>=2 & alt_len>=3) }))
+   # )
    
    ##----------------------------------------------------------------
    if(verbose){ message('Returning output...') }
