@@ -46,7 +46,7 @@ getGeneDiplotypeMaxEff <- function(gene.diplotypes){
 ####################################################################################################
 #' Determine biallelic hit type v2
 #'
-#' @param diplotypes Diplotypes dataframe
+#' @param gene.diplotypes Diplotypes dataframe
 #'
 #' @return A character vector of hit types
 #' @export
