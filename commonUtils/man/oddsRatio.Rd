@@ -9,20 +9,27 @@
 \usage{
 oddsRatio(x, ...)
 
-\method{oddsRatio}{default}(xpos, xneg, ypos, yneg, trans.method = "none", logistic.growth = 0.2)
+\method{oddsRatio}{default}(
+  case.true,
+  case.false,
+  ctrl.true,
+  ctrl.false,
+  trans.method = "none",
+  logistic.growth = 0.2
+)
 
 \method{oddsRatio}{matrix}(m, ...)
 
-\method{oddsRatio}{dataframe}(m, ...)
+\method{oddsRatio}{data.frame}(m, ...)
 }
 \arguments{
-\item{xpos}{Group 'x' responders}
+\item{case.true}{Case group responders}
 
-\item{xneg}{Group 'x' non responders}
+\item{case.false}{Case group non responders}
 
-\item{ypos}{Group 'y' responders}
+\item{ctrl.true}{Control group responders}
 
-\item{yneg}{Group 'y' non responders}
+\item{ctrl.false}{Control group non responders}
 
 \item{trans.method}{Can be 'none', 'linear' or 'logistic'}
 

@@ -5,7 +5,7 @@
 \alias{cliffDelta.default}
 \alias{cliffDelta.matrix}
 \alias{cliffDelta.data.frame}
-\title{Calculate Cliff's delta values}
+\title{Calculate Cliff's delta values (for continuous data)}
 \usage{
 cliffDelta(x, ...)
 
@@ -13,7 +13,7 @@ cliffDelta(x, ...)
 
 \method{cliffDelta}{matrix}(x, y)
 
-\method{cliffDelta}{dataframe}(x, y)
+\method{cliffDelta}{data.frame}(x, y)
 }
 \arguments{
 \item{x}{A numeric vector for the 1st group of observations. Alternatively, a matrix, where

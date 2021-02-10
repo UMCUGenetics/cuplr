@@ -4,11 +4,24 @@
 \alias{wilcoxTest}
 \alias{wilcoxTest.matrix}
 \alias{wilcoxTest.default}
+\alias{wilcoxTest.data.frame}
 \title{Perform multiple wilcox tests}
 \usage{
 wilcoxTest(x, ...)
 
 \method{wilcoxTest}{matrix}(
+  x,
+  y,
+  alternative = "two.sided",
+  mu = 0,
+  exact = NA,
+  correct = TRUE,
+  pvalue.only = TRUE
+)
+
+\method{wilcoxTest}{default}(x, y, ...)
+
+\method{wilcoxTest}{data.frame}(
   x,
   y,
   alternative = "two.sided",
