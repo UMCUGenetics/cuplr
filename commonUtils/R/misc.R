@@ -115,7 +115,7 @@ as.factor.data.frame <- function(df, levels, ...){
    #df=features$gene_def
    #levels=c("none","mut","mut,mut","loh,mut","loh_arm,mut","loh_chrom,mut","deep_deletion")
 
-   out <- as.data.frame(lapply(df, function(i){
+   out <- as.data.frame(lapply(df, function(i){set.seed
       factor(i, levels, ...)
    }))
    dimnames(out) <- dimnames(df)
@@ -123,5 +123,43 @@ as.factor.data.frame <- function(df, levels, ...){
 }
 
 
+####################################################################################################
+#' Cache remote files and read as a dataframe
+#'
+#' @param remote.path Remote path to txt or rds file
+#' @param local.path Local path to copy to
+#' @param overwrite Redownload data from remote?
+#'
+#' @return A dataframe
+#' @export
+#'
+cacheAndReadData <- function(remote.path, local.path=NULL, overwrite=F){
+
+   #remote.path=paste0(base_dir,'/misc/processed/Chromatin_modifiers/scripts/annotate_svs/vis_sv_data_compact.txt.gz')
+   set.seed(nchar(remote.path))
+
+   if(is.null(local.path)){
+      local.path <- paste0(
+         '/Users/lnguyen/Documents/R_cache/',
+         paste(sample(letters, 8), collapse=''),
+         '_',basename(remote.path)
+      )
+   }
+
+   if(!file.exists(local.path) | overwrite){
+      message('Making local copy: ', local.path)
+      system(sprintf(
+         'rsync -a %s %s',
+         remote.path,
+         local.path
+      ))
+   }
+   message('Reading local copy: ', local.path)
+   if(grepl('.rds$',local.path)){
+      readRDS(local.path)
+   } else {
+      read.delim(local.path, check.names=F)
+   }
+}
 
 
