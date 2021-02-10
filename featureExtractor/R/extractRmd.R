@@ -27,7 +27,8 @@ extractRmd <- function(
    #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/171002_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
    #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/200117_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
    #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/160825_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
-   #    
+   #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor//DO217817-from-jar//purple25/DO217817T.purple.somatic.vcf.gz'
+   # 
    #    bin.size=1e6
    #    as.matrix=T
    #    vcf.filter='PASS'
@@ -39,7 +40,7 @@ extractRmd <- function(
       df <- vcfAsDataframe(vcf.file, vcf.fields=c(1,2,4,5,7,8), vcf.filter=vcf.filter, verbose=verbose, ...)
       #df <- vcfAsDataframe(vcf.file, vcf.fields=c(1,2,4,5,7,8), vcf.filter=vcf.filter, verbose=verbose)
       
-      if(clonal.variants.only){
+      if(clonal.variants.only & nrow(df)!=0){
          if(verbose){ message('Selecting clonal variants') }
          ## Split clonal/subclonal variants
          df$subclonal_prob <- as.numeric(getInfoValues(df$info,'SUBCL')[,1])
@@ -50,16 +51,16 @@ extractRmd <- function(
       df$info <- NULL
    }
    
-   df_colnames <- c('chrom','pos','ref','alt')
-   if(!(identical(colnames(df)[1:4], df_colnames))){
-      warning("colnames(df)[1:4] != c('chrom','pos','ref','alt'). Assuming first 4 columns are these columns")
-      colnames(df)[1:4] <- df_colnames
-   }
-
-   if(verbose){ message('Removing rows with multiple ALT sequences...') }
-   df <- df[!grepl(',',df$alt),]
-   
    if(nrow(df)!=0){
+      df_colnames <- c('chrom','pos','ref','alt')
+      if(!(identical(colnames(df)[1:4], df_colnames))){
+         warning("colnames(df)[1:4] != c('chrom','pos','ref','alt'). Assuming first 4 columns are these columns")
+         colnames(df)[1:4] <- df_colnames
+      }
+      
+      if(verbose){ message('Removing rows with multiple ALT sequences...') }
+      df <- df[!grepl(',',df$alt),]
+       
       if(verbose){ message('Converting chrom name style...') }
       GenomeInfoDb::seqlevelsStyle(df$chrom)<- 'NCBI'
    }
