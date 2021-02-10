@@ -79,17 +79,13 @@ spawnCvJobs <- function(
 #SBATCH --time=${time}
 #SBATCH --mem=${mem}
 #SBATCH --ntasks-per-node=${n_classes}
-
 if [[ ! -f ${done_path} ]]; then
-
 guixr load-profile ~/.guix-profile/ --<<EOF
 Rscript ${train.script.path} ${train.data.path} ${fold_indexes_path} ${out_path} ${seed} && touch ${done_path}
 EOF
-
 else
 echo Skipping ${fold_name}. Done file exists: ${done_path}
 fi
-
 ")
       job_script <- gsub("${fold_name}",fold_name, job_script, fixed=T)
       job_script <- gsub("${fold_dir}",fold_dir, job_script, fixed=T)
@@ -176,7 +172,7 @@ gatherCvOutput <- function(
 
    if(verbose){ message('Plotting imp barplots...') }
    pdf(paste0(plots_dir,'/imp_barplots.pdf'), 16, 10)
-   plot( plotTopFeatures(imp, top.n=40, infer.feature.type=T, n.col=4, feature.type.colors='auto') )
+   plot( plotTopFeatures(imp, top.n=40, infer.feature.type=T, n.col=4, feature.type.colors=NULL) )
    dev.off()
 
    # if(verbose){ message('Plotting feat imp heatmap...') }
