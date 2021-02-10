@@ -68,10 +68,27 @@ aggregateMatrixList <- function(l, func=function(x){ mean(x, na.rm=T) }, as.matr
 #' @export
 #'
 plotTopFeatures <- function(
-   m=NULL, cv_out=NULL, top.n=10, infer.feature.type=F,
+   m=NULL, cv_out=NULL, top.n=10,
    n.row=NULL, n.col=NULL,
-   feature.type.colors=NULL
+   feature.type.colors=NULL,
+   infer.feature.type=F, infer.feature.type.func=NULL
 ){
+   if(F){
+      m=readRDS('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.11a.1_snv_contexts/imp.rds')
+      infer.feature.type.func=function(x){ gsub('(^\\w\\[)|(\\]\\w$)','',x) }
+
+      m=readRDS('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.11c.1_indel_contexts/imp.rds')
+      infer.feature.type.func=NULL
+
+      top.n=20
+      infer.feature.type='force'
+      #infer.feature.type.func=NULL
+
+      n.row=NULL
+      n.col=NULL
+      feature.type.colors=NULL
+   }
+
    if(!is.null(cv_out)){
       m <- aggregateMatrixList(lapply(cv_out,`[[`,'imp'), as.matrix=T)
    }
@@ -82,10 +99,17 @@ plotTopFeatures <- function(
    }))
    df <- forceDfOrder(df)
 
-   if(infer.feature.type){
+   feature_tags_exist <- all(grepl('^\\w+[.]',colnames(m)))
+
+   if(infer.feature.type=='force' | (infer.feature.type==T & feature_tags_exist)){
+
+      if(is.null(infer.feature.type.func)){
+         infer.feature.type.func <- function(x){ gsub('[.].+$','',x) }
+      }
+
       df$feature_type <- factor(
-         gsub('[.].+$','',df$feature),
-         levels=unique(gsub('[.].+$','',colnames(m)))
+         infer.feature.type.func(df$feature),
+         levels=unique(infer.feature.type.func(colnames(m)))
       )
    } else {
       df$feature_type <- 'none'
@@ -97,11 +121,18 @@ plotTopFeatures <- function(
    label_y_pos <- max(df$value) * 0.05
 
    if(is.null(feature.type.colors)){
+      # color_pal <- c(
+      #    RColorBrewer::brewer.pal(12, 'Set3'),
+      #    RColorBrewer::brewer.pal(9, 'Pastel1'),
+      #    RColorBrewer::brewer.pal(8, 'Pastel2')
+      # )
+
       color_pal <- c(
-         RColorBrewer::brewer.pal(12, 'Set3'),
-         RColorBrewer::brewer.pal(9, 'Pastel1'),
-         RColorBrewer::brewer.pal(8, 'Pastel2')
+         "#8DD3C7","#BEBADA","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#BC80BD","#CCEBC5","#FFED6F", ##Excl: "#D9D9D9","#FFFFB3"
+         "#FBB4AE","#B3CDE3","#CCEBC5","#DECBE4","#FED9A6","#FFFFCC","#E5D8BD","#FDDAEC","#F2F2F2",
+         "#B3E2CD","#FDCDAC","#CBD5E8","#F4CAE4","#E6F5C9","#FFF2AE","#F1E2CC","#CCCCCC"
       )
+
       color_pal <- structure(
          color_pal[1:length(levels(df$feature_type))],
          names=levels(df$feature_type)
@@ -126,7 +157,6 @@ plotTopFeatures <- function(
       color_pal <- feature.type.colors
    }
 
-
    require(ggplot2)
    p <- ggplot(df, aes(x=index, y=value)) +
       facet_wrap(~class, nrow=n.row, ncol=n.col) +
@@ -144,7 +174,7 @@ plotTopFeatures <- function(
          panel.grid.minor=element_blank()
       )
 
-   if(length(unique(df$feature_type))==1){
+   if(length(unique(df$feature_type))==1 | !feature_tags_exist){
       p <- p + guides(fill=F)
    }
 
@@ -168,9 +198,11 @@ plotTopFeatures <- function(
 plotFeatureImpHeatmap <- function(
    m=NULL, cv_out=NULL, top.n=50, min.imp=NULL, invert.y=T, sort.features=F
 ){
+
    if(!is.null(cv_out)){
       m <- aggregateMatrixList(lapply(cv_out,`[[`,'imp'), as.matrix=T)
    }
+
    if(sort.features){
       m <- m[,order(colnames(m))]
    }
@@ -344,19 +376,29 @@ plotHeatmapFromMatrix <- function(
 #'
 plotPerfHeatmap <- function(
    actual=NULL, predicted=NULL, cv_out=NULL,
-   rel.heights=c(0.3, 0.15, 1),
+   rel.heights=c(perf=0.3, counts=0.15, heatmap=1),
 
    ## Confusion heatmap
    sort=F, rel.values=T,
 
    ## Performance metrics
-   metrics=c('f1','prec','tpr'), show.weighted.mean=T
+   metrics=c('f1','prec','tpr'),
+   show.weighted.mean=T
 ){
    require(ggplot2)
    if(!is.null(cv_out)){
       actual <- unlist(lapply(cv_out,function(i){ i$test_set$actual }))
       predicted <- unlist(lapply(cv_out,function(i){ i$test_set$predicted }))
    }
+
+   ## Make leves the same between actual and predicted
+   classes <- c(
+      levels(predicted),
+      sort(unique(as.character(actual)))
+   )
+   classes <- unique(classes)
+   actual <- factor(actual, classes)
+   predicted <- factor(predicted, classes)
 
    ## Large confusion matrix ----------------------------------------------------------------
    tab <- table(predicted, actual)
@@ -370,12 +412,18 @@ plotPerfHeatmap <- function(
    tab <- tab[class_order,class_order]
 
    tab <- cbind(NA,tab) ## Add dummy column for mean performance
+   tab <- tab[levels(droplevels(predicted)),] ## remove non-existing prediction levels
 
-   p_heatmap <- plotHeatmapFromMatrix(
+   plots <- list()
+
+   plots$heatmap <- plotHeatmapFromMatrix(
       tab, show.labels=T, x.lab='Actual\n(Columns: prop. misclassified as which class)', y.lab='Predicted', invert.y=T,
       #palette=if(rel.values){ 'YlGnBu' } else { 'none' },
       legend.name=if(rel.values){ 'Column fraction' } else { 'Counts' }
-   )
+   ) +
+      theme(
+         axis.text.x.bottom=element_blank()
+      )
 
    ## Samples per class ----------------------------------------------------------------
    class_counts <- table(actual)
@@ -393,11 +441,10 @@ plotPerfHeatmap <- function(
    #counts <- counts[,ncol(counts):1]
    #counts <- forceDfOrder(counts)
 
-   p_counts <-
-      plotHeatmapFromMatrix(t(as.matrix(counts)), palette='none', show.labels=T) +
+   plots$counts <-
+      plotHeatmapFromMatrix(t(as.matrix(counts)), palette='none', show.labels=T, x.title.position='top') +
       geom_hline(yintercept=1.5, size=0.5) +
       theme(
-         #panel.grid=element_blank(),
          axis.text.x.bottom=element_blank(),
          axis.title=element_blank()
       )
@@ -414,10 +461,12 @@ plotPerfHeatmap <- function(
 
    perf <- perf[class_order,]
 
+   perf_ss <- perf[rownames(perf) %in% predicted,]
+
    ## Summary stats
    if(show.weighted.mean){
       perf_summary <- rbind(
-         OVERALL=apply(perf,2,function(i){
+         OVERALL=apply(perf_ss,2,function(i){
             weights <- table(actual)/length(actual)
             weights <- weights[names(i)]
             weighted.mean(i, weights)
@@ -425,24 +474,42 @@ plotPerfHeatmap <- function(
       )
    } else {
       perf_summary <- rbind(
-         OVERALL = apply(perf,2,mean)
+         OVERALL = apply(perf_ss,2,mean)
       )
    }
    perf <- rbind(perf_summary, perf)
    perf <- round(perf, 2)
 
-   p_perf <- plotHeatmapFromMatrix(
+   plots$perf <- plotHeatmapFromMatrix(
          t(perf), palette='RdYlGn', palette.direction=1, show.labels=T,
          y.lab='Perf.', legend.name='Metric value', x.title.position='top'
       ) +
       theme(
-         axis.title.x=element_blank()
+         axis.text.x.bottom=element_blank(),
+         axis.title=element_blank()
       )
 
    ## Combine --------------------------------
+   plots <- rev(plots)
+
+   sel_plots <- names(rel.heights!=0)
+   plots <- plots[sel_plots]
+   rel_heights <- rel.heights[sel_plots]
+
+   plots[[1]] <- plots[[1]] +
+      theme(
+         axis.text.x.top=element_text(angle=90, hjust=0, vjust=0.5)
+      )
+
+   plots[[length(plots)]] <- plots[[length(plots)]] +
+      theme(
+         axis.text.x.bottom=element_text(angle=90, hjust=1, vjust=0.5),
+         axis.title.x.bottom=element_text()
+      )
+
    cowplot::plot_grid(
-      p_perf, p_counts, p_heatmap,
-      ncol=1, align='v', axis='tblr', rel_heights=rel.heights
+      plotlist=plots,
+      ncol=1, align='v', axis='tblr', rel_heights=rel_heights
    )
 
 }
