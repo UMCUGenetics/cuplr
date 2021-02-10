@@ -46,14 +46,14 @@ mkMutProfileSnvIndel <- function(
    
    sig_scores$max_score <- unlist(Map(function(clinvar_score, hotspot_score, snpeff_score){
       if(clinvar_score != 0){ return(clinvar_score) }
-      if(hotspot_score != 0){ return(hotspot_score) }
+      #if(hotspot_score != 0){ return(hotspot_score) }
       if(snpeff_score != 0){ return(snpeff_score) }
       return(0)
    }, clinvar_score, hotspot_score, snpeff_score, USE.NAMES=F))
    
    sig_scores$max_score_origin <- unlist(Map(function(clinvar_score, hotspot_score, snpeff_score){
       if(clinvar_score != 0){ return('clinvar') }
-      if(hotspot_score != 0){ return('hotspot') }
+      #if(hotspot_score != 0){ return('hotspot') }
       if(snpeff_score != 0){ return('snpeff') }
       return('none')
    }, clinvar_score, hotspot_score, snpeff_score, USE.NAMES=F))
