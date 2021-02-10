@@ -69,9 +69,13 @@ nmf <- function(
       min.k <- min(dim(A2))
       A.isNA <- is.na(A2)
       A.anyNA <- any(A.isNA) # anyNA is depreciated in new version of R
+      #print('1')
       if (A.anyNA) {
          min.k <- min(min.k, ncol(A2) - rowSums(A.isNA), nrow(A2) - colSums(A.isNA))
       }
+      #print('2')
+      #print(k)
+      #print(min.k)
       if(k > min.k){
          warning(paste0('k is larger than min.k (',min.k,'). Returning NA'))
          return(
@@ -81,6 +85,7 @@ nmf <- function(
             )
          )
       }
+      #print('3')
 
       ## Do NMF
       nnmf_out <- NNLM::nnmf(
@@ -101,7 +106,13 @@ nmf <- function(
    }
 
    ## Determine optimal rank --------------------------------
-   if(verbose>0){ message('Determining optimal rank...') }
+   if(verbose>0){
+      if(length(k.range)>1){
+         message('Calculating MSE and determining optimal rank...')
+      } else {
+         message('Calculating MSE...')
+      }
+   }
    param_grid <- data.frame(
       k=rep(k.range, each=repeats),
       repeat_num=rep(1:repeats, length(k.range)),
@@ -150,7 +161,12 @@ nmf <- function(
 
    ## Run NMF with optimum rank --------------------------------
    ## Optimum rank: Rank before mse increases above threshold (i.e. max.rel.log.mse.increase)
-   optimum_k <- perf_summ[(nrow(perf_summ)-1),'k']
+   if(length(k.range)>1){
+      optimum_k <- perf_summ[(nrow(perf_summ)-1),'k']
+   } else {
+      optimum_k <- k.range
+   }
+
    if(verbose>0){ message('Running NMF with optimum rank (=', optimum_k,')...') }
    out <- main(k=optimum_k, repeat.num=1, return.perf=F)
 
