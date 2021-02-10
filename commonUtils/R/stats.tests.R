@@ -61,6 +61,7 @@ fisherTest <- function (x, ...) {
 
 #' @rdname fisherTest
 #' @method fisherTest default
+#' @export
 fisherTest.default <- function(
    case.true, case.false, ctrl.true, ctrl.false,
    alternative='two.sided', verbose=F
@@ -105,6 +106,7 @@ fisherTest.default <- function(
 
 #' @rdname fisherTest
 #' @method fisherTest matrix
+#' @export
 fisherTest.matrix <- function(m, ...){
    if(ncol(m)!=4){ stop('Input matrix must have 4 columns corresponding to a flattened contingency matrix') }
    fisherTest.default(
@@ -112,6 +114,10 @@ fisherTest.matrix <- function(m, ...){
       ...
    )
 }
+
+#' @rdname fisherTest
+#' @method fisherTest data.frame
+#' @export
 fisherTest.data.frame <- fisherTest.matrix
 
 
@@ -137,6 +143,7 @@ fisherChi2 <- function (x, ...) {
 
 #' @rdname fisherChi2
 #' @method fisherChi2 default
+#' @export
 fisherChi2.default <- function(case.true, case.false, ctrl.true, ctrl.false, correct=TRUE, return.statistic=FALSE){
    ## Adapted from stats::chisq.test()
    # if(F){
@@ -176,10 +183,15 @@ fisherChi2.default <- function(case.true, case.false, ctrl.true, ctrl.false, cor
 
 #' @rdname fisherChi2
 #' @method fisherChi2 matrix
+#' @export
 fisherChi2.matrix <- function(m, ...){
    if(ncol(m)!=4){ stop('Input matrix must have 4 columns corresponding to a flattened contingency matrix') }
    fisherChi2.default(m[,1],m[,2],m[,3],m[,4])
 }
+
+#' @rdname fisherChi2
+#' @method fisherChi2 data.frame
+#' @export
 fisherChi2.data.frame <- fisherChi2.matrix
 
 
@@ -397,6 +409,7 @@ wilcoxTest <- function (x, ...) {
 
 #' @rdname wilcoxTest
 #' @method wilcoxTest matrix
+#' @export
 wilcoxTest.matrix <- function(
    x, y, alternative="two.sided", mu=0, exact=NA, correct=TRUE,
    pvalue.only=TRUE
@@ -515,10 +528,24 @@ wilcoxTest.matrix <- function(
       stringsAsFactors=FALSE, row.names=rnames
    )
 }
+
+#' @rdname wilcoxTest
+#' @method wilcoxTest default
+#' @export
+wilcoxTest.default <- function(x, y, ...){
+   x <- matrix(x, ncol=1L)
+   y <- matrix(y, ncol=1L)
+   wilcoxTest.matrix(x,y, ...)
+}
+
+#' @rdname wilcoxTest
+#' @method wilcoxTest data.frame
+#' @export
 wilcoxTest.data.frame <- wilcoxTest.matrix
 
 #' @rdname wilcoxTest
 #' @method wilcoxTest default
+#' @export
 wilcoxTest.default <- function(x, y, ...){
    x <- matrix(x, ncol=1L)
    y <- matrix(y, ncol=1L)
