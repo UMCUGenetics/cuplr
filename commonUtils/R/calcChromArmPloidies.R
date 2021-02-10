@@ -55,7 +55,7 @@ calcChromArmPloidies <- function(
          total_cn='copyNumber',major_cn='majorAllelePloidy',minor_cn='minorAllelePloidy'
       )
    }
-   
+
    cnv <- selectRequiredCols(
       df=cnv,
       required.cols=c('chrom','start','end','total_cn','major_cn','minor_cn'),
@@ -215,6 +215,7 @@ calcChromArmCnChange <- function (x, ...) {
 
 #' @rdname calcChromArmCnChange
 #' @method calcChromArmCnChange numeric
+#' @export
 calcChromArmCnChange.numeric <- function(x, direction){
    #x <- unlist(features$ploidy[1,])
 
@@ -237,6 +238,7 @@ calcChromArmCnChange.numeric <- function(x, direction){
 
 #' @rdname calcChromArmCnChange
 #' @method calcChromArmCnChange matrix
+#' @export
 calcChromArmCnChange.matrix <- function(m, direction){
    #m=features$ploidy
 
@@ -259,6 +261,7 @@ calcChromArmCnChange.matrix <- function(m, direction){
 
 #' @rdname calcChromArmCnChange
 #' @method calcChromArmCnChange data.frame
+#' @export
 calcChromArmCnChange.data.frame <- calcChromArmCnChange.matrix
 
 
