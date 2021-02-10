@@ -56,10 +56,15 @@ mkMutProfileGeneCnv <- function(
    #sel.cols=c(chrom='chromosome',start='start',end='end',total_cn='total_cn',major_cn='major_cn',minor_cn='minor_cn')
    #cnv.file<-input.file.paths['cnv']
    
+   #cnv.file='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104-update3//somatics/181019_HMFregXXXXXXXX/purple/XXXXXXXX.purple.cnv.somatic.tsv'
+   #sel.cols=c(chrom='chromosome',start='start',end='end',total_cn='copyNumber',major_cn='majorAlleleCopyNumber',minor_cn='minorAlleleCopyNumber')
+   #exons.bed.file='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/misc/processed/Chromatin_modifiers/gene_list/chromatin_modifier_exons.bed.gz'
+   
    ## ------------------------
    if(verbose){ message('Reading bed file...') }
    if(!is.null(exons.bed.file)){
       bed <- read.delim(exons.bed.file, stringsAsFactors=F)
+      colnames(bed)[2:3] <- c('start','end')
       gene_info <- bed[,c('chrom','gene_start','gene_end','hgnc_symbol','ensembl_gene_id')]
       colnames(gene_info)[2:3] <- c('start','end')
    } else {
