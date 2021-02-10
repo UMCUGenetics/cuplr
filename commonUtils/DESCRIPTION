@@ -14,4 +14,8 @@ Imports:
 	GenomeInfoDb,
 	matrixStats,
 	Rcpp
+Suggests:
+	naturalsort,
+	ggplot2,
+	ggrepel
 RoxygenNote: 7.1.1
