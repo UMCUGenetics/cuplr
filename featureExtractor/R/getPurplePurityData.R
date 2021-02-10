@@ -11,7 +11,7 @@ getPurplePurityData <- function(purple.purity.path, tag.features=T){
 
    out <- c(
       gender=if(df$gender=='FEMALE'){ 'female' } else { 'male' }, ## MALE_KLINEFELTER becomes male
-      has_wgd=if(df$wholeGenomeDuplication=='true'){ TRUE } else { FALSE }
+      has_wgd=as.logical(df$wholeGenomeDuplication)
    )
    
    return(out)
