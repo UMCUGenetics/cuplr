@@ -4,6 +4,7 @@
 \alias{fisherChi2}
 \alias{fisherChi2.default}
 \alias{fisherChi2.matrix}
+\alias{fisherChi2.data.frame}
 \title{Fast chi-squared test for 2x2 matrices (similar to a fisher test)}
 \usage{
 fisherChi2(x, ...)
@@ -18,6 +19,8 @@ fisherChi2(x, ...)
 )
 
 \method{fisherChi2}{matrix}(m, ...)
+
+\method{fisherChi2}{data.frame}(m, ...)
 }
 \arguments{
 \item{...}{Arguments that can be passed to fisherChi2.default()}

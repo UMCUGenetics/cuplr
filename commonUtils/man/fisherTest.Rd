@@ -4,6 +4,7 @@
 \alias{fisherTest}
 \alias{fisherTest.default}
 \alias{fisherTest.matrix}
+\alias{fisherTest.data.frame}
 \title{Fast fisher's exact tests}
 \usage{
 fisherTest(x, ...)
@@ -18,6 +19,8 @@ fisherTest(x, ...)
 )
 
 \method{fisherTest}{matrix}(m, ...)
+
+\method{fisherTest}{data.frame}(m, ...)
 }
 \arguments{
 \item{...}{Arguments that can be passed to fisherTest.default()}
