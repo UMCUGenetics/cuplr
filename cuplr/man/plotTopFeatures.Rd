@@ -8,10 +8,11 @@ plotTopFeatures(
   m = NULL,
   cv_out = NULL,
   top.n = 10,
-  infer.feature.type = F,
   n.row = NULL,
   n.col = NULL,
-  feature.type.colors = NULL
+  feature.type.colors = NULL,
+  infer.feature.type = F,
+  infer.feature.type.func = NULL
 )
 }
 \arguments{
@@ -22,15 +23,15 @@ plotTopFeatures(
 
 \item{top.n}{Top number of features to show}
 
-\item{infer.feature.type}{Determine the feature type based on the tag/prefix. Everything before
-the first dot (.) is considered the feature tag}
-
 \item{n.row}{Number of facet rows}
 
 \item{n.col}{Number of facet columns}
 
 \item{feature.type.colors}{A character vector of color hex codes with names being the feature
 types}
+
+\item{infer.feature.type}{Determine the feature type based on the tag/prefix. Everything before
+the first dot (.) is considered the feature tag}
 }
 \value{
 A ggplot object

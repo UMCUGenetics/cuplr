@@ -9,10 +9,12 @@ trainRandomForest(
   test = NULL,
   colname.response = "response",
   do.feat.sel = T,
-  feat.sel.v.alternative = NULL,
+  feat.sel.alternative = NULL,
   feat.sel.max.pvalue = 0.01,
-  feat.sel.min.effect.size = 3,
+  feat.sel.min.cliff.delta = 0.1,
+  feat.sel.min.cramer.v = 0.1,
   feat.sel.top.n.features = NULL,
+  feat.sel.whitelist = NULL,
   balance.classes = F,
   k.inner = 5,
   n.resamples.true = 4,
@@ -22,6 +24,7 @@ trainRandomForest(
   max.upsample.ratio = 10,
   ntree = 500,
   get.local.increments = T,
+  feat.tmp.path = NULL,
   model.tmp.path = NULL,
   seed = NULL,
   msg.prefix = NULL,
@@ -38,10 +41,14 @@ the performance of the trained model}
 
 \item{do.feat.sel}{Perform univariate feature selection?}
 
+\item{feat.sel.alternative}{Can be 'two.sided', 'greater' or 'less'. Can be provided as a
+single string, or a character vector of the same length as the number of features}
+
 \item{feat.sel.max.pvalue}{Only features with p-value lower than this will be kept}
 
-\item{feat.sel.min.effect.size}{Effect size threshold for keeping features. Default: 3
-(applies to both +3 and -3 effect sizes)}
+\item{feat.sel.min.cliff.delta}{Cliff delta (effect size) threshold for keeping continous features}
+
+\item{feat.sel.min.cramer.v}{Cramer's V (effect size) threshold for keeping categorical features}
 
 \item{feat.sel.top.n.features}{Only keep the top number of features}
 
