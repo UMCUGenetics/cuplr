@@ -25,7 +25,7 @@
 nmf <- function(
    A,
    k.range=1:10, repeats=10, max.samples=100, impute.prop=0.1, max.rel.log.mse.increase=0.002,
-   seed=1, verbose=0
+   run.with.optimum.k=T, seed=1, verbose=0
 ){
    if(F){
       #m_rmd <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.10e_rmd1mb_DR104update/features/features.txt.gz')
@@ -40,13 +40,15 @@ nmf <- function(
    }
 
    ## Init --------------------------------
-   #require(NNLM)
+   require(NNLM)
+
+   set.seed(seed)
 
    A <- as.matrix(A)
    if(!is.numeric(A)){ stop('`A` must be a numeric matrix or dataframe') }
 
    ## Calc NMF performance; Do final fit --------------------------------
-   main <- function(k, repeat.num, return.perf=F){
+   main <- function(k, repeat.num, return.perf=F, max.samples){
 
       i_seed <- as.integer(paste0(seed,repeat.num))
       set.seed(i_seed)
@@ -132,7 +134,7 @@ nmf <- function(
 
       if(verbose>0){ message('> Rank ',k,', repeat ',repeat_num) }
 
-      i_perf <- main(k=k, repeat.num=repeat_num, return.perf=T)
+      i_perf <- main(k=k, repeat.num=repeat_num, return.perf=T, max.samples=max.samples)
       perf <- rbind(perf, cbind(k=k,i_perf))
 
       if(i %in% checkpoints){
@@ -152,23 +154,34 @@ nmf <- function(
 
          mse_increase <- (perf_before - perf_after)/perf_before
 
-         if(mse_increase > max.rel.log.mse.increase){
-            break
+         if(!is.null(max.rel.log.mse.increase)){
+            if(mse_increase > max.rel.log.mse.increase){ break }
          }
-
       }
    }
 
    ## Run NMF with optimum rank --------------------------------
    ## Optimum rank: Rank before mse increases above threshold (i.e. max.rel.log.mse.increase)
-   if(length(k.range)>1){
-      optimum_k <- perf_summ[(nrow(perf_summ)-1),'k']
-   } else {
+
+   if(length(k.range)==1){
       optimum_k <- k.range
+   } else {
+      if(tail(k.range,1)==nrow(perf_summ)){
+         optimum_k <- nrow(perf_summ)
+         if(!is.null(max.rel.log.mse.increase)){
+            warning('Could not find optimal rank (max.rel.log.mse.increase threshold not satisfied).\nReturning last k in k.range')
+         }
+      } else {
+         optimum_k <- perf_summ[(nrow(perf_summ)-1),'k']
+      }
    }
 
    if(verbose>0){ message('Running NMF with optimum rank (=', optimum_k,')...') }
-   out <- main(k=optimum_k, repeat.num=1, return.perf=F)
+   if(run.with.optimum.k){
+      out <- main(k=optimum_k, repeat.num=1, return.perf=F, max.samples=Inf)
+   } else {
+      out <- list()
+   }
 
    out$perf <- perf
    out$perf_summ <- perf_summ
