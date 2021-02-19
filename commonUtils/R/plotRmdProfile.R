@@ -3,11 +3,12 @@
 #' @param m A matrix where rows are samples and columns are RMD bins
 #' @param top.n Show labels for the features with the highest peaks
 #' @param plot.title Plot title
+#' @param y.lab y axis title
 #'
 #' @return A ggplot object
 #' @export
 #'
-plotRmdProfile <- function(m, top.n=15, plot.title='RMD profile'){
+plotRmdProfile <- function(m, top.n=15, plot.title='RMD profile', y.lab='Probability'){
    #m=sig_prof
 
    require(naturalsort)
@@ -103,6 +104,7 @@ plotRmdProfile <- function(m, top.n=15, plot.title='RMD profile'){
          ) +
 
          ggtitle(i) +
+         ylab(y.lab) +
 
          theme_bw() +
          theme(
