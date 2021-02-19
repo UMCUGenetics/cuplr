@@ -20,8 +20,9 @@
 #' @export
 #'
 extractRmd <- function(
-   vcf.file=NULL, df=NULL, sample.name=NULL, genome.bins=NULL, bin.size=1e6, as.matrix=T, 
-   vcf.filter='PASS', clonal.variants.only=T, verbose=F, ...
+   vcf.file=NULL, df=NULL, sample.name=NULL, genome.bins=NULL, bin.size=1e6, as.matrix=T,
+   vcf.filter='PASS', clonal.variants.only=T, mut.types='snv',
+   verbose=F, ...
 ){
    # if(F){
    #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/171002_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
@@ -63,6 +64,21 @@ extractRmd <- function(
        
       if(verbose){ message('Converting chrom name style...') }
       GenomeInfoDb::seqlevelsStyle(df$chrom)<- 'NCBI'
+   }
+   
+   if(nrow(df)!=0){
+      
+      if(verbose){ message('Subsetting for: ',paste(mut.types, collapse=', '),'...') }
+      
+      df$mut_type <- 'other'
+      df$mut_type[ nchar(df$ref)==1 & nchar(df$alt)==1 ] <- 'snv'
+      df$mut_type[ nchar(df$ref)==2 & nchar(df$alt)==2 ] <- 'dbs'
+      df$mut_type[ 
+         ( nchar(df$ref)==1 & nchar(df$alt)>1 ) |
+         ( nchar(df$ref)>1 & nchar(df$alt)==1 )
+      ] <- 'indel'
+      
+      df <- df[df$mut_type %in% mut.types,]
    }
 
    ##----------------------------------------------------------------
