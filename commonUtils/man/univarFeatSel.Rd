@@ -13,7 +13,7 @@ univarFeatSel(
   min.cramer.v = 0.1,
   sel.top.n.features = NULL,
   min.features = 2,
-  output.type = "new.x",
+  whitelist = NULL,
   verbose = F
 )
 }
@@ -37,8 +37,6 @@ to both +ve and -ve values}
 \item{sel.top.n.features}{Limit the total number of features that are selected}
 
 \item{min.features}{Minimum number of features to keep. Prevents outputting no features}
-
-\item{output.type}{Can be 'raw','new.x','features'}
 
 \item{verbose}{Show progress messages?}
 }

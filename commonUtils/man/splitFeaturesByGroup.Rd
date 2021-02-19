@@ -10,7 +10,7 @@ splitFeaturesByGroup(x, ...)
 
 \method{splitFeaturesByGroup}{default}(x, rm.tags = F)
 
-\method{splitFeaturesByGroup}{dataframe}(x, rm.tags = F)
+\method{splitFeaturesByGroup}{data.frame}(x, rm.tags = F)
 }
 \arguments{
 \item{rm.tags}{Remove feature group tags?}
