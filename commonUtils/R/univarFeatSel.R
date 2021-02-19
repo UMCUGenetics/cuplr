@@ -22,7 +22,6 @@
 #' to both +ve and -ve values
 #' @param sel.top.n.features Limit the total number of features that are selected
 #' @param min.features Minimum number of features to keep. Prevents outputting no features
-#' @param output.type Can be 'raw','new.x','features'
 #' @param verbose Show progress messages?
 #'
 #' @return A vector of feature names if return.new.x=TRUE, else a feature matrix with the selected
@@ -33,9 +32,8 @@ univarFeatSel <- function(
    x, y,
    alternative=NULL,
    max.pvalue=0.01, min.cliff.delta=0.1, min.cramer.v=0.1,
-   sel.top.n.features=NULL,
-   min.features=2,
-   #output.type='new.x',
+   sel.top.n.features=NULL, min.features=2,
+   whitelist=NULL,
    verbose=F
 ){
    if(F){
@@ -107,7 +105,7 @@ univarFeatSel <- function(
    pvalues_numeric <- numeric()
    cliff_delta <- numeric()
    if(ncol(x_numeric)!=0){
-      if(verbose){ message('Performing wilcox tests for numerical features...') }
+      if(verbose){ message('Performing wilcox tests for numeric features...') }
       pvalues_numeric <- wilcoxTest.data.frame(
          x_numeric[y,],
          x_numeric[!y,],
@@ -115,17 +113,17 @@ univarFeatSel <- function(
       )
       pvalues_numeric[is.na(pvalues_numeric)] <- 1
 
-      if(verbose){ message("Calculating Cliff's delta for numerical features...") }
+      if(verbose){ message("Calculating Cliff's delta for numeric features...") }
       cliff_delta <- cliffDelta.data.frame(x_numeric[y,], x_numeric[!y,])
    }
 
-   ## Fisher test on logical/categorical features --------------------------------
+   ## Fisher test on logical features --------------------------------
    x_logical <- x[,!is_numeric,drop=F]
 
    pvalues_logical <- numeric()
    cramer_v <- numeric()
    if(ncol(x_logical)!=0){
-      if(verbose){ message('Performing fisher tests for logical/categorical features...') }
+      if(verbose){ message('Performing fisher tests for logical features...') }
       x_logical <- as.matrix(as.data.frame(x_logical, check.names=F))
       #table(x_logical[,'fusion.TMPRSS2_ERG'])
 
@@ -135,13 +133,13 @@ univarFeatSel <- function(
          alternative = alternative[colnames(x_logical)]
       )
 
-      if(verbose){ message("Calculating Cramer's V for logical/categorical features...") }
+      if(verbose){ message("Calculating Cramer's V for logical features...") }
       cramer_v <- cramerV.data.frame(conting)
    }
 
-   ## Aggregate stats from continuous/categorical data --------------------------------
+   ## Aggregate stats from numeric/logical data --------------------------------
    tests <- data.frame(
-      feature_type=c(rep('continuous',ncol(x_numeric)), rep('categorical',ncol(x_logical))),
+      feature_type=c(rep('numeric',ncol(x_numeric)), rep('logical',ncol(x_logical))),
       pvalue=c(pvalues_numeric, pvalues_logical),
       cliff_delta=c(cliff_delta, rep(0,ncol(x_logical))),
       cramer_v=c(rep(0,ncol(x_numeric)), cramer_v),
@@ -178,7 +176,7 @@ univarFeatSel <- function(
 
    ## Return feature names or filtered feature matrix
    keep_features <- names(is_pass_feature)[is_pass_feature]
-   if(sum(is_pass_feature) < min.features){
+   if(length(keep_features) < min.features){
       keep_features <- names(keep_features)[1:min.features]
    } else if(!is.null(sel.top.n.features)){
       top_n_features <- min(length(keep_features), sel.top.n.features, ncol(x))
@@ -190,18 +188,11 @@ univarFeatSel <- function(
 
    tests$is_keep_feature[ is_pass_feature & !(tests$feature %in% keep_features) ] <- FALSE
 
-   return(tests)
+   if(!is.null(whitelist)){
+      tests$is_keep_feature[ tests$feature %in% whitelist ] <- TRUE
+   }
 
-   # ## Return enrichment analysis
-   # if(output.type=='raw'){ return(tests) }
-   #
-   # if(output.type=='new.x'){
-   #    return(x_raw[,keep_features,drop=F])
-   # }
-   #
-   # if(output.type=='features'){
-   #    return(keep_features)
-   # }
+   return(tests)
 }
 
 
