@@ -35,6 +35,7 @@ splitFeaturesByGroup <- function (x, ...) {
 
 #' @rdname splitFeaturesByGroup
 #' @method splitFeaturesByGroup default
+#' @export
 splitFeaturesByGroup.default <- function(x, rm.tags=F){
    feature_groups <- groupFeaturesByTag(names(x))
    l <- lapply(feature_groups, function(i){ x[i] })
@@ -48,7 +49,8 @@ splitFeaturesByGroup.default <- function(x, rm.tags=F){
 }
 
 #' @rdname splitFeaturesByGroup
-#' @method splitFeaturesByGroup dataframe
+#' @method splitFeaturesByGroup data.frame
+#' @export
 splitFeaturesByGroup.data.frame <- function(x, rm.tags=F){
    feature_groups <- groupFeaturesByTag(colnames(x))
    l <- lapply(feature_groups, function(i){ x[,i,drop=F] })
