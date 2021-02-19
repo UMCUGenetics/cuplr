@@ -8,7 +8,7 @@ plotPerfHeatmap(
   actual = NULL,
   predicted = NULL,
   cv_out = NULL,
-  rel.heights = c(0.3, 0.15, 1),
+  rel.heights = c(perf = 0.3, counts = 0.15, heatmap = 1),
   sort = F,
   rel.values = T,
   metrics = c("f1", "prec", "tpr"),

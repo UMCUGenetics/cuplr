@@ -4,7 +4,15 @@
 \alias{predict.randomForestEnsemble}
 \title{Predict method for random forest ensemble}
 \usage{
-\method{predict}{randomForestEnsemble}(object, newdata, type = "response", verbose = F)
+\method{predict}{randomForestEnsemble}(
+  object,
+  newdata,
+  type = "response",
+  gender.feature.name = "purple.gender",
+  classes.female = c("Cervix", "Ovary", "Uterus"),
+  classes.male = "Prostate",
+  verbose = F
+)
 }
 \arguments{
 \item{object}{An object of class randomForestEnsemble}
