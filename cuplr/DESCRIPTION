@@ -15,4 +15,5 @@ Suggests:
 	mltoolkit,
 	ggplot2,
 	NNLM,
-	rfFC
+	rfFC,
+	reshape2
