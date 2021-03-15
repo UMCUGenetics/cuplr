@@ -3,12 +3,13 @@
 #' @param x A logical matrix
 #' @param y A logical vector indicating the case/control group (i.e. response)
 #' @param use.totals Should case/control totals be used instead of case.false and ctrl.false?
+#' @param show.warnings Show warnings?
 #'
 #' @return A matrix with the columns: case.true, case.false, ctrl.true, ctrl.false. Each row is
 #' thus one contingency matrix
 #' @export
 #'
-contingencyMatrix <- function(x, y, use.totals=FALSE){
+contingencyMatrix <- function(x, y, use.totals=FALSE, show.warnings=TRUE){
 
    if(!is.logical(x)){ stop('x must be a logical matrix or vector') }
    if(!is.logical(y)){ stop('y must be a logical vector') }
@@ -18,11 +19,25 @@ contingencyMatrix <- function(x, y, use.totals=FALSE){
    case <- x[y,,drop=F]
    ctrl <- x[!y,,drop=F]
 
+   if(anyNA(x)){
+      if(show.warnings){
+         warning('`x` contains NAs. These were excluded from the contingency counts')
+      }
+      case.NAs <- apply(case, 2, function(i){ sum(is.na(i)) })
+      ctrl.NAs <- apply(ctrl, 2, function(i){ sum(is.na(i)) })
+
+      case[is.na(case)] <- FALSE
+      ctrl[is.na(ctrl)] <- FALSE
+   } else {
+      case.NAs <- 0
+      ctrl.NAs <- 0
+   }
+
    case.true <- colSums(case)
-   case.false <- nrow(case) - case.true
+   case.false <- nrow(case) - case.true - case.NAs
 
    ctrl.true <- colSums(ctrl)
-   ctrl.false <- nrow(ctrl) - ctrl.true
+   ctrl.false <- nrow(ctrl) - ctrl.true - ctrl.NAs
 
    if(!use.totals){
       cbind(
@@ -32,9 +47,9 @@ contingencyMatrix <- function(x, y, use.totals=FALSE){
    } else {
       cbind(
          case.true,
-         case.total=nrow(case), ## Use case totals instead
+         case.total=nrow(case) - case.NAs, ## Use case totals instead
          ctrl.true,
-         case.total=nrow(ctrl) ## Use ctrl totals instead
+         case.total=nrow(ctrl) - ctrl.NAs ## Use ctrl totals instead
       )
    }
 }
