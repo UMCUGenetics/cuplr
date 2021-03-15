@@ -107,14 +107,14 @@ univarFeatSel <- function(
    if(ncol(x_numeric)!=0){
       if(verbose){ message('Performing wilcox tests for numeric features...') }
       pvalues_numeric <- wilcoxTest.data.frame(
-         x_numeric[y,],
-         x_numeric[!y,],
+         x_numeric[y,,drop=F],
+         x_numeric[!y,,drop=F],
          alternative = alternative[colnames(x_numeric)]
       )
       pvalues_numeric[is.na(pvalues_numeric)] <- 1
 
       if(verbose){ message("Calculating Cliff's delta for numeric features...") }
-      cliff_delta <- cliffDelta.data.frame(x_numeric[y,], x_numeric[!y,])
+      cliff_delta <- cliffDelta.data.frame(x_numeric[y,,drop=F], x_numeric[!y,,drop=F])
    }
 
    ## Fisher test on logical features --------------------------------
