@@ -96,7 +96,7 @@ cliffDelta.data.frame <- cliffDelta.matrix
 
 
 ####################################################################################################
-#' Calculate odds ratio
+#' Calculate Cramer's V
 #'
 #' @rdname cramerV
 #'
