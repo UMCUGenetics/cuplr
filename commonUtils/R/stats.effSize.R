@@ -1,3 +1,4 @@
+
 #' Calculate Cliff's delta values (for continuous data)
 #'
 #' @rdname cliffDelta
@@ -35,25 +36,15 @@ Rcpp::cppFunction('double cliffd(NumericVector x, NumericVector y){
 }
 ')
 
-# set.seed(1)
-# x <- sample(1:10,6,replace=T)
-# y <- sample(1:10,5,replace=T)
-#
-# x <- m_true[,1]
-# y <- m_false[,1]
-#
-# ## R version
-# signs <- sign(outer(x, y, FUN="-")); sum(signs, na.rm=T) / length(signs)
-#
-# ## Cpp version
-# cliffd(x,y)
-
 #' @rdname cliffDelta
 #' @method cliffDelta default
 #' @export
 cliffDelta.default <- function(x,y){
-   #x <- m_true[,1]
-   #y <- m_false[,1]
+
+   # ## R implementation
+   # signs <- sign(outer(x, y, FUN="-"))
+   # sum(signs, na.rm=T) / length(signs)
+
    if(!is.numeric(x) | !is.numeric(y)){ stop('x and y must be numeric matrices') }
    cliffd(x,y)
 }
@@ -62,8 +53,6 @@ cliffDelta.default <- function(x,y){
 #' @method cliffDelta matrix
 #' @export
 cliffDelta.matrix  <- function(x, y){
-   #x=m_true
-   #y=m_false
 
    if(ncol(x)!=ncol(y)){ stop('x and y must have the sample number of columns') }
    x <- as.matrix(x); dimnames(x) <- NULL
@@ -94,6 +83,56 @@ cliffDelta.matrix  <- function(x, y){
 #' @export
 cliffDelta.data.frame <- cliffDelta.matrix
 
+# if(F){
+#    set.seed(1)
+#    x <- matrix(
+#       sample(1:10, 120000,replace=T),
+#       ncol=600
+#    )
+#
+#    y <- matrix(
+#       sample(2:15, 240000,replace=T),
+#       ncol=600
+#    )
+#
+#    signs <- sign(outer(x[,1], y[,1], FUN="-"))
+#    sum(signs, na.rm=T) / length(signs)
+#
+#    sum(signs>0)
+#    sum(signs<0)
+#
+#    ##
+#    cliffDeltaR <- function(x,y){
+#
+#       n_comparisons <- nrow(x)*nrow(y)
+#
+#       ## Rows of x are compared with cols of y
+#       ## Therefore need to transpose
+#       y <- t(y)
+#
+#       gt_sums <- rowSums(
+#          apply(x,1,function(i){
+#             rowSums(i > y)
+#          })
+#       )
+#       lt_sums <- rowSums(
+#          apply(x,1,function(i){
+#             rowSums(i < y)
+#          })
+#       )
+#
+#       sign_sums <- gt_sums - lt_sums
+#       sign_sums / n_comparisons
+#    }
+#
+#    system.time({
+#       cliffDelta(x,y)
+#    })
+#
+#    system.time({
+#       cliffDeltaR(x,y)
+#    })
+# }
 
 ####################################################################################################
 #' Calculate Cramer's V
@@ -169,7 +208,7 @@ cramerV.default <- function(case.true, case.false, ctrl.true, ctrl.false, show.s
    V[is.na(V)] <- 0
 
    if(show.sign){
-      ## Add sign
+      ## Add sign based on log(odds ratio)
       observed_1 <- observed + 1
       ratio_case <- observed_1[,'case.true'] / observed_1[,'case.false']
       ratio_ctrl <- observed_1[,'ctrl.true'] / observed_1[,'ctrl.false']
