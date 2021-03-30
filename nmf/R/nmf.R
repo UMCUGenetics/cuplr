@@ -152,7 +152,7 @@ runNmf <- function(
 #'
 nmfRankSearch <- function(
    A,
-   k.range=1:10, repeats=10, max.samples=100, impute.prop=0.1, max.rel.log.mse.increase=0.002,
+   k.range=1:10, repeats=50, max.samples=100, impute.prop=0.1, max.rel.log.mse.increase=0.002,
    run.with.optimum.k=T, seed=1, verbose=0
 ){
    if(F){
