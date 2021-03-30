@@ -405,17 +405,32 @@ trainRandomForest <- function(
 #' @param type 'response', 'prob' or 'votes', indicating the type of output: predicted values,
 #' matrix of class probabilities, or matrix of vote counts. 'class' is allowed, but automatically
 #' converted to "response", for backward compatibility.
+#' @param gender.feature.name The name of the feature specifying the gender of each sample
+#' @param classes.female A character vector of female cancer type classes. For male samples (as
+#' determined by `gender.feature.name`), the probabilities outputted by the binary random forests
+#' corresponding to `classes.female` will be set to zero
+#' @param classes.male A character vector of male cancer type classes. Similar to `classes.female`
+#' @param calc.feat.contrib Calculate feature contributions?
+#' @param top.n.pred.classes Number of top predicted classes (i.e. binary random forest names) to
+#' keep features from when calculating feature contributions
+#' @param top.n.features Number of top features for each sample to keep when calculating feature
+#' contributions
+#' @param verbose Show progress messages? Can be 0,1,2
 #'
-#' @return 'response': predicted classes (the classes with majority vote). 'prob' matrix of class
-#' probabilities (one column for each class and one row for each input). 'vote'
-#' matrix of vote counts (one column for each class and one row for each new input); either in raw
-#' counts or in fractions (if norm.votes=TRUE).
+#'
+#' @return 'response': predicted classes (the classes with majority vote).
+#' 'prob': matrix of class
+#' probabilities (one column for each class and one row for each input)
+#' 'detailed': a list containing the following objects: probs_raw, probs_adjusted, responses_pred,
+#' feat_contrib
+#'
 #' @export
 #'
 predict.randomForestEnsemble <- function(
    object, newdata, type='response',
    gender.feature.name='purple.is_female',
    classes.female=c('Cervix','Ovary','Uterus'), classes.male='Prostate',
+   calc.feat.contrib=T, top.n.pred.classes=3, top.n.features=5,
    verbose=F
 ){
    if(F){
@@ -426,6 +441,8 @@ predict.randomForestEnsemble <- function(
       gender.feature.name='purple.is_female'
       classes.female=c('Cervix','Ovary','Uterus')
       classes.male='Prostate'
+      top.n.pred.classes=3
+      top.n.features=5
       verbose=T
    }
 
@@ -473,7 +490,7 @@ predict.randomForestEnsemble <- function(
    }
    #probs_raw <- reports_merged$probs_raw
    probs_raw <- do.call(cbind, lapply(object$ensemble, function(model){
-      if(verbose){
+      if(verbose>=2){
          counter <<- counter + 1
          message('[',counter,'/',length(object$ensemble),']: ', names(object$ensemble)[counter])
       }
@@ -482,8 +499,6 @@ predict.randomForestEnsemble <- function(
 
    ## --------------------------------
    if(verbose){ message('Adjusting raw probabilities...') }
-
-   #newdata=newdata[rownames(probs_raw),]
 
    ## Re-weigh probs
    probs_adjusted <- randomForest:::predict.randomForest(object$prob_weigher, probs_raw, type='prob')
@@ -508,13 +523,21 @@ predict.randomForestEnsemble <- function(
    responses_pred <- factor( colnames(probs_adjusted)[ max.col(probs_adjusted) ], levels=colnames(probs_adjusted) )
    if(type=='response'){ return(responses_pred) }
 
+   out <- list(
+      probs_raw=probs_raw,
+      probs_adjusted=probs_adjusted,
+      responses_pred=structure(responses_pred, names=rownames(newdata))
+   )
+
+   if(!calc.feat.contrib){ return(out) }
+
    ## --------------------------------
    if(verbose){
       counter <- 0
       if(verbose){ message('Calculating feature contributions...') }
    }
    l_feat_contrib <- lapply(model$ensemble, function(model){
-      if(verbose){
+      if(verbose>=2){
          counter <<- counter + 1
          message('[',counter,'/',length(object$ensemble),']: ', names(object$ensemble)[counter])
       }
@@ -526,59 +549,98 @@ predict.randomForestEnsemble <- function(
       )
    })
 
+   # m1 <- do.call(cbind, lapply(l_feat_contrib, rowSums))
+   # probs_raw
+
    ## --------------------------------
-   if(verbose){ message('Formatting output as long form dataframe...') }
+   if(verbose){ message('Formatting feature contrib output as long form dataframe...') }
    feat_contrib <- reshape2::melt(l_feat_contrib)
    colnames(feat_contrib) <- c('sample','feature','contrib','binary_rf')
    feat_contrib <- feat_contrib[,c('sample','binary_rf','feature','contrib')]
 
+   ## Get features used by ensemble
    all_binary_rf_feat <- unique(unlist(lapply(model$ensemble, function(i){ names(i$forest$xlevels) }), use.names=F))
    all_binary_rf_feat <- all_binary_rf_feat[ na.exclude(match(colnames(newdata), all_binary_rf_feat)) ]
 
+   ## Convert metadata to factors
    feat_contrib <- within(feat_contrib,{
       sample <- factor(sample, rownames(newdata))
       feature <- factor(feature, all_binary_rf_feat)
       binary_rf <- factor(binary_rf, names(l_feat_contrib))
    })
 
+   ## Calculate feature rank
    feat_contrib <- feat_contrib[
       order(feat_contrib$sample, feat_contrib$binary_rf, -feat_contrib$contrib)
       ,]
 
+   feat_contrib$group <- as.numeric(
+      paste0(
+         as.integer(feat_contrib$sample),'.',
+         as.integer(feat_contrib$binary_rf)
+      )
+   )
+
+   rle_out <- rle(feat_contrib$group)
+   feat_contrib$feature_rank <- unlist(lapply(rle_out$lengths, function(i){ 1:i }))
+   feat_contrib$group <- NULL; rm(rle_out)
+
+   ## Reduce object size by removing irrelevant data
+   if(!is.null(top.n.features)){
+      feat_contrib <- feat_contrib[feat_contrib$feature_rank<=top.n.features,]
+   }
+
+   if(!is.null(top.n.pred.classes)){
+      top_pred_classes <- t(apply(probs_adjusted,1, function(i){
+         colnames(probs_adjusted)[ order(i, decreasing=T) ]
+      }))
+      top_pred_classes <- top_pred_classes[,1:top.n.pred.classes,drop=F]
+      top_pred_classes <- reshape2::melt(top_pred_classes)
+      colnames(top_pred_classes) <- c('sample','pred_class_rank','pred_class')
+
+      feat_contrib <- feat_contrib[
+         paste0(feat_contrib$binary_rf,':',feat_contrib$sample) %in%
+            paste0(top_pred_classes$pred_class,':',top_pred_classes$sample)
+         ,]
+
+      rm(top_pred_classes)
+   }
+
+   rownames(feat_contrib) <- NULL
+
    ## --------------------------------
-   if(verbose){ message('Determining feature contribution directionality...') }
+   if(verbose){ message('Gathering feature summary stats...') }
    feat_sel <- do.call(rbind, lapply(names(object$ensemble), function(i){
       #i='Prostate'
       df <- object$ensemble[[i]]$feat_sel
       cbind(binary_rf=i, df)
    }))
 
-   ## Merge cliff delta and cramer's v
-   feat_sel$eff_size <- feat_sel$cliff_delta
-   which_not_numeric <- feat_sel$feature_type!='numeric'
-   feat_sel$eff_size[which_not_numeric] <- feat_sel$cramer_v[which_not_numeric]
-
-   ## Subset for negatively correlated features (in relation to prediction class)
-   ## i.e. features with negative effect size
-   feat_sel <- feat_sel[feat_sel$eff_size < 0 & feat_sel$alternative!='greater',]
-   feat_sel$feature_supplement[feat_sel$feature_type=='numeric'] <- 'low'
-   feat_sel$feature_supplement[feat_sel$feature_type=='logical'] <- 'false'
-
-   feat_contrib$feature_supplement <- feat_sel$feature_supplement[
-      match(
-         paste0(feat_contrib$binary_rf,':',feat_contrib$feature),
-         paste0(feat_sel$binary_rf,':',feat_sel$feature)
-      )
-   ]
-
-   feat_contrib$feature_supplement[is.na(feat_contrib$feature_supplement)] <- ''
-
-   list(
-      probs_raw=probs_raw,
-      probs_adjusted=probs_adjusted,
-      responses_pred=structure(responses_pred, names=rownames(newdata)),
-      feat_contrib=feat_contrib
+   ## Get cohort averages
+   index <- match(
+      paste0(feat_contrib$binary_rf,':',feat_contrib$feature),
+      paste0(feat_sel$binary_rf,':',feat_sel$feature)
    )
+   feat_contrib$avg_case <- feat_sel$avg_case[index]
+   feat_contrib$avg_ctrl <- feat_sel$avg_ctrl[index]
+   rm(index)
+
+   ## Get feature values per sample
+   newdata_ss <- newdata[,unique(as.character(feat_contrib$feature)),drop=F] ## Subset for features in `feat_contrib`
+   newdata_ss <- as.matrix(newdata_ss+0) ## Convert logical data to integer
+   newdata_ss <- reshape2::melt(newdata_ss)
+   colnames(newdata_ss) <- c('sample','feature','value')
+
+   index <- match(
+      paste0(feat_contrib$sample,':',feat_contrib$feature),
+      paste0(newdata_ss$sample,':',newdata_ss$feature)
+   )
+   feat_contrib$value <- newdata_ss$value[index]
+   rm(index, newdata_ss)
+
+   ##
+   out$feat_contrib <- feat_contrib
+   return(out)
 }
 
 ##----------------------------------------------------------------------
