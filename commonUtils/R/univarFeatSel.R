@@ -22,10 +22,14 @@
 #' to both +ve and -ve values
 #' @param sel.top.n.features Limit the total number of features that are selected
 #' @param min.features Minimum number of features to keep. Prevents outputting no features
+#' @param whitelist A character vector of feature names in x to keep, regardless of statistical
+#' enrichment
+#' @param order.by.pvalue If FALSE, rows of the output dataframe will be ordered by the same
+#' order of the features (i.e. colnames) in `x`. If TRUE, it will be sorted by pvalue
 #' @param verbose Show progress messages?
 #'
-#' @return A vector of feature names if return.new.x=TRUE, else a feature matrix with the selected
-#' features
+#' @return A dataframe containing the pvalue, effect size, and other summary statistics for each
+#' feature
 #' @export
 #'
 univarFeatSel <- function(
@@ -33,7 +37,7 @@ univarFeatSel <- function(
    alternative=NULL,
    max.pvalue=0.01, min.cliff.delta=0.1, min.cramer.v=0.1,
    sel.top.n.features=NULL, min.features=2,
-   whitelist=NULL,
+   whitelist=NULL, order.by.pvalue=TRUE,
    verbose=F
 ){
    if(F){
@@ -67,7 +71,6 @@ univarFeatSel <- function(
    if(!is.logical(y)){ stop('y must be a logical vector') }
    if(any(sapply(x, is.character))){ stop('characters must be converted to factors') }
    if(is.null(colnames(x))){ stop('x must have colnames') }
-   #if(!(output.type %in% c('new.x','raw','features'))){ stop("output.type must be 'new.x', 'raw', or 'features'") }
 
    ## Initialize alternative --------------------------------
    if(is.null(alternative)){
@@ -88,19 +91,25 @@ univarFeatSel <- function(
       names(alternative) <- colnames(x)
    }
 
-   ## Convert factors to logicals --------------------------------
-   #if(output.type=='new.x'){ x_raw <- x }
-
+   ## Convert data types --------------------------------
    if(verbose){ message('Converting factors to logicals (assuming 1st factor level as negative effect)') }
    x <- lapply(x, function(i){
       if(is.factor(i)){ return(as.integer(i)>1) }
       return(i)
    })
+
+   # if(verbose){ message('Converting 1,0 to TRUE,FALSE') }
+   # x <- lapply(x, function(i){
+   #    if(all(unique(i) %in% 0:1)){ i <- as.logical(i) }
+   #    return(i)
+   # })
+
    x <- as.data.frame(x, check.names=F)
 
    ## Wilcox test on numeric features --------------------------------
    is_numeric <- sapply(x, is.numeric)
    x_numeric <- x[,is_numeric, drop=F]
+   x_numeric <- as.matrix(x_numeric)
 
    pvalues_numeric <- numeric()
    cliff_delta <- numeric()
@@ -119,6 +128,7 @@ univarFeatSel <- function(
 
    ## Fisher test on logical features --------------------------------
    x_logical <- x[,!is_numeric,drop=F]
+   x_logical <- as.matrix(x_logical)
 
    pvalues_logical <- numeric()
    cramer_v <- numeric()
@@ -138,18 +148,58 @@ univarFeatSel <- function(
    }
 
    ## Aggregate stats from numeric/logical data --------------------------------
+   ## Initialized dataframe
    tests <- data.frame(
-      feature_type=c(rep('numeric',ncol(x_numeric)), rep('logical',ncol(x_logical))),
-      pvalue=c(pvalues_numeric, pvalues_logical),
-      cliff_delta=c(cliff_delta, rep(0,ncol(x_logical))),
-      cramer_v=c(rep(0,ncol(x_numeric)), cramer_v),
-      row.names=c(colnames(x_numeric), colnames(x_logical))
+      feature=c(colnames(x_numeric), colnames(x_logical)),
+      feature_type=c(rep('numeric',ncol(x_numeric)), rep('logical',ncol(x_logical)))
    )
+   rownames(tests) <- tests$feature
 
-   tests <- tests[colnames(x),] ## Preserve original feature order
+   ## Add test data
    tests$alternative <- alternative[rownames(tests)]
+   tests$pvalue <- c(pvalues_numeric, pvalues_logical)
+   tests$cliff_delta <- c(cliff_delta, rep(0,ncol(x_logical)))
+   tests$cramer_v <- c(rep(0,ncol(x_numeric)), cramer_v)
 
-   tests <- data.frame(feature=rownames(tests), tests, row.names=NULL)
+   ## Merge cliff delta and cramer's v
+   which_not_numeric <- tests$feature_type!='numeric'
+   tests$eff_size <- tests$cliff_delta
+   tests$eff_size[which_not_numeric] <- tests$cramer_v[which_not_numeric]
+   tests$eff_size_metric <- 'cliff_delta'
+   tests$eff_size_metric[which_not_numeric] <- 'cramer_v'
+
+   ## Add case/ctrl cohort stats  --------------------------------
+   if(verbose){ message("Calculating summary stats...") }
+   colMeansTrimmed <- function(m, trim=0.25){
+      m <- apply(m,2,sort)
+
+      n <- nrow(m)
+      lo <- floor(n * trim) + 1
+      hi <- n + 1 - lo
+
+      m <- m[lo:hi,]
+      colMeans(m)
+   }
+
+   calcAvg <- function(x.numeric, x.logical){
+      avg_numeric <- numeric()
+      if(ncol(x.numeric)!=0){
+         avg_numeric <- colMeansTrimmed(x.numeric)
+      }
+
+      avg_logical <- numeric()
+      if(ncol(x.logical)!=0){
+         avg_logical <- colMeans(x.logical)
+      }
+
+      c(avg_numeric, avg_logical)
+   }
+
+   tests$avg_case <- calcAvg(x_numeric[y,], x_logical[y,])
+   tests$avg_ctrl <- calcAvg(x_numeric[!y,], x_logical[!y,])
+   tests$avg_metric <- 'iqm'
+   tests$avg_metric[which_not_numeric] <- 'mean'
+
    tests <- tests[order(tests$pvalue),]
 
    ## Post-processing --------------------------------
@@ -190,6 +240,15 @@ univarFeatSel <- function(
 
    if(!is.null(whitelist)){
       tests$is_keep_feature[ tests$feature %in% whitelist ] <- TRUE
+   }
+
+   ## Cleanup output
+   rownames(tests) <- NULL
+   tests$cliff_delta <- NULL
+   tests$cramer_v <- NULL
+
+   if(!order.by.pvalue){
+      tests <- tests[match(colnames(x), tests$feature),]
    }
 
    return(tests)
