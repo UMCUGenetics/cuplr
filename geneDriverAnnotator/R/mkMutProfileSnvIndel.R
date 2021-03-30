@@ -6,6 +6,10 @@
 #' @param df.snv.indel A germline/somatic table originating from HMF germline/somatic vcfs
 #' @param scoring A list containing the scoring for snpeff, clinvar, and enigma annotation values
 #' @param keep.only.first.eff Only keep first snpeff_eff (items are separated by '&')?
+#' @param include.hotspots If TRUE, identified hotspot mutations will be considered in the final
+#' scoring
+#' @param filter.no.impact.variants Variants with a score of 0 will be assigned 'no_impact_variant'
+#' to snpeff_eff
 #' @param verbose Show messages?
 #'
 #' @return The original input dataframe with annotation columns
@@ -15,6 +19,7 @@ mkMutProfileSnvIndel <- function(
    df.snv.indel, 
    scoring=SCORING_MUT,
    keep.only.first.eff=T,
+   include.hotspots=F,
    filter.no.impact.variants=T,
    verbose=T
 ){
@@ -38,7 +43,11 @@ mkMutProfileSnvIndel <- function(
    clinvar_score[is.na(clinvar_score)] <- 0
    
    if(verbose){ message('Assigning hotspot score...') }
-   hotspot_score <- ifelse(df.snv.indel$is_hotspot_mut,5,0)
+   if(include.hotspots){
+      hotspot_score <- ifelse(df.snv.indel$is_hotspot_mut,5,0)
+   } else {
+      hotspot_score <- rep(0, nrow(df.snv.indel))
+   }
    
    #--------- Calculate max score and which database it came from ---------#
    if(verbose){ message('Calculating max scores...') }
@@ -46,14 +55,14 @@ mkMutProfileSnvIndel <- function(
    
    sig_scores$max_score <- unlist(Map(function(clinvar_score, hotspot_score, snpeff_score){
       if(clinvar_score != 0){ return(clinvar_score) }
-      #if(hotspot_score != 0){ return(hotspot_score) }
+      if(hotspot_score != 0){ return(hotspot_score) }
       if(snpeff_score != 0){ return(snpeff_score) }
       return(0)
    }, clinvar_score, hotspot_score, snpeff_score, USE.NAMES=F))
    
    sig_scores$max_score_origin <- unlist(Map(function(clinvar_score, hotspot_score, snpeff_score){
       if(clinvar_score != 0){ return('clinvar') }
-      #if(hotspot_score != 0){ return('hotspot') }
+      if(hotspot_score != 0){ return('hotspot') }
       if(snpeff_score != 0){ return('snpeff') }
       return('none')
    }, clinvar_score, hotspot_score, snpeff_score, USE.NAMES=F))
