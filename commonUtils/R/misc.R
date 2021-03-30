@@ -147,7 +147,12 @@ cacheAndReadData <- function(remote.path, local.path=NULL, overwrite=F){
    }
 
    if(!file.exists(local.path) | overwrite){
-      message('Making local copy: ', local.path)
+      if(!file.exists(local.path)){
+         message('Making local copy: ', local.path)
+      } else {
+         message('Updating local copy: ', local.path)
+      }
+
       system(sprintf(
          'rsync -a %s %s',
          remote.path,
