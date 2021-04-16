@@ -99,12 +99,10 @@ plotHeatmapFromMatrix <- function(
 #'
 #' @param actual A vector of the actual classes
 #' @param predicted A vector of the predicted classes
-#' @param cv_out Alternative input to `actual` and `predicted`. Cross validation output in the
-#' form of a list that has 'imp' object (e.g. cv_out[[1]]$test_set$actual and
-#' cv_out[[1]]$test_set$predicted)
 #' @param rel.heights A numeric vector of length 3. Relative heights of the plots
 #' @param sort Sort cancer type by number of % sample of correctly classified
 #' @param rel.values In lower plot, show absolute number or %
+#' @param predicted.classes.only Only show classes that are present in predicted
 #' @param metrics A character vector indicating which performance metrics to show in the upper plot.
 #' See documentation for mltoolkit to see which metrics are available
 #' @param show.weighted.mean In upper plot, calculated the weighted mean or normal mean?
@@ -113,11 +111,11 @@ plotHeatmapFromMatrix <- function(
 #' @export
 #'
 plotPerfHeatmap <- function(
-   actual=NULL, predicted=NULL, cv_out=NULL,
+   actual=NULL, predicted=NULL,
    rel.heights=c(perf=0.3, counts=0.15, heatmap=1),
 
    ## Confusion heatmap
-   sort=F, rel.values=T,
+   sort=F, rel.values=T, predicted.classes.only=F,
 
    ## Performance metrics
    metrics=c('f1','prec','tpr'),
@@ -129,22 +127,31 @@ plotPerfHeatmap <- function(
       predicted=test_set$predicted
    }
 
+   ## Init ----------------------------------------------------------------
    require(ggplot2)
-   if(!is.null(cv_out)){
-      actual <- unlist(lapply(cv_out,function(i){ i$test_set$actual }))
-      predicted <- unlist(lapply(cv_out,function(i){ i$test_set$predicted }))
+
+   if(!is.factor(actual)){ stop('`actual` must be a factor') }
+   if(!is.factor(predicted)){ stop('`predicted` must be a factor') }
+
+   ## Only show classes that are present in predicted
+   if(predicted.classes.only){
+      is_predicted_class <- actual %in% levels(predicted)
+      actual <- actual[is_predicted_class]
+      predicted <- predicted[is_predicted_class]
+
+      classes <- levels(predicted)
+   } else {
+      ## Make levels the same between actual and predicted
+      classes <- sort(unique(c(
+         levels(predicted),
+         levels(actual)
+      )))
+
+      classes <- c(
+         classes[classes %in% predicted],
+         classes[!(classes %in% predicted)]
+      )
    }
-
-   ## Make levels the same between actual and predicted
-   classes <- sort(unique(c(
-      as.character(predicted),
-      as.character(actual)
-   )))
-
-   classes <- c(
-      classes[classes %in% predicted],
-      classes[!(classes %in% predicted)]
-   )
 
    actual <- factor(actual, classes)
    predicted <- factor(predicted, classes)
@@ -166,7 +173,7 @@ plotPerfHeatmap <- function(
    plots <- list()
 
    plots$heatmap <- plotHeatmapFromMatrix(
-      tab, show.labels=T, x.lab='Actual\n(Columns: prop. misclassified as which class)', y.lab='Predicted', invert.y=T,
+      tab, show.labels=T, x.lab='Actual class', y.lab='Predicted class', invert.y=T,
       #palette=if(rel.values){ 'YlGnBu' } else { 'none' },
       legend.name=if(rel.values){ 'Column fraction' } else { 'Counts' }
    ) +
@@ -271,6 +278,63 @@ plotPerfHeatmap <- function(
 
 }
 
+####################################################################################################
+#' Calculate the fraction of correctly predicted samples
+#'
+#' @param actual A factor of the actual classes
+#' @param predicted A factor of the predicted classes
+#' @param rm.non.pred.classes Remove stats for classes that are not in the factor levels of
+#' `predicted`
+#'
+#' @return A dataframe
+#' @export
+#'
+calcFracCorrect <- function(actual, predicted, rm.non.pred.classes=T){
+
+   if(!is.factor(actual)){ stop('`actual` must be a factor') }
+   if(!is.factor(predicted)){ stop('`predicted` must be a factor') }
+
+   ## Format factor levels
+   pred_levels <- levels(predicted)
+
+   uniq_responses <- sort(unique(
+      c(
+         as.character(actual),
+         as.character(predicted)
+      )
+   ))
+
+   actual <- factor(actual, uniq_responses)
+   predicted <- factor(predicted, uniq_responses)
+
+   n_correct <- diag(table(predicted, actual))
+   n_total <- table(actual)
+
+   ## Main
+   out <- data.frame(
+      #group=i,
+      class=names(n_correct),
+      n_correct=as.integer(n_correct),
+      n_total=as.integer(n_total)
+   )
+
+   if(rm.non.pred.classes){
+      out <- out[out$class %in% pred_levels,]
+   }
+
+   out <- rbind(
+      data.frame(
+         class='All',
+         n_correct=sum(out$n_correct),
+         n_total=sum(out$n_total)
+      ),
+      out
+   )
+
+   out$frac_correct <- out$n_correct / out$n_total
+
+   return(out)
+}
 
 ####################################################################################################
 #' Plot false negative rate
@@ -324,3 +388,6 @@ plotFnr <- function(actual, prob){
       )
 
 }
+
+
+
