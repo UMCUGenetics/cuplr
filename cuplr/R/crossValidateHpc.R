@@ -18,6 +18,8 @@
 #' Rscript ${train.script.path} ${train.data.path} ${fold_indexes_path} ${out_path} ${seed} ${trailing.args}
 #' @param time A string specifying SLURM run time
 #' @param mem A string specifying SLURM memory
+#' @param n.tasks.per.node Number of threads to use. If NULL, the number of threads will be the
+#' number of classes
 #' @param verbose Show progress messages?
 #'
 #' @return Writes jobs to cv.out.dir
@@ -30,7 +32,7 @@ spawnCvJobs <- function(
    colname.response='response',
    k=20, seed=1,
    rm.path.prefix='/Users/lnguyen', trailing.args='',
-   time='2:00:00',mem='16G',
+   time='2:00:00',mem='16G', n.tasks.per.node=NULL,
    verbose=T
 ){
    if(F){
@@ -63,6 +65,8 @@ spawnCvJobs <- function(
 
    n_classes <- length(unique(df[,colname.response]))
 
+   if(is.null(n.tasks.per.node)){ n.tasks.per.node <- n_classes }
+
    if(verbose){ message('Getting fold indexes...') }
    folds <- mltoolkit::createCvTrainTestSets(df, stratify.by.col=colname.response, k=k, return.data=F)
 
@@ -94,7 +98,7 @@ spawnCvJobs <- function(
 #SBATCH --output=${fold_dir}/slurm.out
 #SBATCH --time=${time}
 #SBATCH --mem=${mem}
-#SBATCH --ntasks-per-node=${n_classes}
+#SBATCH --ntasks-per-node=${n.tasks.per.node}
 if [[ ! -f ${done_path} ]]; then
 guixr load-profile ~/.guix-profile/ --<<EOF
 Rscript ${train.script.path} ${train.data.path} ${fold_indexes_path} ${out_path} ${seed} ${trailing.args} && touch ${done_path}
@@ -113,6 +117,7 @@ fi
       job_script <- gsub2("${time}",time)
       job_script <- gsub2("${mem}",mem)
       job_script <- gsub2("${n_classes}",n_classes)
+      job_script <- gsub2("${n.tasks.per.node}",n.tasks.per.node)
 
       ## Main
       job_script <- gsub2("${train.script.path}",train.script.path)
@@ -141,48 +146,6 @@ done
    submit_script <- gsub(rm.path.prefix,'', submit_script)
 
    writeString( submit_script, paste0(cv.out.dir,'/submit_jobs.sh') )
-}
-
-####################################################################################################
-#' Combine results from multiple prediction reports into one list object
-#'
-#' @param reports A list of reports. Each report (a list) must have the names: probs_raw,
-#' probs_adjusted, responses_pred, responses_actual, feat_contrib, imp
-#' @param verbose Show progress messages?
-#'
-#' @return A list
-#' @export
-#'
-mergePredReports <- function(reports, verbose=T){
-
-   reports_merged <- list()
-
-   if(verbose){ 'Merging probs_raw...' }
-   reports_merged$probs_raw <- do.call(rbind, lapply(reports,`[[`,'probs_raw'))
-
-   if(verbose){ 'Merging probs_adjusted...' }
-   reports_merged$probs_adjusted <- do.call(rbind, lapply(reports,`[[`,'probs_adjusted'))
-
-   if(verbose){ 'Merging predicted responses...' }
-   reports_merged$responses_pred <- structure(
-      unlist(lapply(reports,`[[`,'responses_pred')),
-      names=unlist(lapply(reports,function(i){ names(i$responses_pred) }))
-   )
-
-   if(verbose){ 'Merging actual responses...' }
-   reports_merged$responses_actual <- structure(
-      unlist(lapply(reports,`[[`,'responses_actual')),
-      names=unlist(lapply(reports,function(i){ names(i$responses_actual) }))
-   )
-
-   if(verbose){ 'Merging feature contributions...' }
-   reports_merged$feat_contrib <- do.call(rbind, lapply(reports,`[[`,'feat_contrib'))
-   reports_merged$feat_contrib <- subset(reports_merged$feat_contrib, contrib>0)
-
-   if(verbose){ 'Merging feature importances...' }
-   reports_merged$imp <- aggregateMatrixList(lapply(reports,`[[`,'imp'), as.matrix=T)
-
-   return(reports_merged)
 }
 
 ####################################################################################################
@@ -244,10 +207,12 @@ gatherCvOutput <- function(
       dir.create(plots_dir, showWarnings=F)
 
       if(verbose){ message('Plotting perf heatmap...') }
-      pdf(paste0(plots_dir,'/perf_heatmap.pdf'), 12, 10)
+      pdf(paste0(plots_dir,'/perf_heatmap.pdf'), 14, 10)
       suppressWarnings({
          plot(plotPerfHeatmap(
-            reports_merged$responses_actual, reports_merged$responses_pred, show.weighted.mean=T,
+            actual=reports_merged$responses_actual,
+            predicted=reports_merged$responses_pred,
+            show.weighted.mean=T,
             rel.heights=c(perf=0.3, counts=0.15, heatmap=1)
          ))
       })
@@ -255,7 +220,22 @@ gatherCvOutput <- function(
 
       if(verbose){ message('Plotting imp barplots...') }
       pdf(paste0(plots_dir,'/imp_barplots.pdf'), 16, 10)
-      plot( plotTopFeatures(reports_merged$imp, top.n=40, infer.feature.type=T, n.col=4, feature.type.colors=NULL) )
+      plot(plotTopFeatures(
+         m=reports_merged$imp,
+         top.n=30,
+         infer.feature.type=T,
+         feature.type.colors=NULL
+      ))
+      dev.off()
+
+      if(verbose){ message('Plotting sorted probs...') }
+      pdf(paste0(plots_dir,'/sorted_probs.pdf'), 16, 10)
+      plot(plotSortedProbs(
+         actual=reports_merged$responses_actual,
+         predicted=reports_merged$responses_pred,
+         probs=reports_merged$probs_adjusted,
+         min.frac.correct=1
+      ))
       dev.off()
    }
 }
