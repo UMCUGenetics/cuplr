@@ -1,24 +1,30 @@
 #' Make barplots from a matrix of feature importances (for multiclass classification)
 #'
-#' @param m A numeric matrix where columns represent the features and rows represent the labels
+#' @param m A numeric matrix where columns represent the features and rows represent the classes
+#' (i.e. the names of each binary random forest)
 #' @param cv_out Alternative input to `m`. Cross validation output in the form of a list that has
 #' 'imp' object (e.g. cv_out[[1]]$imp)
 #' @param top.n Top number of features to show
-#' @param infer.feature.type Determine the feature type based on the tag/prefix. Everything before
-#' the first dot (.) is considered the feature tag
-#' @param n.row Number of facet rows
-#' @param n.col Number of facet columns
 #' @param feature.type.colors A character vector of color hex codes with names being the feature
 #' types
+#' @param infer.feature.type Determine the feature type based on the tag/prefix. Everything before
+#' @param infer.feature.type.func Function used to infer feature type. Defaults to
+#' `function(x){ gsub('[.].+$','',x) }`, which takes the string before the first dot as the tag
+#' the first dot (.) is considered the feature tag
+#' @param facet.ncol Number of facet columns. If 'auto', this value will be
+#' `round(sqrt(n_classes))`
+#' @param facet.rnow Number of facet rows
+#' @param as.list If FALSE (default), a faceted ggplot is returned (one facet for each class). If
+#' TRUE, each class is plotted as separate ggplot and a list of these is returned
 #'
 #' @return A ggplot object
 #' @export
 #'
 plotTopFeatures <- function(
    m=NULL, cv_out=NULL, top.n=10,
-   n.row=NULL, n.col=NULL,
    feature.type.colors=NULL,
    infer.feature.type=F, infer.feature.type.func=NULL,
+   facet.ncol='auto', facet.nrow=NULL,
    as.list=F
 ){
    if(F){
@@ -27,16 +33,9 @@ plotTopFeatures <- function(
 
       m=readRDS('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.11c.1_indel_contexts/imp.rds')
       infer.feature.type.func=NULL
-
-      top.n=20
-      infer.feature.type='force'
-      #infer.feature.type.func=NULL
-
-      n.row=NULL
-      n.col=NULL
-      feature.type.colors=NULL
    }
 
+   ## Init --------------------------------
    require(ggplot2)
 
    if(!is.null(cv_out)){
@@ -49,8 +48,8 @@ plotTopFeatures <- function(
    }))
    df <- forceDfOrder(df)
 
+   ## Infer feature types --------------------------------
    feature_tags_exist <- all(grepl('^\\w+[.]',colnames(m)))
-
    if(infer.feature.type=='force' | (infer.feature.type==T & feature_tags_exist)){
 
       if(is.null(infer.feature.type.func)){
@@ -65,11 +64,13 @@ plotTopFeatures <- function(
       df$feature_type <- 'none'
    }
 
+   ## Plot params --------------------------------
+   ## Bar labels
    df$label <- as.character(df$feature)
    df$label[df$value<=0] <- ''
-
    label_y_pos <- max(df$value) * 0.05
 
+   ## Bar colors
    if(is.null(feature.type.colors)){
       # color_pal <- c(
       #    RColorBrewer::brewer.pal(12, 'Set3'),
@@ -107,11 +108,17 @@ plotTopFeatures <- function(
       color_pal <- feature.type.colors
    }
 
+   ## No. of facet columns
+   if(facet.ncol=='auto'){
+      facet.ncol <- round(sqrt(nrow(m)))
+   }
+
+   ## Plot --------------------------------
    main <- function(pd){
       p <- ggplot(pd, aes(x=index, y=value))
 
       if(!as.list){
-         p <- p + facet_wrap(~class, nrow=n.row, ncol=n.col)
+         p <- p + facet_wrap(~class, nrow=facet.nrow, ncol=facet.ncol)
       }
 
       p <- p +
