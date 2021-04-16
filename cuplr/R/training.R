@@ -421,7 +421,7 @@ trainRandomForest <- function(
 #' @return 'response': predicted classes (the classes with majority vote).
 #' 'prob': matrix of class
 #' probabilities (one column for each class and one row for each input)
-#' 'detailed': a list containing the following objects: probs_raw, probs_adjusted, responses_pred,
+#' 'report': a list containing the following objects: probs_raw, probs_adjusted, responses_pred,
 #' feat_contrib
 #'
 #' @export
@@ -450,8 +450,8 @@ predict.randomForestEnsemble <- function(
    if(!is.data.frame(newdata)){ stop('`newdata` must be a dataframe') }
    if(!('randomForestEnsemble' %in% class(object))){ stop('`object` must be randomForestEnsemble') }
 
-   if(!(type %in% c('prob','report','detailed'))){
-      stop('`type` must be one of the following: prob, report, detailed')
+   if(!(type %in% c('prob','response','report'))){
+      stop('`type` must be one of the following: prob, response, report')
    }
 
    ## Prepare data --------------------------------
@@ -501,7 +501,8 @@ predict.randomForestEnsemble <- function(
    if(verbose){ message('Adjusting raw probabilities...') }
 
    ## Re-weigh probs
-   probs_adjusted <- randomForest:::predict.randomForest(object$prob_weigher, probs_raw, type='prob')
+   #probs_adjusted <- randomForest:::predict.randomForest(object$prob_weigher, probs_raw, type='prob')
+   probs_adjusted <- probs_raw
 
    ## Set probs for disallowed tissue classes to 0
    samples_female <- newdata[,gender.feature.name]
@@ -536,7 +537,7 @@ predict.randomForestEnsemble <- function(
       counter <- 0
       if(verbose){ message('Calculating feature contributions...') }
    }
-   l_feat_contrib <- lapply(model$ensemble, function(model){
+   l_feat_contrib <- lapply(object$ensemble, function(model){
       if(verbose>=2){
          counter <<- counter + 1
          message('[',counter,'/',length(object$ensemble),']: ', names(object$ensemble)[counter])
@@ -559,7 +560,7 @@ predict.randomForestEnsemble <- function(
    feat_contrib <- feat_contrib[,c('sample','binary_rf','feature','contrib')]
 
    ## Get features used by ensemble
-   all_binary_rf_feat <- unique(unlist(lapply(model$ensemble, function(i){ names(i$forest$xlevels) }), use.names=F))
+   all_binary_rf_feat <- unique(unlist(lapply(object$ensemble, function(i){ names(i$forest$xlevels) }), use.names=F))
    all_binary_rf_feat <- all_binary_rf_feat[ na.exclude(match(colnames(newdata), all_binary_rf_feat)) ]
 
    ## Convert metadata to factors
@@ -656,8 +657,10 @@ predict.randomForestEnsemble <- function(
 #' @param fold.num Cross validation fold number. Only used in the prefix of progress messages. If
 #' not specified, no prefix will be displayed.
 #' @param tmp.dir A path a temporary directory, which if provided, enables resume capability
-#' @param rm.tmp.dir If TRUE will remove the tmp dir if training completes successfully
-#' @param multi.core Use multiple cores?
+#' @param rm.tmp.dir If TRUE, will remove the tmp dir if training completes successfully
+#' @param multi.core If TRUE, multiple cores will be used when performing NMF on RMD features, and 
+#' when training the random forest ensemble. Each class (i.e. cancer type) is forked to a separate 
+#' core.
 #' @param verbose Show progress? Can be 0, 1, 2 (increasing verbosity)
 #'
 #' @return A list containing the training output
@@ -667,7 +670,7 @@ trainRandomForestEnsemble <- function(
    train, test=NULL, colname.response='response',
    do.rmd.nmf=F,
    args.trainRandomForest=list(),
-   inner.holdout.fraction=c(1,3),
+   #inner.holdout.fraction=c(1,3),
    seed=NULL, msg.prefix=NULL,
    tmp.dir=NULL, rm.tmp.dir=T,
    multi.core=F, verbose=1
@@ -717,7 +720,7 @@ trainRandomForestEnsemble <- function(
    out <- list()
    class(out) <- c('list','randomForestEnsemble')
    out$ensemble <- NA
-   out$prob_weigher <- NA
+   #out$prob_weigher <- NA
 
    ##----------------------------------------------------------------------
    if(verbose>=1){message(msg_prefix,'[',format(Sys.time(), "%X"),'] Selecting data for training main ensemble and prob weigher...')}
@@ -783,30 +786,31 @@ trainRandomForestEnsemble <- function(
       })
    }
 
+   # ##----------------------------------------------------------------------
+   # if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Splitting data for training main ensemble and probability weigher...') }
+   # inner_folds_indexes <- mltoolkit::createCvTrainTestSets(
+   #    train, k=inner.holdout.fraction[2],
+   #    stratify.by.col=colname.response, return.data=F
+   # )
+   # inner_folds_indexes <- lapply(inner_folds_indexes,`[[`,'test')
+   #
+   # train_data <- list()
+   #
+   # train_data$ensemble <- train[
+   #    sort(unlist(inner_folds_indexes[
+   #       (inner.holdout.fraction[1]+1) : inner.holdout.fraction[2]
+   #    ]))
+   # ,]
+   #
+   # train_data$prob_weigher <- train[
+   #    sort(unlist(inner_folds_indexes[
+   #       1:inner.holdout.fraction[1]
+   #    ]))
+   # ,]
+
    ##----------------------------------------------------------------------
-   if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Splitting data for training main ensemble and probability weigher...') }
-   inner_folds_indexes <- mltoolkit::createCvTrainTestSets(
-      train, k=inner.holdout.fraction[2],
-      stratify.by.col=colname.response, return.data=F
-   )
-   inner_folds_indexes <- lapply(inner_folds_indexes,`[[`,'test')
-
-   train_data <- list()
-
-   train_data$ensemble <- train[
-      sort(unlist(inner_folds_indexes[
-         (inner.holdout.fraction[1]+1) : inner.holdout.fraction[2]
-      ]))
-   ,]
-
-   train_data$prob_weigher <- train[
-      sort(unlist(inner_folds_indexes[
-         1:inner.holdout.fraction[1]
-      ]))
-   ,]
-
-   ##----------------------------------------------------------------------
-   y_ohe <- oneHotEncode(as.factor(train_data$ensemble[,colname.response]))
+   #y_ohe <- oneHotEncode(as.factor(train_data$ensemble[,colname.response]))
+   y_ohe <- oneHotEncode(as.factor(train[,colname.response]))
    #y_ohe <- y_ohe[,c('Lymphoid','Prostate')]
 
    if(!is.null(tmp.dir)){ dir.create(paste0(tmp.dir,'/class_models/'), showWarnings=F) }
@@ -818,7 +822,8 @@ trainRandomForestEnsemble <- function(
       tmp.class_model <- paste0(tmp.dir,'/class_models/model.',colnames(y_ohe)[i],'.rds')
 
       y <- unname(y_ohe[,i])
-      train_new <- train_data$ensemble
+      #train_new <- train_data$ensemble
+      train_new <- train
       train_new$response <- y_ohe[,i]
 
       msg_prefix_ct <- paste0('[',i,'/',ncol(y_ohe),': ',colnames(y_ohe)[i],'] ')
@@ -866,63 +871,53 @@ trainRandomForestEnsemble <- function(
       out$ensemble <- readRDS(tmp.ensemble)
    }
 
-   train_data$ensemble <- NULL
-
-   ##----------------------------------------------------------------------
-   if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Training random forest probability weigher...') }
-
-   tmp.prob_weigher <- paste0(tmp.dir,'/prob_weigher.rds')
-   if(!file.exists(tmp.prob_weigher)){
-      holdout_probs <- do.call(cbind, lapply(out$ensemble, function(model){
-         #i=ensemble$Breast
-         randomForest:::predict.randomForest(
-            model,
-            rmColumns(train_data$prob_weigher, colname.response),
-            type='prob'
-         )[,1]
-      }))
-
-      holdout_probs <- cbind(
-         response=train_data$prob_weigher[,colname.response],
-         as.data.frame(holdout_probs)
-      )
-
-      out$prob_weigher <- randomForest::randomForest(
-         x=rmColumns(holdout_probs, colname.response),
-         y=holdout_probs[,colname.response],
-         strata=y,
-         proximity=F, ntree=500, importance=T,
-         keep.inbag=T, replace=F, ## required for calculating local increments
-         na.action=na.roughfix,
-         do.trace=F
-      )
-
-      invisible(capture.output(
-         out$prob_weigher$localIncrements <- rfFC::getLocalIncrements(
-            out$prob_weigher,
-            rmColumns(holdout_probs, colname.response)
-         )
-      ))
-      saveRDS(out$prob_weigher, tmp.prob_weigher)
-      rm(holdout_probs)
-
-   } else {
-
-      if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Loading random forest probability weigher...') }
-      out$prob_weigher <- readRDS(tmp.prob_weigher)
-   }
-
-   train_data$prob_weigher <- NULL
+   #train_data$ensemble <- NULL
 
    # ##----------------------------------------------------------------------
-   # if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Storing levels from categorical features...') }
-   # categorical_lvls <- lapply(rmColumns(train_data$prob_weigher, colname.response), levels)
-   # categorical_lvls <- categorical_lvls[ !sapply(categorical_lvls, is.null) ]
-   # categorical_lvls <- categorical_lvls[
-   #    names(categorical_lvls) %in% colnames(rmColumns(train_data$prob_weigher, colname.response))
-   # ]
+   # if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Training random forest probability weigher...') }
    #
-   # out$categorical_lvls <- categorical_lvls
+   # tmp.prob_weigher <- paste0(tmp.dir,'/prob_weigher.rds')
+   # if(!file.exists(tmp.prob_weigher)){
+   #    holdout_probs <- do.call(cbind, lapply(out$ensemble, function(model){
+   #       #i=ensemble$Breast
+   #       randomForest:::predict.randomForest(
+   #          model,
+   #          rmColumns(train_data$prob_weigher, colname.response),
+   #          type='prob'
+   #       )[,1]
+   #    }))
+   #
+   #    holdout_probs <- cbind(
+   #       response=train_data$prob_weigher[,colname.response],
+   #       as.data.frame(holdout_probs)
+   #    )
+   #
+   #    out$prob_weigher <- randomForest::randomForest(
+   #       x=rmColumns(holdout_probs, colname.response),
+   #       y=holdout_probs[,colname.response],
+   #       strata=y,
+   #       proximity=F, ntree=500, importance=T,
+   #       keep.inbag=T, replace=F, ## required for calculating local increments
+   #       na.action=na.roughfix,
+   #       do.trace=F
+   #    )
+   #
+   #    invisible(capture.output(
+   #       out$prob_weigher$localIncrements <- rfFC::getLocalIncrements(
+   #          out$prob_weigher,
+   #          rmColumns(holdout_probs, colname.response)
+   #       )
+   #    ))
+   #    saveRDS(out$prob_weigher, tmp.prob_weigher)
+   #    rm(holdout_probs)
+   #
+   # } else {
+   #
+   #    if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Loading random forest probability weigher...') }
+   #    out$prob_weigher <- readRDS(tmp.prob_weigher)
+   # }
+   #
+   # train_data$prob_weigher <- NULL
 
    ##----------------------------------------------------------------------
    if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Calculating feature importance...') }
@@ -979,8 +974,8 @@ print.randomForestEnsemble <- function(object){
    cat('$ensemble\n\nBinary RF names:\n')
    print(names(object$ensemble))
 
-   cat('\n$prob_weigher')
-   print(object$prob_weigher)
+   # cat('\n$prob_weigher')
+   # print(object$prob_weigher)
 
    cat('\nOther list levels:\n')
    cat( paste0('$',names(object)[3:length(object)]) )
