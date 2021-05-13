@@ -5,10 +5,10 @@
 #' @param b The sample size of cohort 1
 #' @param breaks.a Number of resampling values to generate for a
 #' @param breaks.b Number of resampling values to generate for b
-#' @param min.size.diff Default=30. Minimum difference between resampling values (integer).
 #' @param midpoint.type Can be 'geometric', 'arithmetic', or 'none'. Calculate the resampling values
 #' from a->midpoint and b->midpoint? If 'none', resampling values will be calculated from a->b and
 #' b->a.
+#' @param min.size.diff Default=30. Minimum difference between resampling values (integer).
 #' @param max.upsample.ratio Default=10. Remove pairs where a or b are upsampled more than this
 #' value
 #'
