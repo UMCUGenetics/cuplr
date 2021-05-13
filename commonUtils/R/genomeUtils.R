@@ -60,6 +60,12 @@ isOverlapping <- function(start1, end1, start2, end2, verbose=F){
 #' @param chrom2 A vector or chromosome names (#1)
 #' @param start2 A vector of start positions (#2)
 #' @param end2 A vector of end positions (#2)
+#' @param df1 A dataframe containing `chrom1`, `start1`, `end1`
+#' @param df2 A dataframe containing `chrom2`, `start2`, `end2`
+#'
+#' @description Find overlapping genomic intervals between two sets of genomeic coordinates. Inputs
+#' must be provided as a set of 3 vectors (e.g. `chrom1`, `start1`, `end1`) or a dataframe
+#' containing these vectors
 #'
 #' @return A list of indexes of #1 for which #2 overlaps
 #' @export
@@ -124,10 +130,9 @@ isOverlappingChromPos <- function(
 #'
 #' @param df A dataframe containing the columns: chrom, start, end
 #' @param centro.pos A named integer vector of the centromere positions (default: hg19)
-#' @param chrom.arm.names A character vector in the form c('1p','1q','2p','2q', ...). The default
-#' 'auto' means that the human chromosome arm names are used. Note that chroms 13, 14, 15, 21, 22
-#' are considered to only have the long (i.e. q) arm.
+#' @param one.armed.chroms A character vector specifying the chromosomes with only one arm
 #' @param arm.only Only return the arm and not the chrom number?
+#' @param seq.levels.style A string indicating the chromosome name style to use
 #' @param centro.intervals.rough.fix If TRUE, intervals intersecting with the centromere will be
 #' assigned to the q arm.
 #' @param show.warnings Show warning messages?
