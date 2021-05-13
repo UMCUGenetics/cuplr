@@ -7,7 +7,8 @@
 gatherCvOutput(
   cv.out.dir,
   out.dir = paste0(cv.out.dir, "/../"),
-  pattern = "model.rds",
+  pattern = "^test_set_report.rds$",
+  mk.plots = T,
   verbose = T
 )
 }
@@ -17,6 +18,8 @@ gatherCvOutput(
 \item{out.dir}{Output dir for this function}
 
 \item{pattern}{Name/pattern of the rds file outputted by the training function}
+
+\item{mk.plots}{Make performance and feature importance plots?}
 
 \item{verbose}{Show progress messages?}
 }

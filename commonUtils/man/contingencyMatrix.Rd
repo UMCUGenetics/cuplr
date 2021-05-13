@@ -4,7 +4,7 @@
 \alias{contingencyMatrix}
 \title{Create multiple contingency matrices}
 \usage{
-contingencyMatrix(x, y, use.totals = FALSE)
+contingencyMatrix(x, y, use.totals = FALSE, show.warnings = TRUE)
 }
 \arguments{
 \item{x}{A logical matrix}
@@ -12,6 +12,8 @@ contingencyMatrix(x, y, use.totals = FALSE)
 \item{y}{A logical vector indicating the case/control group (i.e. response)}
 
 \item{use.totals}{Should case/control totals be used instead of case.false and ctrl.false?}
+
+\item{show.warnings}{Show warnings?}
 }
 \value{
 A matrix with the columns: case.true, case.false, ctrl.true, ctrl.false. Each row is

@@ -33,6 +33,12 @@ fisherChi2(x, ...)
 
 \item{ctrl.false}{Group 'y' non responders}
 
+\item{correct}{a logical indicating whether to apply continuity correction when computing the
+test statistic for 2 by 2 tables: one half is subtracted from all |O - E| differences; however,
+the correction will not be bigger than the differences themselves.}
+
+\item{return.statistic}{Return the raw chi-square statistic}
+
 \item{m}{A matrix containing the 4 columns corresponding to a contingency matrix}
 
 \item{verbose}{Show progress?}

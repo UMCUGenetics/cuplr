@@ -14,6 +14,7 @@ univarFeatSel(
   sel.top.n.features = NULL,
   min.features = 2,
   whitelist = NULL,
+  order.by.pvalue = TRUE,
   verbose = F
 )
 }
@@ -38,11 +39,17 @@ to both +ve and -ve values}
 
 \item{min.features}{Minimum number of features to keep. Prevents outputting no features}
 
+\item{whitelist}{A character vector of feature names in x to keep, regardless of statistical
+enrichment}
+
+\item{order.by.pvalue}{If FALSE, rows of the output dataframe will be ordered by the same
+order of the features (i.e. colnames) in `x`. If TRUE, it will be sorted by pvalue}
+
 \item{verbose}{Show progress messages?}
 }
 \value{
-A vector of feature names if return.new.x=TRUE, else a feature matrix with the selected
-features
+A dataframe containing the pvalue, effect size, and other summary statistics for each
+feature
 }
 \description{
 For numerical variables, wilcoxon tests are performed. For categorical variables,

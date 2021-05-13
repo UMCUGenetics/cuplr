@@ -4,12 +4,20 @@
 \alias{cacheAndReadData}
 \title{Cache remote files and read as a dataframe}
 \usage{
-cacheAndReadData(remote.path, local.path = NULL, overwrite = F)
+cacheAndReadData(
+  remote.path,
+  local.path = NULL,
+  cache.dir = path.expand("~/Documents/R_cache/"),
+  overwrite = F
+)
 }
 \arguments{
 \item{remote.path}{Remote path to txt or rds file}
 
 \item{local.path}{Local path to copy to}
+
+\item{cache.dir}{Path to the cache directory. If `local.path` is not specified, files will be
+cached here.}
 
 \item{overwrite}{Redownload data from remote?}
 }
