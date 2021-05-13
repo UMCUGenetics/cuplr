@@ -97,10 +97,10 @@ plotHeatmapFromMatrix <- function(
 #' @description Creates two plots. Upper plot shows performance metrics per cancer type and lower
 #' plot shows the number or % of samples correctly/incorrectly classified
 #'
-#' @param actual A vector of the actual classes
-#' @param predicted A vector of the predicted classes
+#' @param actual A factor vector of the actual classes
+#' @param predicted A factor vector of the predicted classes
 #' @param rel.heights A numeric vector of length 3. Relative heights of the plots
-#' @param sort Sort cancer type by number of % sample of correctly classified
+#' @param sort.classes Sort cancer type by number of % sample of correctly classified
 #' @param rel.values In lower plot, show absolute number or %
 #' @param predicted.classes.only Only show classes that are present in predicted
 #' @param metrics A character vector indicating which performance metrics to show in the upper plot.
@@ -115,7 +115,7 @@ plotPerfHeatmap <- function(
    rel.heights=c(perf=0.3, counts=0.15, heatmap=1),
 
    ## Confusion heatmap
-   sort=F, rel.values=T, predicted.classes.only=F,
+   sort.classes=F, rel.values=T, predicted.classes.only=F,
 
    ## Performance metrics
    metrics=c('f1','prec','tpr'),
@@ -164,7 +164,7 @@ plotPerfHeatmap <- function(
       tab <- round(tab,2)
    }
 
-   class_order <- if(sort){ names(sort(diag(tab), decreasing=T)) } else { names(diag(tab)) }
+   class_order <- if(sort.classes){ names(sort(diag(tab), decreasing=T)) } else { names(diag(tab)) }
    tab <- tab[class_order,class_order]
 
    tab <- cbind(NA,tab) ## Add dummy column for mean performance
@@ -194,8 +194,6 @@ plotPerfHeatmap <- function(
 
    counts <- data.frame(total=class_counts, correct=correct_counts)
    counts$incorrect <- counts$total - counts$correct
-   #counts <- counts[,ncol(counts):1]
-   #counts <- forceDfOrder(counts)
 
    plots$counts <-
       plotHeatmapFromMatrix(t(as.matrix(counts)), palette='none', show.labels=T, x.title.position='top') +
@@ -336,58 +334,6 @@ calcFracCorrect <- function(actual, predicted, rm.non.pred.classes=T){
    return(out)
 }
 
-####################################################################################################
-#' Plot false negative rate
-#'
-#' @description The false negative rate can also be interpreted as the cumulative fraction of
-#' samples per class that have a given probability.
-#'
-#' @param actual A vector of the actual classes
-#' @param prob A matrix of probabilities, where rows are the samples and columns are the cancer
-#' types
-#'
-#' @return A ggplot object
-#' @export
-#'
-plotFnr <- function(actual, prob){
-
-   confusion <- mltoolkit::confusionMatrix(
-      predicted=prob,
-      actual=actual,
-      cutoff.interval=0.1
-   )
-
-   perf <- do.call(rbind, lapply(names(confusion), function(i){
-      df <- confusion[[i]]
-      df <- cbind(
-         df, mltoolkit::calcPerf(df,metrics=c('tpr','fnr','prec','f1'), add.start.end.values=F)
-      )
-      df <- cbind(class=i,df)
-      return(df)
-   }))
-
-   m <- reshape2::dcast( perf[,c('class','cutoff','fn')], class~cutoff, value.var='fn' )
-   rownames(m) <- m[,1]; m[,1] <- NULL
-   m <- as.matrix(m)
-
-   m_rel <- round(m/m[,ncol(m)],2)
-
-   custom_labels <- paste0(
-      format(round(reshape2::melt(m_rel)$value, 2), nsmall=2),
-      ' (',reshape2::melt(m)$value,')'
-   )
-
-   plotHeatmapFromMatrix(
-      m_rel, invert.y=T, x.lab='Probability', y.lab='Cancer type',
-      show.labels=T, custom.labels=custom_labels, legend.name='Fraction'
-   ) +
-      #ggtitle('Per cancer type, fraction/counts of samples <=probability') +
-      ggtitle(expression("Per cancer type, fraction/counts of samples with prob."<="indicated prob.")) +
-      theme(
-         axis.text.x.bottom=element_text(angle=0, hjust=0.5)
-      )
-
-}
 
 
 
