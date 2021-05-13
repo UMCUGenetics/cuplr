@@ -1,7 +1,7 @@
 #' Summarize prediction report
 #'
-#' @param pred.report A list with the objects with the names: probs_raw, probs_adjusted,
-#' responses_pred, responses_actual, feat_contrib, imp
+#' @param report A list with the objects with the names: probs_raw, prob,
+#' class_pred, class_actual, feat_contrib, imp
 #' @param show.which.top.classes An integer vector specifying the top n predicted classes to show
 #' @param show.which.top.features An integer vector specifying the top features contributing to the
 #' top predicted class to show
@@ -10,13 +10,13 @@
 #' @export
 #'
 predReportSummary <- function(
-   pred.report,
+   report,
    show.which.top.classes=NULL, show.top.class.probs=T,
    show.which.top.features=NULL, show.top.features.contribs=T
 ){
 
    if(F){
-      pred.report=pred_reports.cv$HMF_PCAWG
+      report=pred_reports.cv$HMF_PCAWG
       show.which.top.classes=1:3
       show.which.top.features=1:3
    }
@@ -32,21 +32,21 @@ predReportSummary <- function(
 
    ## Preds --------------------------------
    df <- data.frame(
-      sample=rownames(pred.report$probs_adjusted),
+      sample=rownames(report$prob),
       row.names=NULL
    )
 
-   if('responses_actual' %in% names(pred.report)){
-      df$class_actual <- pred.report$responses_actual
+   if('class_actual' %in% names(report)){
+      df$class_actual <- report$class_actual
    }
 
-   df$class_pred <- pred.report$responses_pred
-   df$class_prob <- matrixStats::rowMaxs(pred.report$probs_adjusted)
+   df$class_pred <- report$class_pred
+   df$class_prob <- matrixStats::rowMaxs(report$prob)
 
    ## Top predicted class --------------------------------
    if(!is.null(show.which.top.classes)){
 
-      m_next_top_n_classes <- t(apply(pred.report$probs_adjusted,1,function(i){
+      m_next_top_n_classes <- t(apply(report$prob,1,function(i){
          i <- sort(i, decreasing=T)
          i <- round(i, 3)
          i <- i[show.which.top.classes]
@@ -64,7 +64,7 @@ predReportSummary <- function(
    ## Top contributing features --------------------------------
    if(!is.null(show.which.top.features)){
 
-      feat_contrib <- pred.report$feat_contrib
+      feat_contrib <- report$feat_contrib
       feat_contrib <- feat_contrib[
          paste0(feat_contrib$sample,'_',feat_contrib$binary_rf) %in%
             paste0(df$sample,'_',df$class_pred)
