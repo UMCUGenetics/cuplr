@@ -144,6 +144,10 @@ fisherTest.data.frame <- fisherTest.matrix
 #' @param case.false Group 'x' non responders
 #' @param ctrl.true Group 'y' responders
 #' @param ctrl.false Group 'y' non responders
+#' @param correct a logical indicating whether to apply continuity correction when computing the
+#' test statistic for 2 by 2 tables: one half is subtracted from all |O - E| differences; however,
+#' the correction will not be bigger than the differences themselves.
+#' @param return.statistic Return the raw chi-square statistic
 #' @param m A matrix containing the 4 columns corresponding to a contingency matrix
 #'
 #' @param verbose Show progress?
