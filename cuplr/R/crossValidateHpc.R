@@ -168,7 +168,7 @@ gatherCvOutput <- function(
    verbose=T
 ){
    if(F){
-      cv.out.dir='/Users/lnguyen//hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.13a_HMF_PCAWG/cv_out/'
+      cv.out.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CUPs_classifier/processed/cuplr/cuplr/models/0.14g_HMF_PCAWG_newValSet/cv_out/'
       out.dir=paste0(cv.out.dir,'/../')
       pattern='^test_set_report.rds$'
       verbose=T
@@ -185,16 +185,19 @@ gatherCvOutput <- function(
    reports_merged_path <- paste0(out.dir,'/test_set_report.rds')
 
    if(!file.exists(reports_merged_path)){
-      if(verbose){ message('Merging CV results...') }
-      reports_merged <- mergePredReports(reports)
+      #if(verbose){ message('Merging CV results...') }
+      reports_merged <- combineLists(reports, exclude.objects='imp', verbose=verbose)
 
+      if(verbose){ message('Aggregating importances...') }
+      reports_merged$imp <- aggregateMatrixList(lapply(reports,`[[`,'imp'), as.matrix=T)
+
+      if(verbose){ message('Gathering fold numbers...') }
       fold_n_samples <- sapply(reports, function(i){
-         length(i$responses_pred)
+         length(i$class_pred)
       })
       reports_merged$fold_num <- rep(1:length(reports), fold_n_samples)
 
-      #rep(c(1,2),c(2,3))
-
+      if(verbose){ message('Saving merged CV results: ', reports_merged_path) }
       saveRDS(reports_merged, reports_merged_path)
    } else {
       if(verbose){ message('Loading merged CV results: ', reports_merged_path) }
@@ -210,8 +213,8 @@ gatherCvOutput <- function(
       pdf(paste0(plots_dir,'/perf_heatmap.pdf'), 14, 10)
       suppressWarnings({
          plot(plotPerfHeatmap(
-            actual=reports_merged$responses_actual,
-            predicted=reports_merged$responses_pred,
+            actual=reports_merged$class_actual,
+            predicted=reports_merged$class_pred,
             show.weighted.mean=T,
             rel.heights=c(perf=0.3, counts=0.15, heatmap=1)
          ))
@@ -231,9 +234,9 @@ gatherCvOutput <- function(
       if(verbose){ message('Plotting sorted probs...') }
       pdf(paste0(plots_dir,'/sorted_probs.pdf'), 16, 10)
       plot(plotSortedProbs(
-         actual=reports_merged$responses_actual,
-         predicted=reports_merged$responses_pred,
-         probs=reports_merged$probs_adjusted,
+         actual=reports_merged$class_actual,
+         predicted=reports_merged$class_pred,
+         probs=reports_merged$prob,
          min.frac.correct=1
       ))
       dev.off()
