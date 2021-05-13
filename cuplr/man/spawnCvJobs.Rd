@@ -13,8 +13,10 @@ spawnCvJobs(
   k = 20,
   seed = 1,
   rm.path.prefix = "/Users/lnguyen",
+  trailing.args = "",
   time = "2:00:00",
   mem = "16G",
+  n.tasks.per.node = NULL,
   verbose = T
 )
 }
@@ -40,6 +42,16 @@ seed <- args[4]}
 \item{seed}{Random seed as in integer.}
 
 \item{rm.path.prefix}{Prefix to remove from all paths in the job script}
+
+\item{trailing.args}{A string specifying trailing args in Rscript command:
+Rscript ${train.script.path} ${train.data.path} ${fold_indexes_path} ${out_path} ${seed} ${trailing.args}}
+
+\item{time}{A string specifying SLURM run time}
+
+\item{mem}{A string specifying SLURM memory}
+
+\item{n.tasks.per.node}{Number of threads to use. If NULL, the number of threads will be the
+number of classes}
 
 \item{verbose}{Show progress messages?}
 }

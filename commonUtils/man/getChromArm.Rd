@@ -19,16 +19,16 @@ getChromArm(
 
 \item{centro.pos}{A named integer vector of the centromere positions (default: hg19)}
 
+\item{one.armed.chroms}{A character vector specifying the chromosomes with only one arm}
+
 \item{arm.only}{Only return the arm and not the chrom number?}
+
+\item{seq.levels.style}{A string indicating the chromosome name style to use}
 
 \item{centro.intervals.rough.fix}{If TRUE, intervals intersecting with the centromere will be
 assigned to the q arm.}
 
 \item{show.warnings}{Show warning messages?}
-
-\item{chrom.arm.names}{A character vector in the form c('1p','1q','2p','2q', ...). The default
-'auto' means that the human chromosome arm names are used. Note that chroms 13, 14, 15, 21, 22
-are considered to only have the long (i.e. q) arm.}
 }
 \value{
 A character vector of chromosome arm names

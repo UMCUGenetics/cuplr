@@ -5,7 +5,7 @@
 \alias{cramerV.default}
 \alias{cramerV.matrix}
 \alias{cramerV.data.frame}
-\title{Calculate odds ratio}
+\title{Calculate Cramer's V}
 \usage{
 cramerV(x, ...)
 

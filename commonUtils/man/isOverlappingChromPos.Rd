@@ -27,10 +27,16 @@ isOverlappingChromPos(
 \item{start2}{A vector of start positions (#2)}
 
 \item{end2}{A vector of end positions (#2)}
+
+\item{df1}{A dataframe containing `chrom1`, `start1`, `end1`}
+
+\item{df2}{A dataframe containing `chrom2`, `start2`, `end2`}
 }
 \value{
 A list of indexes of #1 for which #2 overlaps
 }
 \description{
-Find overlapping genomic intervals
+Find overlapping genomic intervals between two sets of genomeic coordinates. Inputs
+must be provided as a set of 3 vectors (e.g. `chrom1`, `start1`, `end1`) or a dataframe
+containing these vectors
 }

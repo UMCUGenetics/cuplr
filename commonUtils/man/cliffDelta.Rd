@@ -9,11 +9,11 @@
 \usage{
 cliffDelta(x, ...)
 
-\method{cliffDelta}{default}(x, y)
+\method{cliffDelta}{default}(x, y, use.r.implementation = USE_CLIFF_DELTA_R)
 
-\method{cliffDelta}{matrix}(x, y)
+\method{cliffDelta}{matrix}(x, y, use.r.implementation = USE_CLIFF_DELTA_R)
 
-\method{cliffDelta}{data.frame}(x, y)
+\method{cliffDelta}{data.frame}(x, y, use.r.implementation = USE_CLIFF_DELTA_R)
 }
 \arguments{
 \item{x}{A numeric vector for the 1st group of observations. Alternatively, a matrix, where
