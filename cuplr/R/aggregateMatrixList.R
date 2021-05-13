@@ -11,6 +11,13 @@
 aggregateMatrixList <- function(l, func=function(x){ mean(x, na.rm=T) }, as.matrix=F, value.name=NULL){
    #l=lapply(cv_out,`[[`,'imp')
 
+   if(
+      !is.list(l) |
+      !all( sapply(l,is.matrix) | sapply(l,is.data.frame) )
+   ){
+      stop('`l` must be a list of matrices or dataframes')
+   }
+
    all_cols <- unique(unlist(lapply(l, colnames)))
    l_melt <- lapply(l, function(i){
       #i=l[[3]]
@@ -33,15 +40,10 @@ aggregateMatrixList <- function(l, func=function(x){ mean(x, na.rm=T) }, as.matr
    m_values <- as.matrix(df_pre[,-c(1,2)])
    df$value <- apply(m_values,1,function(i){ func(i) })
 
-
-
-   #m_values <- do.call(cbind, lapply(l_melt,`[[`,'value'))
-   #df <- l_melt[[1]]
-   #df$value <- apply(m_values,1,function(i){ func(i) })
-
    if(as.matrix){
       out <- reshape2::acast(df, class ~ feature)
       out <- out[,colnames(l[[1]])]
+
       return(out)
    } else {
       if(!is.null(value.name)){ colnames(df)[3] <- value.name }
