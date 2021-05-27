@@ -200,46 +200,11 @@ gatherCvOutput <- function(
       if(verbose){ message('Saving merged CV results: ', reports_merged_path) }
       saveRDS(reports_merged, reports_merged_path)
    } else {
-      if(verbose){ message('Loading merged CV results: ', reports_merged_path) }
-      reports_merged <- readRDS(reports_merged_path)
-   }
 
-   ## Plots --------------------------------
-   if(mk.plots){
-      plots_dir <- paste0(out.dir,'/plots/')
-      dir.create(plots_dir, showWarnings=F)
+      message('Merged CV results path exists: ', reports_merged_path)
 
-      if(verbose){ message('Plotting perf heatmap...') }
-      pdf(paste0(plots_dir,'/perf_heatmap.pdf'), 14, 10)
-      suppressWarnings({
-         plot(plotPerfHeatmap(
-            actual=reports_merged$class_actual,
-            predicted=reports_merged$class_pred,
-            show.weighted.mean=T,
-            rel.heights=c(perf=0.3, counts=0.15, heatmap=1)
-         ))
-      })
-      dev.off()
-
-      if(verbose){ message('Plotting imp barplots...') }
-      pdf(paste0(plots_dir,'/imp_barplots.pdf'), 16, 10)
-      plot(plotTopFeatures(
-         m=reports_merged$imp,
-         top.n=30,
-         infer.feature.type=T,
-         feature.type.colors=NULL
-      ))
-      dev.off()
-
-      if(verbose){ message('Plotting sorted probs...') }
-      pdf(paste0(plots_dir,'/sorted_probs.pdf'), 16, 10)
-      plot(plotSortedProbs(
-         actual=reports_merged$class_actual,
-         predicted=reports_merged$class_pred,
-         probs=reports_merged$prob,
-         min.frac.correct=1
-      ))
-      dev.off()
+      #if(verbose){ message('Loading merged CV results: ', reports_merged_path) }
+      #reports_merged <- readRDS(reports_merged_path)
    }
 }
 
