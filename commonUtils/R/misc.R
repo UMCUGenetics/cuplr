@@ -159,27 +159,31 @@ cacheAndReadData <- function(
    set.seed(nchar(remote.path))
 
    ## Copy --------------------------------
-   if(is.null(local.path)){
-      local.path <- paste0(
-         cache.dir,
-         sub(regex,'',basename(remote.path)),
-         '.',paste(sample(letters, 8), collapse=''),ext
-      )
-   }
-
-   local.path <- gsub('/+', '/', local.path)
-   if(!file.exists(local.path) | overwrite){
-      if(!file.exists(local.path)){
-         message('Making local copy: ', local.path)
-      } else {
-         message('Updating local copy: ', local.path)
+   if(dir.exists('/hpc/')){
+      local.path <- remote.path
+   } else {
+      if(is.null(local.path)){
+         local.path <- paste0(
+            cache.dir,
+            sub(regex,'',basename(remote.path)),
+            '.',paste(sample(letters, 8), collapse=''),ext
+         )
       }
 
-      system(sprintf(
-         'rsync -a %s %s',
-         remote.path,
-         local.path
-      ))
+      local.path <- gsub('/+', '/', local.path)
+      if(!file.exists(local.path) | overwrite){
+         if(!file.exists(local.path)){
+            message('Making local copy: ', local.path)
+         } else {
+            message('Updating local copy: ', local.path)
+         }
+
+         system(sprintf(
+            'rsync -a %s %s',
+            remote.path,
+            local.path
+         ))
+      }
    }
 
    ## Read --------------------------------
