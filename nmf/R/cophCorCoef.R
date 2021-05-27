@@ -9,7 +9,7 @@
 #' indicating 2 samples belong to the sample cluster. This is the 'connectivity matrix' (C in the
 #' Brunet paper)
 #' (iii) With e.g. 100 NMF repeats, there are 100 connectivity matrices. Take the mean of the
-#' connectivity matrices. This is the 'consensus matrix' (C̄ in the paper)
+#' connectivity matrices. This is the 'consensus matrix' (C_dash in the paper)
 #' (iv) Take 1 - consensus matrix to get the distance matrix, then hierachical cluster on this and
 #' calculate the cophenetic matrix with `stats::cophenetic()`
 #' (v) The cophenetic coefficient is the pearson correlation of the distance matrix with the
