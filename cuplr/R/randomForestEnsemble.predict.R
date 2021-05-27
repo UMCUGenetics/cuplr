@@ -27,22 +27,22 @@
 #'
 predict.randomForestEnsemble <- function(
    object, newdata, type='report',
-   gender.feature.name='purple.is_female',
+   gender.feature.name='gender.gender',
    classes.female=c('Cervix','Ovary','Uterus'), classes.male='Prostate',
-   calc.feat.contrib=T, top.n.pred.classes=3, top.n.features=5,
+   calc.feat.contrib=T, top.n.pred.classes=NULL, top.n.features=5,
    verbose=F
 ){
-   if(F){
-      object=model
-      newdata=features
-      type='prob'
-      gender.feature.name='purple.is_female'
-      classes.female=c('Cervix','Ovary','Uterus')
-      classes.male='Prostate'
-      top.n.pred.classes=3
-      top.n.features=5
-      verbose=T
-   }
+   # if(F){
+   #    object=model
+   #    newdata=features
+   #    type='prob'
+   #    gender.feature.name='gender.gender'
+   #    classes.female=c('Cervix','Ovary','Uterus')
+   #    classes.male='Prostate'
+   #    top.n.pred.classes=NULL
+   #    top.n.features=5
+   #    verbose=T
+   # }
 
    ## Checks --------------------------------
    if(!is.data.frame(newdata)){ stop('`newdata` must be a dataframe') }
@@ -238,6 +238,9 @@ predict.randomForestEnsemble <- function(
 
    ##
    out$feat_contrib <- feat_contrib
+
+   ## --------------------------------
+   class(out) <- c('predReport', class(out))
    return(out)
 }
 
