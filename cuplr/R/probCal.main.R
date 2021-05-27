@@ -1,16 +1,23 @@
 #' Isotonic regression
 #'
+#' @rdname isoReg
+#'
 #' @description A wrapper for stats::isoreg()
 #'
-#' @param x x values
-#' @param y y values
+#' @param x Input x values
+#' @param y Input y values
 #'
-#' @return A list which the objects:
-#' - orig_data: Original x,y values ordered by the x values
-#' - curve: The x,y values of the curve
+#' @return A dataframe containing the x,y values of the curve
 #' @export
 #'
 isoReg <- function(x,y){
+
+   if(F){
+      report=pred_reports$CV
+      sel_class <- 'HeadAndNeck_Other'
+      x=report$prob[,sel_class]
+      y=report$class_actual==sel_class
+   }
 
    coords <- data.frame(x,y)
    coords <- coords[order(coords$x),]
@@ -20,19 +27,24 @@ isoReg <- function(x,y){
    fit$x <- sort(fit$x)
    fit$y <- sort(fit$y)
 
-   orig_data <- data.frame(x=fit$x, y=fit$y)
+   #orig_data <- data.frame(x=fit$x, y=fit$y)
 
    curve <- data.frame(
       x = fit$x[ fit$iKnots ],
       y = fit$yf[ fit$iKnots ]
    )
 
-   ## Add y-values for x-values (i.e. original probabilities) of 0 and 1
+   ## Force curve to start at (0,0) and (1,max(y))
    curve <- rbind(
-      within(curve[1,], x <- 0),
+      within(curve[1,], { x <- 0; y <- 0 }),
       curve,
       within(curve[nrow(curve),], x <- 1)
    )
+
+   curve <- curve[
+      !(curve$x==0 & duplicated(curve$x)) &
+      !(curve$x==1 & duplicated(curve$x, fromLast=T))
+   ,]
 
    ## Dedup rows with same y-values
    curve <- unique(curve)
@@ -45,7 +57,67 @@ isoReg <- function(x,y){
    NULL -> curve$is_uniq_first -> curve$is_uniq_last -> curve$is_dup_bounding
 
    ## Output
-   list(orig_data=orig_data, curve=curve)
+   #list(orig_data=orig_data, curve=curve)
+   class(curve) <- c('isoReg',class(curve))
+   return(curve)
+}
+
+#' @method predict isoReg
+#' @export
+predict.isoReg <- function(object, newdata){
+   #object=isoReg(x=df$class_target_prob, y=df$response)
+   #newdata=seq(0,1,0.01)
+   approx(x=object$x, y=object$y, xout=newdata)$y
+}
+
+####################################################################################################
+#' Logistic regression (1 dimensional)
+#'
+#' @rdname logReg
+#'
+#' @description A wrapper for stats::glm()
+#'
+#' @param x Input x values
+#' @param y Input y values
+#'
+#' @return A numeric vector with the intercept (b0) and gradient (b1)
+#' @export
+#'
+logReg <- function(x, y){
+   #x=df$class_target_prob
+   #y=df$response
+   coords <- data.frame(x,y)
+   fit <- glm(data=coords, formula=y~x, family='binomial')
+   coefs <- data.frame(
+      b0=fit$coefficients[['(Intercept)']],
+      b1=fit$coefficients[['x']]
+   )
+   class(coefs) <- c('logReg',class(coefs))
+   return(coefs)
+}
+
+#' @method predict logReg
+#' @export
+predict.logReg <- function(object, newdata, scale01=T){
+   #object=log_reg
+   #newdata=seq(0,1,0.01)
+   require(stats)
+   intercept <- object[['b0']]
+   gradient <- object[['b1']]
+
+   main <- function(x){
+      logit <- intercept+gradient*x
+      1/(1+(exp(-logit)))
+   }
+
+   out <- main(newdata)
+
+   if(scale01){
+      yrange <- main(c(min=0, max=1))
+      out <- (out - yrange[['min']]) / (yrange[['max']] - yrange[['min']])
+   }
+
+   return(out)
 }
 
 ####################################################################################################
@@ -58,8 +130,10 @@ isoReg <- function(x,y){
 #' the prediction probabilities from each random forest
 #' @param report A list with the objects with the names: prob, class_actual
 #' @param output If 'coords' returns a dataframe with the x,y values of the calibration curve for
-#' each `actual` class. If 'plot', returns a ggplot object
-#' @param curve.coords The output from `probCalCurves(..., output='coords')`
+#' each `actual` class. If 'plot', returns a ggplot object. If 'plotdata', returns a list with the
+#' raw plot data
+#' @param method Type of regression to perform. Can be 'isotonic' or 'logistic'.
+#' @param cal.curves The output from `probCalCurves(..., output='curve')`
 #'
 #' @description `probCalCurves()` generates calibration curves to map raw classifier
 #' (pseudo-)probabilibities to real probabilities. This is done using isotonic regression, with
@@ -71,11 +145,15 @@ isoReg <- function(x,y){
 #'
 #' @export
 #'
-probCalCurves <- function(actual=NULL, probs=NULL, report=NULL, output=c('coords','plot')){
-
-   # if(F){
-   #    report=pred_reports$CV
-   # }
+probCalCurves <- function(
+   actual=NULL, probs=NULL, report=NULL,
+   output=c('curve','plot','plotdata'), method=c('isotonic','logistic')
+){
+   if(F){
+      report=pred_reports$CV
+      actual=report$class_actual
+      probs=report$prob
+   }
 
    ## Init --------------------------------
    if(!is.null(report)){
@@ -83,35 +161,62 @@ probCalCurves <- function(actual=NULL, probs=NULL, report=NULL, output=c('coords
       probs <- report$prob
    }
 
-   output <- match.arg(output, c('coords','plot'))
+   output <- match.arg(output, c('curve','plot','plotdata'))
+   method <- match.arg(method, c('isotonic','logistic'))
 
    ## Main --------------------------------
    uniq_classes <- colnames(probs)
-   isoreg_fits <- lapply(uniq_classes, function(i){
-      #i='Cervix'
+
+   coords <- lapply(uniq_classes, function(i){
+      #i='Skin_Other'
 
       ## Prep data
       df <- data.frame(
-         class_target = i,
-         response = as.integer(actual==i),
-         class_target_prob = probs[,i],
+         class = i,
+         x = probs[,i],
+         y = as.integer(actual==i),
          row.names=NULL
       )
-      df <- df[order(df$class_target_prob, decreasing=F),]
-
-      out <- isoReg(x=df$class_target_prob, y=df$response)
-      lapply(out, function(j){
-         j$class <- i
-         return(j)
-      })
+      df[order(df$x),]
    })
+   names(coords) <- uniq_classes
 
-   orig_data <- do.call(rbind, lapply(isoreg_fits,`[[`,'orig_data'))
-   curve_coords <- do.call(rbind, lapply(isoreg_fits,`[[`,'curve'))
-   rm(isoreg_fits)
+   reg_func <- switch(
+      method,
+      isotonic=isoReg,
+      logistic=logReg
+   )
 
-   ## Output --------------------------------
-   if(output=='coords'){ return(curve_coords) }
+   fit <- lapply(uniq_classes, function(i){
+      out <- reg_func(coords[[i]]$x, coords[[i]]$y)
+      out$class <- i
+      return(out)
+   })
+   names(fit) <- uniq_classes
+
+   if(output=='curve'){
+      return( do.call(rbind, unname(fit)) )
+   }
+
+   ## Plot --------------------------------
+   orig_data <- do.call(rbind, unname(coords))
+   if(method=='isotonic'){
+      curve_coords <- do.call(rbind, fit)
+   } else {
+      x_values <- seq(0,1,0.01)
+      curve_coords <- lapply(names(fit), function(i){
+         data.frame(
+            x=x_values,
+            y=predict(fit[[i]], x_values),
+            class=i
+         )
+      })
+      curve_coords <- do.call(rbind, curve_coords)
+   }
+
+   if(output=='plotdata'){
+      return( list(curve_coords=curve_coords, orig_data=orig_data) )
+   }
 
    ggplot(curve_coords, aes(x=x, y=y)) +
 
@@ -136,22 +241,21 @@ probCalCurves <- function(actual=NULL, probs=NULL, report=NULL, output=c('coords
 #' @rdname probCal
 #' @export
 #'
-probCal <- function(probs, curve.coords){
+probCal <- function(probs, cal.curves){
    # if(F){
    #    probs=pred_reports$CV$prob
-   #    curve.coords=calib_curves
+   #    cal.curves=cal_curves
    # }
 
    ## Init --------------------------------
-   if(!all(colnames(probs) %in% unique(curve.coords$class))){
-      stop('`colnames(probs)` must have the same classes as in `curve.coords`')
+   if(!all(colnames(probs) %in% unique(cal.curves$class))){
+      stop('`colnames(probs)` must have the same classes as in `cal.curves`')
    }
 
    ## Main --------------------------------
    probs_scaled <- lapply(colnames(probs), function(i){
-      #i='Breast'
-      lookup_table <- curve.coords[curve.coords$class==i,]
-      approx(x=lookup_table$x, y=lookup_table$y, probs[,i])$y
+      #i='HeadAndNeck_Other'
+      predict(cal.curves[cal.curves$class==i,], probs[,i])
    })
 
    probs_scaled <- do.call(cbind, probs_scaled)
