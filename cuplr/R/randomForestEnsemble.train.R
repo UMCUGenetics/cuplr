@@ -156,8 +156,9 @@ crossValidate <- function(
 #' @param feat.sel.min.cliff.delta Cliff delta (effect size) threshold for keeping continous features
 #' @param feat.sel.min.cramer.v Cramer's V (effect size) threshold for keeping categorical features
 #' @param feat.sel.top.n.features Only keep the top number of features
-#' @param balance.classes If TRUE or 'resample', up and downsampling will be performed. Resampling
-#' ratios are determined by an inner cross-validation
+#' @param balance.classes If 'resample', up and downsampling will be performed. Resampling ratios
+#' are determined by an inner cross-validation. If 'class_weights', class weights equal to
+#' 1/n_samples_in_class will be used. If 'none', no class balancing will be performed.
 #' @param k.inner Number of inner cross-validation folds to use to determine resampling ratios
 #' @param n.resamples.true Number of resampling values to generate for the TRUE class
 #' @param n.resamples.false Number of resampling values to generate for the FALSE class
@@ -193,7 +194,7 @@ trainRandomForest <- function(
    feat.sel.whitelist=NULL,
 
    ## class balancing
-   balance.classes=c(FALSE,TRUE,'resample','class_weights'), k.inner=5,
+   balance.classes=c('none','resample','class_weights'), k.inner=5,
    n.resamples.true=4, n.resamples.false=4, midpoint.type='geometric',
    min.size.diff=NULL, max.upsample.ratio=10,
 
@@ -247,10 +248,13 @@ trainRandomForest <- function(
       }
    }
 
-   balance.classes <- match.arg(balance.classes, c(FALSE,TRUE,'resample','class_weights'))
+   balance.classes <- balance.classes[1]
+   if(!(balance.classes %in% c('none','resample','class_weights'))){
+      stop("`balance.classes` must be 'none', 'resample', or 'class_weights'")
+   }
 
    ##----------------------------------------------------------------------
-   y <- train_data$y
+   y <- train_data$y ## y <- train_data$y=='Prostate'
    x <- train_data$x
    rm(train_data)
 
@@ -281,7 +285,7 @@ trainRandomForest <- function(
    }
 
    ##----------------------------------------------------------------------
-   if(balance.classes==T || balance.classes=='resample'){
+   if(balance.classes=='resample'){
       if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Balancing classes...') }
       resampling_grid <- resamplingGrid(
          a=sum(y==TRUE), b=sum(y==FALSE),
@@ -439,8 +443,8 @@ trainRandomForest <- function(
 
    model$seed <- seed
 
-   if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Saving tmp model...') }
    if(!is.null(model.tmp.path)){
+      if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Saving tmp model...') }
       saveRDS(model, model.tmp.path)
    }
 
