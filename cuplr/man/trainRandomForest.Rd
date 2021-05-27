@@ -15,7 +15,7 @@ trainRandomForest(
   feat.sel.min.cramer.v = 0.1,
   feat.sel.top.n.features = NULL,
   feat.sel.whitelist = NULL,
-  balance.classes = c(FALSE, TRUE, "resample", "class_weights"),
+  balance.classes = c("none", "resample", "class_weights"),
   k.inner = 5,
   n.resamples.true = 4,
   n.resamples.false = 4,
@@ -55,8 +55,9 @@ single string, or a character vector of the same length as the number of feature
 \item{feat.sel.whitelist}{A character vector of feature names in x to keep (i.e. ignore feature
 selection for these features)}
 
-\item{balance.classes}{If TRUE or 'resample', up and downsampling will be performed. Resampling
-ratios are determined by an inner cross-validation}
+\item{balance.classes}{If 'resample', up and downsampling will be performed. Resampling ratios
+are determined by an inner cross-validation. If 'class_weights', class weights equal to
+1/n_samples_in_class will be used. If 'none', no class balancing will be performed.}
 
 \item{k.inner}{Number of inner cross-validation folds to use to determine resampling ratios}
 

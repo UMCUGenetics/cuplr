@@ -8,11 +8,11 @@
   object,
   newdata,
   type = "report",
-  gender.feature.name = "purple.is_female",
+  gender.feature.name = "gender.gender",
   classes.female = c("Cervix", "Ovary", "Uterus"),
   classes.male = "Prostate",
   calc.feat.contrib = T,
-  top.n.pred.classes = 3,
+  top.n.pred.classes = NULL,
   top.n.features = 5,
   verbose = F
 )

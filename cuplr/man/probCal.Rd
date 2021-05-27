@@ -9,10 +9,11 @@ probCalCurves(
   actual = NULL,
   probs = NULL,
   report = NULL,
-  output = c("coords", "plot")
+  output = c("curve", "plot", "plotdata"),
+  method = c("isotonic", "logistic")
 )
 
-probCal(probs, curve.coords)
+probCal(probs, cal.curves)
 }
 \arguments{
 \item{actual}{A vector of the actual classes}
@@ -23,9 +24,12 @@ the prediction probabilities from each random forest}
 \item{report}{A list with the objects with the names: prob, class_actual}
 
 \item{output}{If 'coords' returns a dataframe with the x,y values of the calibration curve for
-each `actual` class. If 'plot', returns a ggplot object}
+each `actual` class. If 'plot', returns a ggplot object. If 'plotdata', returns a list with the
+raw plot data}
 
-\item{curve.coords}{The output from `probCalCurves(..., output='coords')`}
+\item{method}{Type of regression to perform. Can be 'isotonic' or 'logistic'.}
+
+\item{cal.curves}{The output from `probCalCurves(..., output='curve')`}
 }
 \value{
 `probCalCurves()`: A dataframe or ggplot object (see `output`). `probCal()` a matrix
