@@ -13,7 +13,7 @@
 #' @return A ggplot object
 #' @export
 #'
-plotHeatmapFromMatrix <- function(
+heatmapFromMatrix <- function(
    m, x.lab=NULL, y.lab=NULL, legend.name='value',
    show.labels=F, custom.labels=NULL, palette='YlGnBu', palette.direction=-1, invert.y=F,
    x.title.position='bottom'
@@ -73,7 +73,7 @@ plotHeatmapFromMatrix <- function(
    }
 
    if(show.labels){
-      p <- p + geom_text(data=m_melt, aes(label=label), size=3.5)
+      p <- p + geom_text(data=m_melt, aes(label=label), size=2.7)
    }
 
    if(is.null(x.lab)){
@@ -98,37 +98,57 @@ plotHeatmapFromMatrix <- function(
 #' plot shows the number or % of samples correctly/incorrectly classified
 #'
 #' @param actual A factor vector of the actual classes
+#' @param probs A matrix where rows are samples, cols are binary random forest names, and cells are
+#' the prediction probabilities from each random forest
 #' @param predicted A factor vector of the predicted classes
+#' @param which.plots Which plots to show? A character vector with one or more of the following
+#' values: 'perf','counts','confusion'.
 #' @param rel.heights A numeric vector of length 3. Relative heights of the plots
 #' @param sort.classes Sort cancer type by number of % sample of correctly classified
 #' @param rel.values In lower plot, show absolute number or %
 #' @param predicted.classes.only Only show classes that are present in predicted
 #' @param metrics A character vector indicating which performance metrics to show in the upper plot.
 #' See documentation for mltoolkit to see which metrics are available
-#' @param show.weighted.mean In upper plot, calculated the weighted mean or normal mean?
+#' @param plot.title Plot title
 #'
 #' @return A cowplot object
 #' @export
 #'
-plotPerfHeatmap <- function(
-   actual=NULL, predicted=NULL,
-   rel.heights=c(perf=0.3, counts=0.15, heatmap=1),
+confusionHeatmap <- function(
+   actual=NULL, probs=NULL, predicted=NULL,
+   which.plots=c('perf','counts','confusion'),
+   rel.heights=c(perf=0.3, counts=0.15, confusion=1),
 
    ## Confusion heatmap
    sort.classes=F, rel.values=T, predicted.classes.only=F,
 
    ## Performance metrics
-   metrics=c('f1','prec','tpr'),
-   show.weighted.mean=T
+   metrics=c('f1','prec','tpr'), show.weighted.mean=T,
+
+   plot.title=NULL
 ){
    if(F){
-      test_set=readRDS('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.13a_HMF_PCAWG/test_set.rds')
-      actual=test_set$actual
-      predicted=test_set$predicted
+      report=pred_reports$CV
+      actual=report$class_actual
+      probs=report$prob_scaled
+
+      sort.classes=F; rel.values=T; predicted.classes.only=T;
+      which.plots=c('counts','confusion')
+      rel.heights=c(perf=0.3, counts=0.15, confusion=1)
+
+      metrics=c('f1','prec','tpr')
+      show.weighted.mean=T
    }
 
-   ## Init ----------------------------------------------------------------
+   ## Init ----------------------------
    require(ggplot2)
+
+   if(!is.null(probs)){
+      predicted <- factor(
+         colnames(probs)[ max.col(probs) ],
+         colnames(probs)
+      )
+   }
 
    if(!is.factor(actual)){ stop('`actual` must be a factor') }
    if(!is.factor(predicted)){ stop('`predicted` must be a factor') }
@@ -156,117 +176,178 @@ plotPerfHeatmap <- function(
    actual <- factor(actual, classes)
    predicted <- factor(predicted, classes)
 
-   ## Large confusion matrix ----------------------------------------------------------------
+   plots <- list()
+
+   ## Large confusion matrix ----------------------------
    tab <- table(predicted, actual)
 
+   overall_acc <- sum( as.character(predicted)==as.character(actual) )
    if(rel.values){
       tab <- apply(tab,2,function(i){ i/sum(i) })
       tab <- round(tab,2)
+
+      overall_acc <- round(overall_acc / length(actual), 2)
    }
 
    class_order <- if(sort.classes){ names(sort(diag(tab), decreasing=T)) } else { names(diag(tab)) }
    tab <- tab[class_order,class_order]
 
-   tab <- cbind(NA,tab) ## Add dummy column for mean performance
    tab <- tab[levels(droplevels(predicted)),] ## remove non-existing prediction levels
 
-   plots <- list()
+   ## Add dummy row and column for overall performance
+   tab <- cbind(OVERALL=NA,tab)
+   tab <- rbind(OVERALL=NA,tab)
+   tab[1,1] <- overall_acc
 
-   plots$heatmap <- plotHeatmapFromMatrix(
-      tab, show.labels=T, x.lab='Actual class', y.lab='Predicted class', invert.y=T,
-      #palette=if(rel.values){ 'YlGnBu' } else { 'none' },
-      legend.name=if(rel.values){ 'Column fraction' } else { 'Counts' }
-   ) +
-      theme(
-         axis.text.x.bottom=element_blank()
-      )
+   if('confusion' %in% which.plots){
+      plots$confusion <- heatmapFromMatrix(
+         tab, show.labels=T, x.lab='Actual class', y.lab='Predicted class', invert.y=T,
+         legend.name=if(rel.values){ 'Column fraction' } else { 'Counts' }
+      ) +
+         theme(
+            axis.text.x.bottom=element_blank(),
+            #axis.ticks=element_line(),
+            legend.position='none'
+         )
+   }
 
-   ## Samples per class ----------------------------------------------------------------
+   ## Correct/incorrect samples per class ----------------------------
+   ##
    class_counts <- table(actual)
    class_counts <- class_counts[class_order]
-   class_counts <- c(total=length(actual), class_counts)
+   class_counts <- c(Total=length(actual), class_counts)
 
    correct_counts <- unlist(lapply(split(data.frame(actual, predicted), actual), function(i){
       sum(i$actual==i$predicted)
    }))
    correct_counts <- correct_counts[class_order]
-   correct_counts <- c(total=sum(actual==predicted),correct_counts)
+   correct_counts <- c(Total=sum(actual==predicted),correct_counts)
 
-   counts <- data.frame(total=class_counts, correct=correct_counts)
-   counts$incorrect <- counts$total - counts$correct
+   counts <- data.frame(Total=class_counts, Correct=correct_counts)
+   counts$Incorrect <- counts$Total - counts$Correct
 
-   plots$counts <-
-      plotHeatmapFromMatrix(t(as.matrix(counts)), palette='none', show.labels=T, x.title.position='top') +
-      geom_hline(yintercept=1.5, size=0.5) +
-      theme(
-         axis.text.x.bottom=element_blank(),
-         axis.title=element_blank()
+   ##
+   if('counts' %in% which.plots){
+      pd_counts <- structure(
+         reshape2::melt(as.matrix(counts)),
+         names=c('class','measure','value')
       )
 
-   ## Performance stats ----------------------------------------------------------------
-   confusion <- mltoolkit::confusionMatrix(
-      predicted=mltoolkit::oneHotEncode(predicted),
-      actual=actual,
-      simplify=T
-   )
+      pd_counts$class <- as.character(pd_counts$class)
+      pd_counts$Total <- counts[pd_counts$class,'Total']
+      pd_counts$frac <- pd_counts$value / pd_counts$Total
+      pd_counts$frac[pd_counts$measure=='Total'] <- NA
+      pd_counts$frac[pd_counts$measure=='Incorrect'] <- -pd_counts$frac[pd_counts$measure=='Incorrect']
 
-   perf <- mltoolkit::calcPerf(confusion, metrics)
-   rownames(perf) <- perf[,1]; perf[,1] <- NULL
+      pd_counts$class[pd_counts$class=='Total'] <- 'OVERALL'
+      pd_counts$class <- factor(pd_counts$class, unique(pd_counts$class))
 
-   perf <- perf[class_order,,drop=F]
-
-   perf_ss <- perf[rownames(perf) %in% predicted,,drop=F]
-
-   ## Summary stats
-   if(show.weighted.mean){
-      perf_summary <- rbind(
-         OVERALL=apply(perf_ss,2,function(i){
-            weights <- table(actual)/length(actual)
-            weights <- weights[names(i)]
-            weighted.mean(i, weights)
-         })
-      )
-   } else {
-      perf_summary <- rbind(
-         OVERALL = apply(perf_ss,2,mean)
-      )
+      plots$counts <- ggplot(pd_counts, aes(y=measure, x=class)) +
+         geom_tile(aes(fill=frac), color='grey') +
+         geom_text(aes(label=value), size=2.7) +
+         geom_hline(yintercept=1.5, size=0.5) +
+         scale_fill_distiller(palette='RdYlGn', na.value='white', limits=c(-1,1), direction=1, guide=F) +
+         scale_x_discrete(expand=c(0,0), position='top') +
+         scale_y_discrete(expand=c(0,0)) +
+         theme_bw() +
+         theme(
+            panel.grid=element_blank(),
+            axis.text.x.bottom=element_text(angle=90, vjust=0.5, hjust=1),
+            axis.text.x.top=element_text(angle=90, vjust=0.5, hjust=0),
+            axis.title=element_blank(),
+            axis.ticks=element_blank()
+         )
    }
-   perf <- rbind(perf_summary, perf)
-   perf <- round(perf, 2)
 
-   plots$perf <- plotHeatmapFromMatrix(
+   # if('counts' %in% which.plots){
+   #    plots$counts <-
+   #       heatmapFromMatrix(t(as.matrix(counts)), palette='none', show.labels=T, x.title.position='top') +
+   #       geom_hline(yintercept=1.5, size=0.5) +
+   #       theme(
+   #          axis.text.x.bottom=element_blank(),
+   #          axis.title=element_blank()
+   #       )
+   # }
+
+   ## Performance stats ----------------------------
+   if('perf' %in% which.plots){
+      confusion <- mltoolkit::confusionMatrix(
+         predicted=mltoolkit::oneHotEncode(predicted),
+         actual=actual,
+         simplify=T
+      )
+
+      perf <- mltoolkit::calcPerf(confusion, metrics)
+      rownames(perf) <- perf[,1]; perf[,1] <- NULL
+
+      perf <- perf[class_order,,drop=F]
+
+      perf_ss <- perf[rownames(perf) %in% predicted,,drop=F]
+
+      ## Summary stats
+      if(show.weighted.mean){
+         perf_summary <- rbind(
+            OVERALL=apply(perf_ss,2,function(i){
+               weights <- table(actual)/length(actual)
+               weights <- weights[names(i)]
+               weighted.mean(i, weights)
+            })
+         )
+      } else {
+         perf_summary <- rbind(
+            OVERALL = apply(perf_ss,2,mean)
+         )
+      }
+      perf <- rbind(perf_summary, perf)
+      perf <- round(perf, 2)
+
+      plots$perf <- heatmapFromMatrix(
          t(perf), palette='RdYlGn', palette.direction=1, show.labels=T,
          y.lab='Perf.', legend.name='Metric value', x.title.position='top'
       ) +
-      guides(fill=F) +
-      theme(
-         axis.text.x.bottom=element_blank(),
-         axis.title=element_blank()
-      )
+         guides(fill=F) +
+         theme(
+            axis.text.x.bottom=element_blank(),
+            axis.title=element_blank()
+         )
+   }
+
 
    ## Combine --------------------------------
    plots <- rev(plots)
 
-   sel_plots <- names(rel.heights!=0)
-   plots <- plots[sel_plots]
-   rel_heights <- rel.heights[sel_plots]
+   if(length(names(rel.heights))!=0){
+      rel_heights <- rel.heights[names(plots)]
+   } else {
+      rel_heights <- rel.heights[1:length(plots)]
+      names(rel_heights) <- names(plots)
+   }
+
 
    plots <- lapply(plots, function(i){
       i + theme(
          axis.text.x.bottom=element_blank(),
-         axis.text.x.top=element_blank()
+         axis.text.x.top=element_blank(),
+         axis.ticks.y=element_line()
       )
    })
 
    plots[[1]] <- plots[[1]] +
       theme(
-         axis.text.x.top=element_text(angle=90, hjust=0, vjust=0.5)
+         axis.text.x.top=element_text(angle=90, hjust=0, vjust=0.5),
+         #axis.text.x.top=element_text(angle=45, hjust=0, vjust=0),
+         axis.ticks.x=element_line()
       )
+   if(!is.null(plot.title)){
+      plots[[1]] <- plots[[1]] + ggtitle(plot.title)
+   }
 
    plots[[length(plots)]] <- plots[[length(plots)]] +
       theme(
          axis.text.x.bottom=element_text(angle=90, hjust=1, vjust=0.5),
-         axis.title.x.bottom=element_text()
+         #axis.text.x.bottom=element_text(angle=45, hjust=1, vjust=1),
+         axis.title.x.bottom=element_text(),
+         axis.ticks.x=element_line()
       )
 
    cowplot::plot_grid(
