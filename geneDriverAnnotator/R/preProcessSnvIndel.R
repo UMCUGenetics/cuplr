@@ -65,16 +65,19 @@ filterVcf <- function(
 #'
 #' @param vcf.file Path to vcf file (gzip compressed)
 #' @param out.file Path to output txt file (make sure to add .gz at the end)
-#' @param genome Name of the genome to supply to snpEff
 #' @param java.path Path to java binary (defaults to the installed JRE location)
-#' @param snpsift.path Path to SnpSift jar (defaults to the one included in this package)
+#' @param snpeff.path Path to SnpEff jar (defaults to the one included in this package)
+#' @param genome Name of the genome to provide to snpEff
+#' @param snpeff.args Command line arguments to provide to snpEff as a string
 #'
-#' @return Nothing but writes a gzipped txt file
+#' @return Writes a gzipped txt file to `out.file`
 #' @export
 #'
 annotateVariantType <- function(
-   vcf.file, out.file, genome='GRCh37.75',
-   java.path=JAVA_PATH, snpeff.path=SNPEFF_PATH
+   vcf.file, out.file,
+   java.path=JAVA_PATH, snpeff.path=SNPEFF_PATH, 
+   genome='GRCh37.75', snpeff.args='-lof -no-downstream -no-intergenic -noShiftHgvs -noStats -verbose'
+   
 ){
    #vcf.file='/Users/lnguyen/hpc/cog_bioinf/cuppen/project_data/HMF_data/DR-104/data/somatics/191205_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
    #out.file='/Users/lnguyen/hpc/cog_bioinf/cuppen/project_data/Luan_projects/CHORD/scripts_main/hmfGeneAnnotation/scripts_prototype/test_output/XXXXXXXX.purple.somatic.ss.vcf.gz'
@@ -86,7 +89,7 @@ annotateVariantType <- function(
       'VCF_FILE=',vcf.file,'\n',
       'OUT_FILE=',out.file,'\n',
 
-      '$JAVA -jar -Xmx16G $SNPEFF ann $GENOME $VCF_FILE -lof -no-downstream -no-intergenic -noShiftHgvs -noStats -verbose | \n',
+      '$JAVA -jar -Xmx16G $SNPEFF ann $GENOME $VCF_FILE ',snpeff.args,' | \n',
       'gzip -c > ${OUT_FILE}.tmp \n',
       'mv ${OUT_FILE}.tmp ${OUT_FILE}' ## Hack to do annotation inline of vcf.file
    )
