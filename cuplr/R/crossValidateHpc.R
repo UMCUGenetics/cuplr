@@ -152,40 +152,24 @@ done
 #' Gathers results from CV fold dirs and creates summary plots
 #'
 #' @param cv.out.dir CV dir. Output path from `spawnCvJobs()`
-#' @param out.dir Output dir for this function
+#' @param out.path Path to write output
 #' @param pattern Name/pattern of the rds file outputted by the training function
-#' @param mk.plots Make performance and feature importance plots?
 #' @param verbose Show progress messages?
 #'
 #' @return Writes merged CV data and plots to out.dir
 #' @export
 #'
-gatherCvOutput <- function(
-   cv.out.dir,
-   out.dir=paste0(cv.out.dir,'/../'),
-   pattern='^test_set_report.rds$',
-   mk.plots=T,
-   verbose=T
-){
-   if(F){
-      cv.out.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn//CUPs_classifier/processed/cuplr/cuplr/models/0.14g_HMF_PCAWG_newValSet/cv_out/'
-      out.dir=paste0(cv.out.dir,'/../')
-      pattern='^test_set_report.rds$'
-      verbose=T
-   }
+gatherCvOutput <- function(cv.out.dir, out.path, pattern='^test_set_report.rds$',verbose=T ){
 
-   if(verbose){ message('Reading CV output...') }
-   report_paths <- list.files(path=cv.out.dir, pattern=pattern, recursive=T, full.names=T)
-   reports <- lapply(report_paths, function(i){
-      if(verbose){ message('  ',i) }
-      readRDS(i)
-   })
+   if(!file.exists(out.path)){
+      if(verbose){ message('Reading CV output...') }
+      report_paths <- list.files(path=cv.out.dir, pattern=pattern, recursive=T, full.names=T)
+      reports <- lapply(report_paths, function(i){
+         if(verbose){ message('  ',i) }
+         readRDS(i)
+      })
 
-   ## Combine results from cv folds --------------------------------
-   reports_merged_path <- paste0(out.dir,'/test_set_report.rds')
-
-   if(!file.exists(reports_merged_path)){
-      #if(verbose){ message('Merging CV results...') }
+      if(verbose){ message('Merging CV output...') }
       reports_merged <- combineLists(reports, exclude.objects='imp', verbose=verbose)
 
       if(verbose){ message('Aggregating importances...') }
@@ -197,15 +181,12 @@ gatherCvOutput <- function(
       })
       reports_merged$fold_num <- rep(1:length(reports), fold_n_samples)
 
-      if(verbose){ message('Saving merged CV results: ', reports_merged_path) }
-      saveRDS(reports_merged, reports_merged_path)
+      if(verbose){ message('Saving merged CV results: ', out.path) }
+      saveRDS(reports_merged, out.path)
    } else {
-
-      message('Merged CV results path exists: ', reports_merged_path)
-
-      #if(verbose){ message('Loading merged CV results: ', reports_merged_path) }
-      #reports_merged <- readRDS(reports_merged_path)
+      message('Merged CV results exist: ', out.path)
    }
+
 }
 
 
