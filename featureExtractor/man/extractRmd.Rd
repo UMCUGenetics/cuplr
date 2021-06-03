@@ -13,6 +13,7 @@ extractRmd(
   as.matrix = T,
   vcf.filter = "PASS",
   clonal.variants.only = T,
+  mut.types = "snv",
   verbose = F,
   ...
 )
@@ -40,7 +41,7 @@ will be selected}
 
 \item{verbose}{Print progress messages?}
 
-\item{...}{Other arguments that can be passed to vcfAsDataframe()}
+\item{...}{Other arguments that can be passed to mutSigExtractor::variantsFromVcf()}
 }
 \value{
 A matrix or vector

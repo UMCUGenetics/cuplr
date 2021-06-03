@@ -7,9 +7,10 @@
 detectKataegis(
   vcf.file = NULL,
   df = NULL,
+  sample.name = NULL,
   vcf.filter = "PASS",
   keep.chroms = c(1:22, "X"),
-  merge.consecutive = F,
+  ref.genome = mutSigExtractor::DEFAULT_GENOME,
   min.muts = 6,
   imd.thres = 1000,
   cp = 1e-06,
@@ -28,9 +29,6 @@ detectKataegis(
 specified}
 
 \item{keep.chroms}{Which chromosomes to keep? Default is c(1:22,'X')}
-
-\item{merge.consecutive}{Some vcfs report MNVs as consecutive variants. For these vcfs, such rows
-need to be merged into one row for proper function of downstream mutSigExtractor functions.}
 
 \item{min.muts}{Min number of SNVs in a PCF segment for the segment to be considered a kataegis
 focus}
@@ -51,6 +49,9 @@ chromosome is not reported (when output.type!='count')}
 \item{verbose}{}
 
 \item{...}{}
+
+\item{merge.consecutive}{Some vcfs report MNVs as consecutive variants. For these vcfs, such rows
+need to be merged into one row for proper function of downstream mutSigExtractor functions.}
 }
 \value{
 An integer or dataframe

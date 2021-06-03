@@ -4,29 +4,13 @@
 \alias{getViralInsertions}
 \title{Determines the presence of viral inserts in a sample}
 \usage{
-getViralInsertions(
-  linx.viral.inserts.path,
-  viral.host.ref.path = VIRAL_HOST_REF,
-  return.counts = F,
-  sel.cols = NULL
-)
+getViralInsertions(viral.inserts)
 }
 \arguments{
-\item{linx.viral.inserts.path}{Path to txt file with the columns: SampleId,
-SvId, VirusId, VirusName}
-
-\item{viral.host.ref.path}{Path to txt file with the columns: refseq_id,
-virus_name, feature_group, cancer_associated}
-
-\item{return.counts}{If TRUE, returns the actual number of viral inserts
-found in a sample}
-
-\item{sel.cols}{A character vector with the names: VirusId. The value corresponding to each name
-should refer to a column name in the txt file. This is used to translate the column names in the
-txt file to the column names that the function will use.}
+\item{viral.inserts}{Path to the LINX viral inserts txt file, or a dataframe of the file}
 }
 \value{
-An integer vector
+A named logical vector indicating which viruses are present in a sample
 }
 \description{
 Determines the presence of viral inserts in a sample
