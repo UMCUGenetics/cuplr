@@ -28,20 +28,20 @@ extractContextsSmnvIndel <- function(
    as.matrix=T, verbose=F, ...
 ){
 
-   if(F){
-      vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/171002_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
-      vcf.file='/Users/lnguyen/hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor//DO217817-from-jar//purple25/DO217817T.purple.somatic.vcf.gz'
-      vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor//DO218019-from-jar//purple25/DO218019T.purple.somatic.vcf.gz'
-      
-      vcf.filter='PASS'
-      keep.chroms=c(1:22,'X')
-      
-      ref.genome=mutSigExtractor::DEFAULT_GENOME
-      tag.features=T
-      verbose=T
-      
-      clonal.variants.only=T
-   }
+   # if(F){
+   #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/171002_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
+   #    vcf.file='/Users/lnguyen/hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor//DO217817-from-jar//purple25/DO217817T.purple.somatic.vcf.gz'
+   #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor//DO218019-from-jar//purple25/DO218019T.purple.somatic.vcf.gz'
+   #    
+   #    vcf.filter='PASS'
+   #    keep.chroms=c(1:22,'X')
+   #    
+   #    ref.genome=mutSigExtractor::DEFAULT_GENOME
+   #    tag.features=T
+   #    verbose=T
+   #    
+   #    clonal.variants.only=T
+   # }
 
    if(verbose){ message('Loading variants...') }
    if(!is.null(vcf.file)){
@@ -51,27 +51,21 @@ extractContextsSmnvIndel <- function(
          ref.genome=ref.genome, verbose=verbose,
          ...
       )
-      
-      # df <- mutSigExtractor::variantsFromVcf(
-      #    vcf.file, vcf.fields=c(1,2,4,5,7,8),
-      #    vcf.filter=vcf.filter, keep.chroms=keep.chroms,
-      #    ref.genome=ref.genome, verbose=verbose
-      # )
-      
-      if(nrow(df)==0){
-         df <- data.frame(chrom=character(), pos=numeric(), ref=character(), alt=character())
-      }
-      
-      if(clonal.variants.only & nrow(df)!=0){
-         if(verbose){ message('Selecting clonal variants') }
-         ## Split clonal/subclonal variants
-         df$subclonal_prob <- as.numeric(getInfoValues(df$info,'SUBCL')[,1])
-         df$subclonal_prob[is.na(df$subclonal_prob)] <- 0
-         df$is_subclonal <- df$subclonal_prob >= 0.8
-         df <- df[!df$is_subclonal,]
-      }
-      df$info <- NULL
    }
+   
+   if(nrow(df)==0){
+      df <- data.frame(chrom=character(), pos=numeric(), ref=character(), alt=character())
+   }
+   
+   if(clonal.variants.only & nrow(df)!=0){
+      if(verbose){ message('Selecting clonal variants') }
+      ## Split clonal/subclonal variants
+      df$subclonal_prob <- as.numeric(getInfoValues(df$info,'SUBCL')[,1])
+      df$subclonal_prob[is.na(df$subclonal_prob)] <- 0
+      df$is_subclonal <- df$subclonal_prob >= 0.8
+      df <- df[!df$is_subclonal,]
+   }
+   df$info <- NULL
    
    df_colnames <- c('chrom','pos','ref','alt')
    if(!(identical(colnames(df)[1:4], df_colnames))){
@@ -111,7 +105,7 @@ extractContextsSmnvIndel <- function(
    if(verbose){ message('Returning output...') }
    out <- do.call(c, l)
    
-   if(!as.matrix){ return(unname(out)) }
+   if(!as.matrix){ return(out) }
    out <- as.matrix(out)
    
    colnames(out) <-
