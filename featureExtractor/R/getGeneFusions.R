@@ -1,81 +1,94 @@
 #' Determine the presence of gene fusions
 #'
-#' @param linx.fusion.path Path to LINX txt file containing fusion data
-#' @param gene.fusion.whitelist.path Path to txt file with list of gene fusions
-#'
-#' @param sel.cols A character vector with the names: Name, ReportedType. The value corresponding 
-#' to each name should refer to a column name in the txt file. This is used to translate the column 
-#' names in the txt file to the column names that the function will use.
+#' @param linx.fusions Path to the LINX fusion txt file, or a dataframe of the file
+#' @param whitelist.path Path to gene fusion whitelist txt file
 #' 
-#' @return A (0,1) vector
+#' @return A named logical vector indicating which gene fusions are present in a sample
 #' @export
 #' 
-getGeneFusions <- function(
-   linx.fusion.path, 
-   gene.fusion.whitelist.path=GENE_FUSION_WHITELIST, sel.cols=NULL
-){
-   #linx.fusion.path='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/analysis/Arne/HMF_linx/sv-linx2/180502_HMFregXXXXXXXX/sv-linx/XXXXXXXX.linx.fusion.tsv'
-   #linx.fusion.path='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/analysis/Arne/HMF_linx/sv-linx2/161118_HMFregXXXXXXXX/sv-linx/XXXXXXXX.linx.fusion.tsv'
-   #linx.fusion.path='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/analysis/Arne/HMF_linx/sv-linx2/160725_HMFregXXXXXXXX/sv-linx/XXXXXXXX.linx.fusion.tsv'
+getGeneFusions <- function(linx.fusions, whitelist.path=GENE_FUSION_WHITELIST){
+   # if(F){
+   #    linx.fusions='/Users/lnguyen/hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor/DO51102-from-jar/linx14/DO51102T.linx.fusions.tsv'
+   #    linx.fusions='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/DO51126/DO51126T.linx.fusions.tsv'
+   #    linx.fusions=cacheAndReadData(
+   #       '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/features/fusions/04_HMF_PCAWG_full/linx.fusions.merged.txt.gz'
+   #    )
+   # }
    
-   ## Load inputs
-   gene_fusion_whitelist <- read.table(gene.fusion.whitelist.path, header=F, stringsAsFactors=F)[,1]
-   
-   fusions <- read.delim(linx.fusion.path, check.names=F, stringsAsFactors=F)
-   required_cols <- c('Name','ReportedType')
-   fusions <- selectRequiredCols(fusions, required.cols=required_cols, sel.cols=sel.cols)
-   
-   fusions$ReportedType[is.na(fusions$ReportedType)] <- ''
-
-   if(nrow(fusions)==0){
-      out <- structure(
-         rep(FALSE, length(gene_fusion_whitelist)),
-         names=gene_fusion_whitelist
-      )
-      
-      return(out)
+   ## Init --------------------------------
+   if(is.character(linx.fusions)){
+      fusions <- read.delim(linx.fusions, check.names=F)
+   } else if(is.data.frame(linx.fusions)){
+      fusions <- linx.fusions
+      #rm(linx.fusions)
+   } else {
+      stop('`linx.fusions` must be a path or a dataframe')
    }
+   gene_fusion_whitelist <- read.table(whitelist.path, header=F, stringsAsFactors=F)[,1]
    
-   ## Identify intragenic fusions
-   fusions <- (function(){
-      l <- lapply(strsplit(fusions$Name,'_'),`[`,1:2)
-      m <- do.call(rbind,l)
-      colnames(m) <- c('partner_5','partner_3')
-      cbind(fusions, m)
-   })()
-   fusions$partner_5 <- as.character(fusions$partner_5)
-   fusions$partner_3 <- as.character(fusions$partner_3)
-   fusions$in_same_gene <- fusions$partner_5==fusions$partner_3
-   
-   ## Rename promiscuous fusions
-   fusions$new_name <- fusions$Name
-   
-   if(any(c('5P-Prom','3P-Prom') %in% fusions$ReportedType)){
-      fusions <- (function(){
-         df <- fusions[!fusions$in_same_gene,]
-         
-         df_split <- split(df, df$ReportedType)
-         
-         if(any('5P-Prom' %in% df$ReportedType)){
-            df_split[['5P-Prom']]$new_name <- paste0(df_split[['5P-Prom']]$partner_5,'_*')
-         }
-         
-         if(any('3P-Prom' %in% df$ReportedType)){
-            df_split[['3P-Prom']]$new_name <- paste0(df_split[['3P-Prom']]$partner_3,'_*')
-         }
-         
-         rbind(
-            do.call(rbind, df_split),
-            fusions[fusions$in_same_gene,]
-         )
-      })()
-      rownames(fusions) <- NULL
-   }
-   
-   out <- structure(
-      gene_fusion_whitelist %in% fusions$new_name,
+   ## Initialize output
+   fusion_exists <- structure(
+      rep(FALSE, length(gene_fusion_whitelist)),
       names=gene_fusion_whitelist
    )
    
-   return(out)
+   ## Select confident fusions
+   fusions <- subset(fusions, likelihood %in% c('LOW','HIGH'))
+   
+   if(nrow(fusions)==0){ return(fusion_exists) }
+   
+   ## Rename fusions --------------------------------
+   ## Rename one sided promiscuous fusions
+   fusions$fusion_name <- (function(){
+      v <- fusions$name
+      
+      is_promiscuous_5 <- fusions$reportedType=='PROMISCUOUS_5'
+      v[is_promiscuous_5] <- paste0(fusions$geneStart[is_promiscuous_5],'_*')
+      
+      is_promiscuous_3 <- fusions$reportedType=='PROMISCUOUS_3'
+      v[is_promiscuous_3] <- paste0('*_',fusions$geneEnd[is_promiscuous_3])
+      
+      return(v)
+   })()
+   
+   ## Split fusions with 2 promiscuous genes into 2 entries
+   if(sum(fusions$reportedType=='PROMISCUOUS_BOTH')>0){
+      fusions <- (function(){
+         df_promiscuous_both <- subset(fusions, reportedType=='PROMISCUOUS_BOTH')
+         
+         rbind(
+            subset(fusions, reportedType!='PROMISCUOUS_BOTH'),
+            within(df_promiscuous_both, fusion_name <- paste0(geneStart,'_*')),
+            within(df_promiscuous_both, fusion_name <- paste0('*_',geneEnd))
+         )
+      })()
+   }
+   
+   ## Group similar fusions under a common name --------------------------------
+   grouping_regex <- list(
+      ## HeadAndNeck_ACC
+      'MYB/MYBL1_NFIB'='^(MYB_NFIB|MYBL1_NFIB)$', 
+      
+      ## Lymphoid
+      '@IGH_*'='^@IGH',
+      
+      ## Prostate
+      '*_ETV1/4/5'='_ETV[145]$',
+      '*_ERG'='^(?!TMPRSS2_ERG).*_ERG',
+      
+      ## Thyroid
+      '*_RET'='_RET$'
+   )
+   
+   for(i in names(grouping_regex)){
+      fusions$fusion_name[
+         grepl(pattern=grouping_regex[[i]], x=fusions$fusion_name, perl=T)
+      ] <- i
+   }
+   
+   ## Output --------------------------------
+   fusions <- subset(fusions, fusion_name %in% gene_fusion_whitelist)
+   fusion_exists[ fusions$fusion_name ] <- TRUE
+   
+   return(fusion_exists)
 }
