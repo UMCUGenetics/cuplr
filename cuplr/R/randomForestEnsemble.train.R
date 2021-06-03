@@ -211,11 +211,13 @@ trainRandomForest <- function(
       ## univariate feature slection
       do.feat.sel=T; feat.sel.alternative=NULL;
       feat.sel.max.pvalue=0.01;
-      feat.sel.min.effect.size=0.1;
+      feat.sel.min.cliff.delta=0.1;
+      feat.sel.min.cramer.v=0.1;
       feat.sel.top.n.features=300;
+      feat.sel.whitelist=NULL;
 
       ## class balancing
-      balance.classes=c(FALSE,TRUE,'resample','class_weights'); k.inner=5;
+      balance.classes=c('none','resample','class_weights'); k.inner=5;
       n.resamples.true=4; n.resamples.false=4; midpoint.type='geometric';
       min.size.diff=NULL; max.upsample.ratio=10;
 
@@ -254,7 +256,7 @@ trainRandomForest <- function(
    }
 
    ##----------------------------------------------------------------------
-   y <- train_data$y ## y <- train_data$y=='Prostate'
+   y <- train_data$y ## y <- train_data$y=='Lung_NSC'
    x <- train_data$x
    rm(train_data)
 
@@ -264,7 +266,7 @@ trainRandomForest <- function(
       if(!is.null(feat.tmp.path) && !file.exists(feat.tmp.path)){
          if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Performing feature selection...') }
          out$feat_sel <- univarFeatSel(
-            x, y,
+            x=x, y=y,
             alternative=feat.sel.alternative,
             max.pvalue=feat.sel.max.pvalue,
             min.cliff.delta=feat.sel.min.cliff.delta,
