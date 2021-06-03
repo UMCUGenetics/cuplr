@@ -1,151 +1,143 @@
-#' Make interval lookup table
+#' Extract SV contexts from LINX
 #'
-#' @param bins A numeric vector specifying the interval breaks
-#'
-#' @return A dataframe
-#' @export
-#'
-mkIntervalLookup <- function(bins=c(0, 10^c(3:7))){
-   intervals <- data.frame(
-      lower=bins[-length(bins)],
-      upper=bins[-1]
-   )
-   
-   intervals$name <- paste0(
-      formatC(intervals$lower, format='e', digits=0),
-      '_',
-      formatC(intervals$upper, format='e', digits=0),
-      '_bp'
-   )
-   
-   intervals$name <- gsub('[+]','',intervals$name)
-   intervals$counts <- 0
-   return(intervals)
-}
-
-#' Count binned SV length
-#'
-#' @param v.sv.len A numeric vector of SV lengths
-#' @param bins A numeric vector specifying the interval breaks
+#' @param vis.sv.data Path to the *vis_sv_data.tsv file or a dataframe of this file
 #'
 #' @return An integer vector of counts
 #' @export
 #'
-countBinnedSvLen <- function(v.sv.len, bins=c(0, 10^c(3:7), Inf)){
-   #v.sv.len=df[df$ResolvedType=='DEL','sv_len']
-   #bins=len.bins.del
+extractContextsSvLinx <- function(vis.sv.data=NULL){
+   # if(F){
+   #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor/DO1003-from-jar/linx14/DO1003T.linx.vis_sv_data.tsv"
+   #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104-update3//somatics/161205_HMFregXXXXXXXX/linx14/XXXXXXXX.linx.vis_sv_data.tsv"
+   #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104-update3/somatics/160601_HMFreg0056_FR10302053_FR10302054_XXXXXXXX/linx14/XXXXXXXX.linx.vis_sv_data.tsv"
+   # }
    
-   intervals <- mkIntervalLookup(bins)
-   
-   if(length(v.sv.len)!=0){
-      intervals$counts <- unlist(lapply(1:nrow(intervals), function(i){
-         sum(intervals$lower[i] <= v.sv.len & v.sv.len < intervals$upper[i])
-      }))
+   ## Load inputs --------------------------------
+   if(is.character(vis.sv.data)){
+      linx_svs <- read.delim(vis.sv.data, check.names=F)
+   } else if(is.data.frame(vis.sv.data)){
+      linx_svs <- vis.sv.data
+      rm(vis.sv.data)
+   } else {
+      stop('`vis.sv.data` must be a path or a dataframe')
    }
    
-   structure(
-      intervals$counts,
-      names=intervals$name
+   #linx_svs$IsSynthetic <- as.logical(linx_svs$IsSynthetic)
+   linx_svs$InDoubleMinute <- as.logical(linx_svs$InDoubleMinute)
+   linx_svs$HasFoldback <- with(linx_svs, InfoStart=='FOLDBACK' | InfoEnd=='FOLDBACK' | ResolvedType=='RESOLVED_FOLDBACK' )
+   
+   ## Punctuated structural events (use raw counts) --------------------------------
+   foldbacks <- length(unique(
+      subset(linx_svs, HasFoldback, ClusterId, drop=T)
+   ))
+   
+   double_minutes <- length(unique(
+      subset(linx_svs, InDoubleMinute, ClusterId, drop=T)
+   ))
+   
+   svs_complex <- subset(linx_svs, ResolvedType=='COMPLEX')
+   if(nrow(svs_complex)!=0){
+      complex_lengths <- with(subset(linx_svs, ResolvedType=='COMPLEX'),{
+         agg <- aggregate(
+            ClusterId,
+            list(ClusterId=ClusterId),
+            function(x){ length(x) }
+         )
+         colnames(agg)[ncol(agg)] <- 'length'
+         return(agg)
+      })
+      
+      complex.n_events <- length(complex_lengths$ClusterId)
+      complex.largest_cluster <- max(complex_lengths$length)
+   } else {
+      complex.n_events <- 0
+      complex.largest_cluster <- 0
+   }
+   
+   ## Ongoing structural events (use relative counts) --------------------------------
+   sv_load <- length(unique(linx_svs$ClusterId))
+   
+   LINEs <- length(unique(
+      subset(linx_svs, ResolvedType=='LINE', ClusterId, drop=T)
+   ))
+   
+   simple_events <- countSimpleSvEvents(linx_svs)
+   
+   ## Output --------------------------------
+   out <- c(
+      n_events=sv_load,
+      complex.n_events=complex.n_events,
+      complex.largest_cluster=complex.largest_cluster,
+      double_minutes=double_minutes,
+      foldbacks=foldbacks,
+      LINEs=LINEs/sv_load,
+      simple_events/sv_load
    )
+   out[is.na(out)] <- 0
+   return(out)
 }
 
 ####################################################################################################
-#' Extract SV contexts from LINX
+#' Count DELs and DUPs stratified by length
 #'
-#' @param vis.sv.data.path Path to the *vis_sv_data.tsv file
-#' @param df A dataframe of the *vis_sv_data.tsv file
-#' @param len.bins.del A numeric vector specifying the interval breaks to bin DEL lengths
-#' @param len.bins.dup A numeric vector specifying the interval breaks to bin DUP lengths
-#' @param resolved.type.annotations.path Path to the txt file containing annotations for each LINX
-#' ResolvedType
-#' @param sel.cols A character vector with the names: ResolvedType, ClusterId, PosStart, PosEnd.
-#' The value corresponding to each name should refer to a column name in the txt file. This is used 
-#' to translate the column names in the txt file to the column names that the function will use.
+#' @param linx.svs A dataframe of a *linx.vis_sv_data.tsv file
+#' @param bin.breaks An integer vector specifying the length bin breaks
 #'
-#' @return An integer vector of counts
+#' @return An integer vector
 #' @export
 #'
-extractContextsSvLinx <- function(
-   vis.sv.data.path=NULL, df=NULL, 
-   len.bins.del=c(0, 10^c(3:7), Inf), len.bins.dup=len.bins.del,
-   resolved.type.annotations.path=RESOLVED_TYPE_ANNOTATIONS,
-   sel.cols=NULL
-){
-   #vis.sv.data.path='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/analysis/Arne/HMF_linx/sv-linx2/181114_HMFregXXXXXXXX/sv-linx/XXXXXXXX.linx.vis_sv_data.tsv'
-   #vis.sv.data.path='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/analysis/Arne/HMF_linx/sv-linx2/160805_HMFregXXXXXXXX/sv-linx/XXXXXXXX.linx.vis_sv_data.tsv'
-   #vis.sv.data.path="/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/COLO829/raw//COLO829v003T.linx.vis_sv_data.tsv"
-   #df=vis_sv_data[vis_sv_data$SampleId=='XXXXXXXX',]
-   #len.bins.del=c(0, 10^c(3:7), Inf)
-   #len.bins.dup=len.bins.del
-   #resolved.type.annotations.path=RESOLVED_TYPE_ANNOTATIONS
+countSimpleSvEvents <- function(linx.svs, bin.breaks=c(0,10^(3:7),Inf)){
    
-   ## Load inputs --------------------------------
-   if(!is.null(vis.sv.data.path)){ df <- read.delim(vis.sv.data.path, stringsAsFactors=F) }
-   
-   required_cols <- c('ResolvedType','ClusterId','PosStart','PosEnd')
-   df <- selectRequiredCols(df, required.cols=required_cols, sel.cols=sel.cols)
-
-   resolved_type_annotations <- read.delim(resolved.type.annotations.path, stringsAsFactors=F)
-   
-   ## Initialize output --------------------------------
-   interval_names_del <- paste0('DEL_',mkIntervalLookup(len.bins.del)$name)
-   interval_names_dup <- paste0('DUP_',mkIntervalLookup(len.bins.dup)$name)
-   
-   other_feature_names <- resolved_type_annotations$ResolvedType
-   other_feature_names <- other_feature_names[!(other_feature_names %in% c('DEL','DUP','COMPLEX'))]
-      
-   feature_names <- c(
-      interval_names_del,
-      interval_names_dup,
-      'COMPLEX',
-      other_feature_names
+   bin_intervals <- levels(cut(0, bin.breaks, right=FALSE, include.lowest=FALSE))
+   context_names <- c(
+      paste0('DEL_',bin_intervals),
+      paste0('DUP_',bin_intervals)
    )
    
-   counts <- structure(
-      rep(0, length(feature_names)),
-      names=feature_names
+   context_counts <- structure(
+      rep(0,length(context_names)),
+      names=context_names
    )
    
-   ## DEL/DUP length --------------------------------
-   df$sv_len <- abs(df$PosEnd - df$PosStart)
-   sv_type_len <- list()
-   
-   sv_type_len$DEL <- countBinnedSvLen(
-      df[df$ResolvedType=='DEL','sv_len'],
-      bins=len.bins.del
-   )
-
-   sv_type_len$DUP <- countBinnedSvLen(
-      df[df$ResolvedType=='DUP','sv_len'],
-      bins=len.bins.del
+   df <- subset(
+      linx.svs, 
+      ResolvedType %in% c('DEL','DUP'), 
+      c(ClusterId, ResolvedType, ChrStart, ChrEnd, PosStart, PosEnd)
    )
    
-   sv_type_len <- do.call(c, sv_type_len)
-   names(sv_type_len) <- gsub('[.]','_',names(sv_type_len))
+   if(nrow(df)==0){ return(context_counts) }
    
-   counts[names(sv_type_len)] <- sv_type_len
+   ## Select intrachromosomal SVs
+   df$is_same_chrom <- df$ChrStart==df$ChrEnd
+   cluster_in_same_chrom <- aggregate(df$is_same_chrom, list(ClusterId=df$ClusterId), all) ## All events in cluster are on the same chromosome?
    
-   ## Count complex events --------------------------------
-   df_complex <- df[df$ResolvedType=='COMPLEX',]
-   counts['COMPLEX'] <- length(unique(df_complex[,'ClusterId'])) ## Consider each event cluster as one event
+   df <- df[
+      df$ClusterId %in% cluster_in_same_chrom$ClusterId[ cluster_in_same_chrom$x ]
+      ,]
    
-
-   ## Other resolved types --------------------------------
-   df_other <- df[
-      df$ResolvedType %in% other_feature_names,
-      c('ClusterId','ResolvedType')
-   ]
+   NULL -> df$ChrStart -> df$ChrEnd -> df$is_same_chrom -> cluster_in_same_chrom
    
-   df_other <- unique(df_other)
-   tab <- table(df_other$ResolvedType)
+   ## Calculate SV lengths
+   pos_min <- aggregate(df$PosStart, list(ClusterId=df$ClusterId), min)
+   pos_max <- aggregate(df$PosEnd, list(ClusterId=df$ClusterId), max)
    
-   counts[names(tab)] <- as.numeric(tab)
+   df_flat <- unique( df[,c('ClusterId', 'ResolvedType')] )
+   df_flat$start <- pos_min$x[ match(df_flat$ClusterId, pos_min$ClusterId) ]
+   df_flat$end <- pos_max$x[ match(df_flat$ClusterId, pos_max$ClusterId) ]
+   df_flat$length <- 1 + df_flat$end - df_flat$start
+   ## all(df_flat$start <= df_flat$end)
+   ## df_flat[df_flat$start == df_flat$end,]
+   ## start coords are 1-based
    
-   ## Return --------------------------------
-   counts <- counts[feature_names]
-   return(counts)
+   ## Make SV type/length contexts
+   df_flat$length_bin <- cut(df_flat$length, bin.breaks, right=FALSE, include.lowest=FALSE)
+   df_flat$context <- paste0(df_flat$ResolvedType, '_', df_flat$length_bin)
+   
+   ## Make context vector
+   tab <- table(df_flat$context)
+   context_counts[names(tab)] <- tab
+   return(context_counts)
 }
-
 
 
 
