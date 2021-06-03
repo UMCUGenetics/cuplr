@@ -24,20 +24,10 @@ keep.chroms=c(1:22,'X','Y')}
 \item{centro.pos}{A named integer vector of the centromere positions (default: hg19)}
 
 \item{chrom.lengths}{A named vector of chromosome lengths (default: hg19)}
-
-\item{df}{A dataframe}
-
-\item{new.row}{The row as a vector or dataframe to insert}
-
-\item{row.num}{Row index to insert the row. Rows below this are shifted down.}
-
-\item{offset}{Insert the row at +offset rows after row.num}
 }
 \value{
 A dataframe containing the intervals of each bin (in chr:start:end and
 linear_start:linear_end form)
-
-A dataframe
 }
 \description{
 Make a look up table of genomic bin intervals
