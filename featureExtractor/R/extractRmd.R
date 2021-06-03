@@ -14,7 +14,7 @@
 #' corresponding to the values in the vcf FILTER column
 #' @param clonal.variants.only If TRUE, only variants with subclonal likelihood (from GRIDSS) < 0.8
 #' will be selected
-#' @param ... Other arguments that can be passed to vcfAsDataframe()
+#' @param ... Other arguments that can be passed to mutSigExtractor::variantsFromVcf()
 #'
 #' @return A matrix or vector
 #' @export
@@ -38,20 +38,20 @@ extractRmd <- function(
    # }
    
    if(!is.null(vcf.file)){
-      df <- vcfAsDataframe(vcf.file, vcf.fields=c(1,2,4,5,7,8), vcf.filter=vcf.filter, verbose=verbose, ...)
-      #df <- vcfAsDataframe(vcf.file, vcf.fields=c(1,2,4,5,7,8), vcf.filter=vcf.filter, verbose=verbose)
-      
-      if(clonal.variants.only & nrow(df)!=0){
-         if(verbose){ message('Selecting clonal variants') }
-         ## Split clonal/subclonal variants
-         df$subclonal_prob <- as.numeric(getInfoValues(df$info,'SUBCL')[,1])
-         df$subclonal_prob[is.na(df$subclonal_prob)] <- 0
-         df$is_subclonal <- df$subclonal_prob >= 0.8
-         df <- df[!df$is_subclonal,]
-      }
-      df$info <- NULL
+      df <- mutSigExtractor::variantsFromVcf(vcf.file, vcf.fields=c(1,2,4,5,7,8), vcf.filter=vcf.filter, verbose=verbose, ...)
    }
    
+   if(clonal.variants.only & nrow(df)!=0){
+      if(verbose){ message('Selecting clonal variants') }
+      ## Split clonal/subclonal variants
+      df$subclonal_prob <- as.numeric(getInfoValues(df$info,'SUBCL')[,1])
+      df$subclonal_prob[is.na(df$subclonal_prob)] <- 0
+      df$is_subclonal <- df$subclonal_prob >= 0.8
+      df <- df[!df$is_subclonal,]
+   }
+   df$info <- NULL
+   
+   ## --------------------------------
    if(nrow(df)!=0){
       df_colnames <- c('chrom','pos','ref','alt')
       if(!(identical(colnames(df)[1:4], df_colnames))){
@@ -81,7 +81,7 @@ extractRmd <- function(
       df <- df[df$mut_type %in% mut.types,]
    }
 
-   ##----------------------------------------------------------------
+   ## --------------------------------
    if(verbose){ message('Counting muts per bin...') }
    if(is.null(genome.bins)){
       genome.bins <- mkGenomeBins(bin.size=bin.size)
@@ -118,10 +118,10 @@ extractRmd <- function(
       counts[names(tab)] <- tab
    }
    
-   ##----------------------------------------------------------------
+   ## --------------------------------
    if(verbose){ message('Returning output...') }
    
-   if(!as.matrix){ return(unname(counts)) }
+   if(!as.matrix){ return(counts) }
    out <- as.matrix(counts)
 
    colnames(out) <-
