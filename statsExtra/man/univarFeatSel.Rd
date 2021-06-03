@@ -2,9 +2,26 @@
 % Please edit documentation in R/univarFeatSel.R
 \name{univarFeatSel}
 \alias{univarFeatSel}
+\alias{univarFeatSel.default}
 \title{Performs pairwise testing and selects significant features}
 \usage{
-univarFeatSel(x, y, verbose = F, ...)
+univarFeatSel(x, y, order.by.pvalue = TRUE, verbose = F, ...)
+
+univarFeatSel.default(
+  x,
+  y,
+  alternative = NULL,
+  max.pvalue = 0.01,
+  min.cliff.delta = 0.1,
+  min.cramer.v = 0.1,
+  sel.top.n.features = NULL,
+  min.features = 2,
+  show.conting = FALSE,
+  show.avg = TRUE,
+  whitelist = NULL,
+  order.by.pvalue = TRUE,
+  verbose = F
+)
 }
 \arguments{
 \item{x}{A matrix or dataframe of features}
@@ -12,7 +29,12 @@ univarFeatSel(x, y, verbose = F, ...)
 \item{y}{A vector of class labels. For binary classification a logical vector. For
 multiclass classification a factor.}
 
+\item{order.by.pvalue}{If FALSE, rows of the output dataframe will be ordered by the same
+order of the features (i.e. colnames) in `x`. If TRUE, it will be sorted by pvalue}
+
 \item{verbose}{Show progress messages?}
+
+\item{...}{Arguments that can be passed to `univarFeatSel.default()`}
 
 \item{alternative}{A vector containing 'two.sided','greater' or 'less', corresponding to each
 feature}
@@ -29,11 +51,12 @@ to both +ve and -ve values}
 
 \item{min.features}{Minimum number of features to keep. Prevents outputting no features}
 
+\item{show.conting}{Show contingency matrix for each feature?}
+
+\item{show.avg}{Show case and control group averages per feature?}
+
 \item{whitelist}{A character vector of feature names in x to keep, regardless of statistical
 enrichment}
-
-\item{order.by.pvalue}{If FALSE, rows of the output dataframe will be ordered by the same
-order of the features (i.e. colnames) in `x`. If TRUE, it will be sorted by pvalue}
 }
 \value{
 A dataframe containing the pvalue, effect size, and other summary statistics for each
