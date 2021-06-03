@@ -2,75 +2,39 @@
 % Please edit documentation in R/extractFeaturesCuplr.R
 \name{extractFeaturesCuplr}
 \alias{extractFeaturesCuplr}
-\title{Extract features for CUPLR}
+\title{Extract input features for CUPLR}
 \usage{
 extractFeaturesCuplr(
-  germ.vcf.path,
-  som.vcf.path,
-  sv.vcf.path,
-  purple.cnv.path,
-  purple.purity.path,
-  linx.fusion.path,
-  linx.viral.inserts.path,
-  linx.vis.sv.data.path,
-  java.path = JAVA_PATH,
-  snpsift.path = SNPSIFT_PATH,
-  snpeff.path = SNPEFF_PATH,
-  out.dir,
-  sample.name,
-  colname.translations = list(),
-  return.features = FALSE,
-  write.features = TRUE,
-  rm.tmp.files = FALSE,
-  verbose = 1
+  in.dir = NULL,
+  input.paths = NULL,
+  out.dir = NULL,
+  verbose = F
 )
 }
 \arguments{
-\item{germ.vcf.path}{Path to germline SNV/indel vcf}
+\item{in.dir}{A directory containing the input files. The required files are searched for with
+the following regular expressions:
+\itemize{
+\item  purple.smnv:        '.purple.somatic.vcf.gz$'
+\item  purple.cnv:         '.purple.cnv.somatic.tsv$'
+\item  purple.purity:      '.purple.purity.tsv$'
+\item  linx.drivers:       '.linx.driver.catalog.tsv$'
+\item  linx.fusions:       '.linx.fusion.tsv$'
+\item  linx.viral.inserts: '.linx.viral_inserts.tsv$'
+\item  linx.vis.sv.data:   '.linx.vis_sv_data.tsv$'
+}}
 
-\item{som.vcf.path}{Path to somatic SNV/indel vcf}
+\item{input.paths}{A named list of the input paths. See \code{in.dir} for the required names}
 
-\item{sv.vcf.path}{Path to GRIDSS SV vcf}
+\item{out.dir}{(Optional) A directory to write intermediate and final output files. If
+unspecified, a dataframe of the features will be returned}
 
-\item{purple.cnv.path}{Path to purple cnv file}
-
-\item{purple.purity.path}{Path to purple.purity.tsv file}
-
-\item{linx.fusion.path}{Path to LINX txt file containing fusion data}
-
-\item{linx.viral.inserts.path}{Path to txt file with the columns: SampleId,}
-
-\item{linx.vis.sv.data.path}{Path to the LINX txt file containing the annotated SVs}
-
-\item{java.path}{Path the the java binary}
-
-\item{snpsift.path}{Path to the SnpSift.jar}
-
-\item{snpeff.path}{Path to snpEff.jar}
-
-\item{out.dir}{out.dir Path to output dir}
-
-\item{sample.name}{A character string indicating the sample name. If NULL, will use the basename
-of \code{som.vcf.path}}
-
-\item{colname.translations}{Used to translate input table colnames to colnames that are
-compatible with CUPLR. This is provided as a list with one or more of the following names:
-purple.cnv, linx.vis.sv.data, linx.viral.inserts, linx.fusion. Each object should be a named
-character vector, where names correspond to the colnames required by CUPLR, and values correspond
-to the colnames in the input tables}
-
-\item{return.features}{If TRUE, will return the dataframe of features which can be used directly
-in R}
-
-\item{write.features}{If TRUE, will write the extracted features to features.txt.gz at \code{out.dir}}
-
-\item{rm.tmp.files}{If TRUE, will remove temporary files from \code{out.dir}}
-
-\item{verbose}{Show messages?}
+\item{verbose}{Show progress messages? 0: No messages. 1: Messages from \code{extractFeaturesCuplr()}.
+2: Messages from internal functions called by \code{extractFeaturesCuplr()}}
 }
 \value{
-A 1-row data.frame
+See \code{out.dir}
 }
 \description{
-Extract features for CUPLR
+Extract input features for CUPLR
 }

@@ -4,30 +4,10 @@
 \alias{extractContextsSvLinx}
 \title{Extract SV contexts from LINX}
 \usage{
-extractContextsSvLinx(
-  vis.sv.data.path = NULL,
-  df = NULL,
-  len.bins.del = c(0, 10^c(3:7), Inf),
-  len.bins.dup = len.bins.del,
-  resolved.type.annotations.path = RESOLVED_TYPE_ANNOTATIONS,
-  sel.cols = NULL
-)
+extractContextsSvLinx(vis.sv.data = NULL)
 }
 \arguments{
-\item{vis.sv.data.path}{Path to the *vis_sv_data.tsv file}
-
-\item{df}{A dataframe of the *vis_sv_data.tsv file}
-
-\item{len.bins.del}{A numeric vector specifying the interval breaks to bin DEL lengths}
-
-\item{len.bins.dup}{A numeric vector specifying the interval breaks to bin DUP lengths}
-
-\item{resolved.type.annotations.path}{Path to the txt file containing annotations for each LINX
-ResolvedType}
-
-\item{sel.cols}{A character vector with the names: ResolvedType, ClusterId, PosStart, PosEnd.
-The value corresponding to each name should refer to a column name in the txt file. This is used
-to translate the column names in the txt file to the column names that the function will use.}
+\item{vis.sv.data}{Path to the *vis_sv_data.tsv file or a dataframe of this file}
 }
 \value{
 An integer vector of counts
