@@ -4,23 +4,15 @@
 \alias{getGeneFusions}
 \title{Determine the presence of gene fusions}
 \usage{
-getGeneFusions(
-  linx.fusion.path,
-  gene.fusion.whitelist.path = GENE_FUSION_WHITELIST,
-  sel.cols = NULL
-)
+getGeneFusions(linx.fusions, whitelist.path = GENE_FUSION_WHITELIST)
 }
 \arguments{
-\item{linx.fusion.path}{Path to LINX txt file containing fusion data}
+\item{linx.fusions}{Path to the LINX fusion txt file, or a dataframe of the file}
 
-\item{gene.fusion.whitelist.path}{Path to txt file with list of gene fusions}
-
-\item{sel.cols}{A character vector with the names: Name, ReportedType. The value corresponding
-to each name should refer to a column name in the txt file. This is used to translate the column
-names in the txt file to the column names that the function will use.}
+\item{whitelist.path}{Path to gene fusion whitelist txt file}
 }
 \value{
-A (0,1) vector
+A named logical vector indicating which gene fusions are present in a sample
 }
 \description{
 Determine the presence of gene fusions
