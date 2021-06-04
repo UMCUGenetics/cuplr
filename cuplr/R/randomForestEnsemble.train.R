@@ -780,13 +780,10 @@ trainRandomForestEnsemble <- function(
 ##----------------------------------------------------------------------
 #' @export
 print.randomForestEnsemble <- function(object){
-   cat('$ensemble\n\nBinary RF names:\n')
+   cat('$ensemble\nBinary RF names:\n')
    print(names(object$ensemble))
 
-   # cat('\n$prob_weigher')
-   # print(object$prob_weigher)
-
-   cat('\nOther list levels:\n')
+   cat('\nOther objects in list:\n')
    cat( paste0('$',names(object)[3:length(object)]) )
 }
 
