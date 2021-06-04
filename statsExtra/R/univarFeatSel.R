@@ -22,66 +22,65 @@
 #' to both +ve and -ve values
 #' @param sel.top.n.features Limit the total number of features that are selected
 #' @param min.features Minimum number of features to keep. Prevents outputting no features
+#' @param show.conting Show contingency matrix for each feature?
+#' @param show.avg Show case and control group averages per feature?
 #' @param whitelist A character vector of feature names in x to keep, regardless of statistical
 #' enrichment
 #' @param order.by.pvalue If FALSE, rows of the output dataframe will be ordered by the same
 #' order of the features (i.e. colnames) in `x`. If TRUE, it will be sorted by pvalue
 #' @param verbose Show progress messages?
+#' @param ... Arguments that can be passed to `univarFeatSel.default()`
 #'
 #' @return A dataframe containing the pvalue, effect size, and other summary statistics for each
 #' feature
 #' @export
 #'
-univarFeatSel <- function(x, y, verbose=F, ...){
+univarFeatSel <- function(x, y, order.by.pvalue=TRUE, verbose=F, ...){
 
    if(is.logical(y)){
-      univarFeatSel.logical(x=x, y=y, verbose=verbose, ...)
+      univarFeatSel.default(x=x, y=y, order.by.pvalue=order.by.pvalue, verbose=verbose, ...)
    } else if(is.factor(y) | is.character(y)) {
       ## Multiclass one vs rest enrichment
-      do.call(rbind, lapply(unique(y), function(i){
+      enr <- do.call(rbind, lapply(unique(y), function(i){
          #i='Breast'
          if(verbose){ message('## ', i) }
-         out <- univarFeatSel(x=x, y=y==i, verbose>=2, ...)
+         out <- univarFeatSel(x=x, y=y==i, order.by.pvalue=FALSE, verbose>=2, ...)
          cbind(class=i, out)
       }))
+      if(order.by.pvalue){ enr <- enr[order(enr$pvalue),] }
+      return(enr)
    } else {
       stop('`y` must be a logical, factor, or character vector')
    }
 }
 
-univarFeatSel.logical <- function(
+#' @rdname univarFeatSel
+#' @export
+#'
+univarFeatSel.default <- function(
    x, y,
    alternative=NULL,
-   max.pvalue=0.01, min.cliff.delta=0.1, min.cramer.v=0.1,
-   sel.top.n.features=NULL, min.features=2,
-   whitelist=NULL, order.by.pvalue=TRUE,
+   max.pvalue=0.01, min.cliff.delta=0.1, min.cramer.v=0.1, sel.top.n.features=NULL, min.features=2,
+   show.conting=FALSE, show.avg=TRUE, whitelist=NULL, order.by.pvalue=TRUE,
    verbose=F
 ){
-   if(F){
-      base_dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/'
-      devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/commonUtils/'))
-      devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/cuplr/'))
-      #devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/featureExtractor/'))
-
-      training_data <- read.delim(paste0(base_dir,'/CUPs_classifier/processed/cuplr/cuplr/models/0.12a_drivers_linx/features/features.txt.gz'))
-      training_data <- read.delim(paste0(base_dir,'/CUPs_classifier/processed/cuplr/cuplr/models/0.09c_originalFeatures/features/features.txt.gz'))
-
-      x=features[,-1]
-      x=x[,grep('^rmd',colnames(x),invert=T)]
-      y=features[,1]=='Skin'
-
-      max.pvalue=0.01
-      min.cliff.delta=0.1
-      min.cramer.v=0.1
-      min.features=2
-      verbose=T
-
-      alternative <- 'two.sided'
-      #alternative[ grep('(^purple)|(^rmd)',colnames(x)) ] <- 'two.sided'
-
-      #output.type='new.x'
-      sel.top.n.features=NULL
-   }
+   # if(F){
+   #    x=features[,-1]
+   #    x=x[,grep('^rmd',colnames(x),invert=T)]
+   #    y=features[,1]=='Skin'
+   #
+   #    max.pvalue=0.01
+   #    min.cliff.delta=0.1
+   #    min.cramer.v=0.1
+   #    min.features=2
+   #    verbose=T
+   #
+   #    alternative <- 'two.sided'
+   #    #alternative[ grep('(^purple)|(^rmd)',colnames(x)) ] <- 'two.sided'
+   #
+   #    #output.type='new.x'
+   #    sel.top.n.features=NULL
+   # }
 
    ## Checks --------------------------------
    if(!is.data.frame(x)){ stop('x must be a dataframe') }
@@ -89,7 +88,8 @@ univarFeatSel.logical <- function(
    if(any(sapply(x, is.character))){ stop('characters must be converted to factors') }
    if(is.null(colnames(x))){ stop('x must have colnames') }
 
-   ## Initialize alternative --------------------------------
+   ## Init --------------------------------
+   ## Alternative vector
    if(is.null(alternative)){
       alternative <- rep('two.sided',ncol(x))
    } else if(length(alternative)==1){
@@ -108,7 +108,7 @@ univarFeatSel.logical <- function(
       names(alternative) <- colnames(x)
    }
 
-   ## Convert data types --------------------------------
+   ## Convert data types
    if(verbose){ message('Converting factors to logicals (assuming 1st factor level as negative effect)') }
    x <- lapply(x, function(i){
       if(is.factor(i)){ return(as.integer(i)>1) }
@@ -117,13 +117,23 @@ univarFeatSel.logical <- function(
 
    x <- as.data.frame(x, check.names=F)
 
+   ## Template contingency matrix
+   conting_template <- matrix(
+      NA, nrow=0, ncol=4,
+      dimnames=list(NULL, c('case.true','case.false','ctrl.true','ctrl.false'))
+   )
+
    ## Wilcox test on numeric features --------------------------------
    is_numeric <- sapply(x, is.numeric)
    x_numeric <- x[,is_numeric, drop=F]
    x_numeric <- as.matrix(x_numeric)
 
+   #contingencyMatrix(x=x_numeric, y=y, avg.func='iqm')
+
    pvalues_numeric <- numeric()
    cliff_delta <- numeric()
+   conting_numeric <- conting_template
+
    if(ncol(x_numeric)!=0){
       if(verbose){ message('Performing wilcox tests for numeric features...') }
       pvalues_numeric <- wilcoxTest.data.frame(
@@ -143,19 +153,21 @@ univarFeatSel.logical <- function(
 
    pvalues_logical <- numeric()
    cramer_v <- numeric()
+   conting_logical <- conting_template
+
    if(ncol(x_logical)!=0){
       if(verbose){ message('Performing fisher tests for logical features...') }
       x_logical <- as.matrix(as.data.frame(x_logical, check.names=F))
       #table(x_logical[,'fusion.TMPRSS2_ERG'])
 
-      conting <- contingencyMatrix(x_logical, y, use.totals=F)
+      conting_logical <- contingencyMatrix(x_logical, y, use.totals=F)
       pvalues_logical <- fisherTest.data.frame(
-         conting,
+         conting_logical,
          alternative = alternative[colnames(x_logical)]
       )
 
       if(verbose){ message("Calculating Cramer's V for logical features...") }
-      cramer_v <- cramerV.data.frame(conting)
+      cramer_v <- cramerV.data.frame(conting_logical)
    }
 
    ## Aggregate stats from numeric/logical data --------------------------------
@@ -181,35 +193,36 @@ univarFeatSel.logical <- function(
 
    ## Add case/ctrl cohort stats  --------------------------------
    if(verbose){ message("Calculating summary stats...") }
-   colMeansTrimmed <- function(m, trim=0.25){
-      m <- apply(m,2,sort)
+   if(show.avg){
+      calcAvg <- function(x.numeric, x.logical){
+         avg_numeric <- numeric()
+         if(ncol(x.numeric)!=0){
+            avg_numeric <- colMeansTrimmed(x.numeric, trim=0.25, na.rm=T)
+         }
 
-      n <- nrow(m)
-      lo <- floor(n * trim) + 1
-      hi <- n + 1 - lo
+         avg_logical <- numeric()
+         if(ncol(x.logical)!=0){
+            avg_logical <- colMeans(x.logical, na.rm=T)
+         }
 
-      m <- m[lo:hi,,drop=F]
-      colMeans(m)
-   }
-
-   calcAvg <- function(x.numeric, x.logical){
-      avg_numeric <- numeric()
-      if(ncol(x.numeric)!=0){
-         avg_numeric <- colMeansTrimmed(x.numeric)
+         c(avg_numeric, avg_logical)
       }
 
-      avg_logical <- numeric()
-      if(ncol(x.logical)!=0){
-         avg_logical <- colMeans(x.logical)
-      }
-
-      c(avg_numeric, avg_logical)
+      tests$avg_case <- calcAvg(x_numeric[y,,drop=F], x_logical[y,,drop=F])
+      tests$avg_ctrl <- calcAvg(x_numeric[!y,,drop=F], x_logical[!y,,drop=F])
+      tests$avg_metric <- 'iqm'
+      tests$avg_metric[which_not_numeric] <- 'prop'
    }
 
-   tests$avg_case <- calcAvg(x_numeric[y,,drop=F], x_logical[y,,drop=F])
-   tests$avg_ctrl <- calcAvg(x_numeric[!y,,drop=F], x_logical[!y,,drop=F])
-   tests$avg_metric <- 'iqm'
-   tests$avg_metric[which_not_numeric] <- 'mean'
+   if(show.conting){
+      tests <- cbind(
+         tests,
+         rbind(
+            contingencyMatrix(x=x_numeric, y=y),
+            conting_logical
+         )
+      )
+   }
 
    tests <- tests[order(tests$pvalue),]
 
