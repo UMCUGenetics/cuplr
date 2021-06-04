@@ -1,0 +1,7 @@
+fivePrimeBreakendId	threePrimeBreakendId	name	reported	reportedType	phased	likelihood	chainLength	chainLinks	chainTerminated	domainsKept	domainsLost	skippedExonsUp	skippedExonsDown	fusedExonUp	fusedExonDown	geneStart	geneContextStart	transcriptStart	geneEnd	geneContextEnd	transcriptEnd	junctionCopyNumber
+259	6	CSMD3_DAB1	false	NONE	INFRAME	NA	1230	7	true			0	0	1	2	CSMD3	Exon 1	ENST00000497026	DAB1	Promoter Region	ENST00000371236	0.8099
+171	174	HDGFRP3_HDGFRP3	false	NONE	OUT_OF_FRAME	NA	0	0	false			0	0	2	2	HDGFRP3	Exon 2	ENST00000299633	HDGFRP3	Exon 2	ENST00000299633	1.0302
+66	65	PDE4D_PDE4D	false	NONE	OUT_OF_FRAME	NA	0	0	false			0	0	2	6	PDE4D	Exon 2	ENST00000340635	PDE4D	Exon 6	ENST00000340635	1.0472
+254	253	MX1_MX2	false	NONE	SKIPPED_EXONS	NA	0	0	false			0	2	7	6	MX1	Exon 7	ENST00000398600	MX2	Exon 6	ENST00000330714	1.9444
+96	91	CSMD3_CSMD3	false	NONE	INFRAME	NA	80217	2	true			0	0	1	5	CSMD3	Exon 1	ENST00000297405	CSMD3	Exon 5	ENST00000297405	1.0753
+127	126	SORCS3_SORCS3	false	NONE	INFRAME	NA	0	0	false			0	0	8	8	SORCS3	Exon 8	ENST00000369701	SORCS3	Exon 8	ENST00000369701	0.9724

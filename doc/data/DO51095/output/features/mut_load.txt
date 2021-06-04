@@ -1,0 +1,3 @@
+snv	0
+indel	2
+dbs	0

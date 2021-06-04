@@ -3,150 +3,234 @@ title: "CUPLR: Cancer of Unknown Primary Location Resolver"
 output: rmarkdown::github_document
 ---
 
-CUPLR is a suite of R packages for detecting the primary tumor location of metastatic tumors based
-on features derived from whole genome sequencing data. 
+CUPLR is a classifier for identifying the primary tumor location of metastatic tumors based
+on features derived from whole genome sequencing data. The model itself is an ensemble of binary
+random forest classifiers which each predict the probability of one cancer type. The final predicted
+cancer type is the one with the highest probability.
 
-This includes the following R packages:
+The features used by CUPLR are extracted from the output of the [HMF pipeline](https://github.com/hartwigmedical/pipeline5),
+specifically from: (i) the somatic VCF file containing SBS, DBS and indel mutations, 
+(ii) [PURPLE](https://github.com/hartwigmedical/hmftools/tree/master/purple) output, and 
+(iii) [LINX](https://github.com/hartwigmedical/hmftools/tree/master/sv-linx) output. Below is a 
+summary of the features.
+
+Feature type  | Source | Description
+------------- | ------ | --------
+sigs          | VCF    | SBS, DBS and indel [mutational signatures](https://cancer.sanger.ac.uk/signatures/)
+mut_load      | VCF    | Total number of SBSs, DBSs and indels
+rmd           | VCF    | Regional mutational density signatures
+kataegis      | VCF    | Counts of kataegis foci
+chrom_arm     | PURPLE | Chromosome arm gains/losses compared to the overall genome ploidy
+gender        | PURPLE | Gender as derived from copy number data
+gene          | LINX   | Deep deletions, amplifications, biallelic losses and mutations of cancer associated genes
+sv            | LINX   | Simple and complex structural variants
+fusion        | LINX   | Presence of gene fusions
+viral_ins     | LINX   | Presence of viral insertions
+
+# Installation
+## Dependencies
+CUPLR depends on several R packages for basic functionality. These can be installed as follows:
+```{r eval=FALSE, error=FALSE}
+install.packages(c('randomForest','reshape2'))
+install.packages('rfFC', repos='http://R-Forge.R-project.org')
+
+install.packages('devtools')
+devtools::install_github('https://github.com/UMCUGenetics/mutSigExtractor/')
+```
+
+Certain functions require other R packages (e.g. ggplot2 for plotting). For details on optional 
+dependencies, see the DESCRIPTION files.
+
+## Loading CUPLR
+CUPLR is composed of the following R packages:
 
 * `cuplr`: random forest training and prediction
 * `featureExtractor`: extract all features used by CUPLR
-* `geneDriverAnnotator`: annotate gene amplifications and biallelic loss
-* `commonUtils`: code used by all CUPLR R packages
+* `statsExtra`: statistics used for univariate feature selection for training CUPLR
+* `nmf`: non-negative matrix factorization for generating regional mutational density signatures
 
-The features used by CUPLR fall under the following types:
-
-* `sigs`: SNV signatures, indel contexts, MNV counts
-* `kataegis`: counts of kataegis foci
-* `gene_amp`: focal gene amplifications
-* `gene_def`: biallelic gene loss
-* `aneuploidy`: chromosome arm gains/losses compared to the overall genome ploidy
-* `purple`: output from PURPLE; includes gender and whole genome duplication status
-* `sv_types`: [LINX] simple and complex SV events
-* `viral_ins`: [LINX] presence of viral insertions
-* `fusion`: [LINX] presence of gene fusions
-* `rep_elem`: counts of repetitive elements
-* `rmd`: regional mutational density
-
-## Dependencies
-CUPLR depends on several R packages. These can be installed as follows:
-
-```{r eval=FALSE, error=FALSE}
-## cuplr dependencies
-install.packages('rfFC')
-install.packages('randomForest')
-
-## featureExtractor dependencies
-install.packages("seqminer")
-
-## commonUtils dependencies
-install.packages("BiocManager")
-BiocManager::install("GenomeInfoDb")
-
-## Devtools required to load CUPLR R packages directly
-install.packages("devtools")
-```
-
-`geneDriverAnnotator` also requires `SnpEff`/`SnpSift` and `java`. However, these have been embedded at 
-`geneDriverAnnotator/dep/` and do not need to be installed separately
-
-In bash, run the following commands to download CUPLR and mutSigExtractor:
+To download CUPLR, run the following commands in the terminal,:
 ```
 cd /working/dir/
 git clone https://github.com/UMCUGenetics/cuplr/
-git clone https://github.com/UMCUGenetics/mutSigExtractor/
 ```
 
-## Loading CUPLR
-In R, load CUPLR and its dependencies:
+Then load the `featureExtractor`, `cuplr`, and `mutSigExtractor` packages. The remaining CUPLR packages (`statsExtra` and `nmf`)
+are only needed for training CUPLR.
 ```{r eval=FALSE, error=FALSE}
-setwd('/working/dir/')
-
-## These need to be installed (done in previous step) and loaded with library()
-## This is because these packages contain C code that must be first compiled
-library('randomForest')
-library('rfFC')
-library("seqminer")
-
-## Load these packages directly with devtools
-devtools::load_all('mutSigExtractor/') 
-
-devtools::load_all('cuplr/commonUtils/')
-## Load commonUtils first! The other CUPLR R packages rely on code in commonUtils
-
-devtools::load_all('cuplr/cuplr/')
-devtools::load_all('cuplr/featureExtractor/')
-devtools::load_all('cuplr/geneDriverAnnotator/')
+cuplr_dir <- '/path/to/cuplr/'
+devtools::load_all(paste0(cuplr_dir,'/featureExtractor/')
+devtools::load_all(paste0(cuplr_dir,'/cuplr/')
 ```
 
-## Extract features
-Extract the features from the HMF pipeline outputs. Note that the gene driver annotation takes some
-time (~2-5min). The other features take in general a few seconds each. However, extracting 
-signatures, kataegis and RMD can take some time (>5min each) in the case 
-of hypermutators (i.e. large somatic SNV/indel vcf).
 
-```{r eval=FALSE, error=FALSE}
-extractFeaturesCuplr(
-   ## vcfs
-   germ.vcf.path='/path/to/*.annotated.vcf.gz',
-   som.vcf.path='/path/to/*.purple.somatic.vcf.gz',
-   sv.vcf.path='/path/to/*.purple.sv.ann.vcf.gz',
+```{r error=FALSE, message=FALSE, echo=FALSE}
+cuplr_dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/'
+devtools::load_all(paste0(cuplr_dir,'/featureExtractor/'))
+devtools::load_all(paste0(cuplr_dir,'/cuplr/'))
+```
 
-   ## PURPLE output
-   purple.cnv.path='/path/to/*.purple.cnv.somatic.tsv',
-   purple.purity.path='/path/to/*.purple.purity.tsv',
+# Using CUPLR
+This tutorial will demonstrate how cancer type prediction can be performed using example input files
+located at `doc/data/`. These are 3 primary tumor samples from the PCAWG consortium, whose BAM files
+were analyzed with the HMF pipeline.
 
-   ## LINX output
-   linx.fusion.path='/path/to/*.linx.fusion.tsv',
-   linx.viral.inserts.path='/path/to/*.linx.viral_inserts.tsv',
-   linx.vis.sv.data.path='/path/to/*.linx.vis_sv_data.tsv',
+## Extracting features
+Extraction of features per sample is performed using `extractFeaturesCuplr()`. 
 
-   out.dir='/path/to/output/dir/', 
-   sample.name='sample_name', 
-   verbose=2
+### Method 1
+Paths to the required input files can be provided to `input.paths` as a named character vector. 
+Make sure that this vector has the names shown below. The below code will return a 1-row dataframe 
+with the values for each feature.
+
+```{r, message=FALSE, warning=FALSE}
+sample_dir <- paste0(cuplr_dir,'/doc/data/DO48977/')
+features <- extractFeaturesCuplr(
+   input.paths=c(
+      purple.smnv=        paste0(sample_dir,'/DO48977T.purple.somatic.vcf.gz'),   ## *.purple.somatic.vcf.gz
+      purple.cnv=         paste0(sample_dir,'/DO48977T.purple.cnv.somatic.tsv'),  ## *.purple.cnv.somatic.tsv
+      purple.purity=      paste0(sample_dir,'/DO48977T.purple.purity.tsv'),       ## *.purple.purity.tsv
+      linx.drivers=       paste0(sample_dir,'/DO48977T.linx.driver.catalog.tsv'), ## *.linx.driver.catalog.tsv
+      linx.fusions=       paste0(sample_dir,'/DO48977T.linx.fusion.tsv'),         ## *.linx.fusion.tsv
+      linx.viral.inserts= paste0(sample_dir,'/DO48977T.linx.viral_inserts.tsv'),  ## *.linx.viral_inserts.tsv
+      linx.vis.sv.data=   paste0(sample_dir,'/DO48977T.linx.vis_sv_data.tsv')     ## *.linx.vis_sv_data.tsv
    )
-```
-
-This will generate `features.txt.gz` within `out.dir`, a 1-row dataframe with feature name header.
-
-Use `readFeaturesCuplr()` to read `features.txt.gz` into R. This function will load the txt file
-as a dataframe and assign factor levels to categorical features (e.g. `gene_def`). Below is what the
-first few columns look like. Feature names in the header follow the regex format 
-`^feature_type.feature_name`.
-
-```{r message=FALSE, warning=FALSE, echo=FALSE}
-devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/commonUtils/')
-devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/')
-devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/')
-features <- readFeaturesCuplr('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/XXXXXXXX/features.txt.gz')
+)
 features[,1:5]
 ```
 
-```{r eval=FALSE, error=FALSE}
-features <- readFeaturesCuplr('/path/to/features.txt.gz')
+### Method 2
+Alternatively, the path to a folder with all the required input files can be provided to `in.dir`.
+The filenames should end with those shown in the comments and the above example 
+(e.g. *.purple.somatic.vcf.gz).
+
+An output folder can optionally be specified to `out.dir`. With this approach, intermediate files
+are also written and allows resuming the feature extraction if a crash occurs (instead of starting
+the extraction from the beginning).
+
+For this tutorial, we will use `in.dir` and `out.dir` to load the example input data and write the 
+outputs. The below code extracts the features for all 3 example samples.
+
+```{r, message=FALSE, warning=FALSE}
+sample_dirs <- list.dirs(paste0(cuplr_dir,'doc/data/'), recursive=F, full.names=T)
+
+for(in_dir in sample_dirs){
+   message('\nExtracting features at: ', in_dir)
+
+   out_dir <- paste0(in_dir,'/output/')
+   dir.create(out_dir, showWarnings=F)
+
+   extractFeaturesCuplr(
+      in.dir=in_dir, ## Provide `input` to in.dir instead of `input.paths`
+      out.dir=out_dir,
+      verbose=1
+   )
+}
+```
+
+We can then read the `all_features.txt.gz` files which are the 1-row dataframes (as mentioned 
+above). It is important to specify `check.names=F` to `read.delim()` as the column names have some
+illegal characters which would otherwise be modified, and we don't want this to happen.
+
+```{r, message=FALSE, warning=FALSE}
+out_paths <- paste0(sample_dirs,'/output/all_features.txt.gz')
+
+## Read txt files
+features <- lapply(out_paths, function(i){ 
+   read.delim(i, check.names=F) 
+})
+
+## Merge 1-row dataframes into a single dataframe
+features <- do.call(rbind, features)
+
+## Assign sample names to rownames
+sample_names <- basename(sample_dirs)
+rownames(features) <- sample_names
 features[,1:5]
 ```
 
-## Predict cancer type
-First load CUPLR with `readRDS()`. Then use `predict.randomForestEnsemble()` to obtain the 
-probabilities for each cancer type.
-```{r message=FALSE, warning=FALSE}
-cuplr <- readRDS(CUPLR) ## `CUPLR` refers to the default path to the random forest model
-predict.randomForestEnsemble(cuplr, features, type='prob')
+### Summary of feature names
+There are 4000+ features; too many to print on screen. However, with below code we can see the names 
+of the first couple of features in each group.
+
+```{r, message=FALSE, warning=FALSE}
+feature_groups <- groupFeaturesByTag(colnames(features), rm.tags=F)
+lapply(feature_groups, head)
 ```
 
-```{r error=FALSE, results="hide", echo=FALSE}
-file.copy(
-   '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/doc/README.md',
-   '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/README.md',
-   overwrite=T
+## Predicting cancer type
+Now that we have the features, we can predict the cancer type. We first need to load CUPLR itself,
+as well as the probability calibration curves. 
+
+The scores outputted by a random forest need to be calibrated to yield true probabilities. A well 
+calibrated classifier should classify the samples such that among the samples to which it gave a 
+score close to e.g 0.8, approximately 80% actually belong to the positive class. For more info, see 
+the [scikit-learn documentation](https://scikit-learn.org/stable/modules/calibration.html)
+
+```{r, eval=FALSE, message=FALSE, warning=FALSE}
+model <- readRDS(MODEL_PATH)
+prob_cal_curves <- read.delim(PROB_CAL_CURVES_PATH)
+```
+
+```{r, message=FALSE, warning=FALSE}
+model <- cacheAndReadData(MODEL_PATH)
+prob_cal_curves <- read.delim(PROB_CAL_CURVES_PATH)
+```
+
+We can then use `predict()` to get the probabilities of each cancer type for each sample. The output
+of `predict()` is a list containing several objects. Here we have specified `calc.feat.contrib=T`
+which will calculate the contribution of each feature to each cancer type prediction. This is
+required to generate the patient report (see next section)
+```{r, message=FALSE, warning=FALSE}
+pred_report <- predict(
+   object=model,
+   newdata=features,
+   prob.cal.curves=prob_cal_curves,
+   calc.feat.contrib=T
+)
+pred_report
+```
+However, the above raw prediction output is not informative at a glance. We can use `summary()` to
+show the prediction in a neat table.
+
+```{r, message=FALSE, warning=FALSE}
+summary(
+   pred_report, 
+   top.n.classes=3, ## Optional: Shows the top 3 classes and their probabilities
+   top.n.feat=3     ## Optional: Shows the top 3 features contributing to the top class prediction
 )
 ```
 
+## Graphical patient report
+Using `patientReport()` we can plot the class probabilities and feature contributions per class.
+This is primarily useful for clinical reporting.
 
+```{r, message=FALSE, warning=FALSE}
+patient_report <- patientReport(
+   prob=pred_report$prob_scaled, 
+   feat.contrib=pred_report$feat_contrib, 
+   sample.name='DO51095'
+)
+```
 
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+if(F){
+   png(paste0(cuplr_dir,'/doc/supp/patient_report_example.png'), 1000, 700, res=150)
+   grid::grid.draw(patient_report)
+   dev.off()   
+}
+```
 
+```{r eval=FALSE}
+grid::grid.draw(patient_report)
+```
 
+![](/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/doc/supp/patient_report_example.png)
 
+We can see that sample DO51095 is a prostate cancer sample, with and this prediction is supported by
+this sample having a TMPRSS2-ERG fusion, a well-known prostate cancer event.
 
+In cases where the probabilities are more uncertain, more feature contribution panels corresponding
+to the top predicted classes will be shown, which will further aid in determining the cancer type.
 
 
