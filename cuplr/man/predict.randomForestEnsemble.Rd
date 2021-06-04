@@ -8,6 +8,7 @@
   object,
   newdata,
   type = "report",
+  prob.cal.curves = NULL,
   gender.feature.name = "gender.gender",
   classes.female = c("Cervix", "Ovary", "Uterus"),
   classes.male = "Prostate",
@@ -24,7 +25,11 @@
 prediction in object is returned)}
 
 \item{type}{'class', 'prob' or 'votes', indicating the type of output: predicted values,
-matrix of class probabilities, or matrix of vote counts.}
+matrix of class probabilities, or matrix of vote counts}
+
+\item{prob.cal.curves}{A dataframe containing the calibration curve coordinates for scaling the
+raw probabilities outputted by the classifier (with the column names: x, y, class). Scaled
+probabilities directly represent accuracy of prediction (i.e. probability of correct prediction)}
 
 \item{gender.feature.name}{The name of the feature specifying the gender of each sample}
 
