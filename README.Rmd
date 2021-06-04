@@ -225,7 +225,7 @@ if(F){
 grid::grid.draw(patient_report)
 ```
 
-![](/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/doc/supp/patient_report_example.png)
+![](doc/supp/patient_report_example.png)
 
 We can see that sample DO51095 is a prostate cancer sample, with and this prediction is supported by
 this sample having a TMPRSS2-ERG fusion, a well-known prostate cancer event.
