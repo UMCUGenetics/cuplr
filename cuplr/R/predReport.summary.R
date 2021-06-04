@@ -24,9 +24,8 @@
 #'
 summary.predReport <- function(
    report,
-   top.n.classes=NULL, show.class.probs=T, simplify.pred.values=F, prob.type='prob',
-   top.n.feat=NULL, show.feat.contribs=T,
-   object.names=NULL
+   top.n.classes=NULL, show.class.probs=T, simplify.pred.values=F, prob.type=NULL,
+   top.n.feat=NULL, show.feat.contribs=T, object.names=NULL
 ){
 
    # if(F){
@@ -50,6 +49,13 @@ summary.predReport <- function(
       stop('`top.n.feat` must be an integer vector')
    }
 
+   if(is.null(prob.type)){
+      if('prob_scaled' %in% names(report)){
+         prob.type <- 'prob_scaled'
+      } else {
+         prob.type <- 'prob'
+      }
+   }
    report$prob <- report[[prob.type]]
 
    df <- data.frame(sample=rownames(report$prob), row.names=NULL)
