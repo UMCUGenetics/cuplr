@@ -6,20 +6,17 @@
 \usage{
 gatherCvOutput(
   cv.out.dir,
-  out.dir = paste0(cv.out.dir, "/../"),
+  out.path,
   pattern = "^test_set_report.rds$",
-  mk.plots = T,
   verbose = T
 )
 }
 \arguments{
 \item{cv.out.dir}{CV dir. Output path from `spawnCvJobs()`}
 
-\item{out.dir}{Output dir for this function}
+\item{out.path}{Path to write output}
 
 \item{pattern}{Name/pattern of the rds file outputted by the training function}
-
-\item{mk.plots}{Make performance and feature importance plots?}
 
 \item{verbose}{Show progress messages?}
 }
