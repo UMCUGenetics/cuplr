@@ -74,7 +74,7 @@ getGeneFusions <- function(linx.fusions, whitelist.path=GENE_FUSION_WHITELIST){
       
       ## Prostate
       '*_ETV1/4/5'='_ETV[145]$',
-      '*_ERG'='^(?!TMPRSS2_ERG).*_ERG',
+      # '*_ERG'='^(?!TMPRSS2_ERG).*_ERG',
       
       ## Thyroid
       '*_RET'='_RET$'
