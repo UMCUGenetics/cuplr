@@ -12,12 +12,12 @@
 #'
 isoReg <- function(x,y){
 
-   if(F){
-      report=pred_reports$CV
-      sel_class <- 'HeadAndNeck_Other'
-      x=report$prob[,sel_class]
-      y=report$class_actual==sel_class
-   }
+   # if(F){
+   #    report=pred_reports$CV
+   #    sel_class <- 'HeadAndNeck_Other'
+   #    x=report$prob[,sel_class]
+   #    y=report$class_actual==sel_class
+   # }
 
    coords <- data.frame(x,y)
    coords <- coords[order(coords$x),]
@@ -149,11 +149,11 @@ probCalCurves <- function(
    actual=NULL, probs=NULL, report=NULL,
    output=c('curve','plot','plotdata'), method=c('isotonic','logistic')
 ){
-   if(F){
-      report=pred_reports$CV
-      actual=report$class_actual
-      probs=report$prob
-   }
+   # if(F){
+   #    report=pred_reports$CV
+   #    actual=report$class_actual
+   #    probs=report$prob
+   # }
 
    ## Init --------------------------------
    if(!is.null(report)){
