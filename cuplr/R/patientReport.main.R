@@ -29,31 +29,29 @@ patientReport <- function(
 ){
 
    if(F){
-      report <- pred_reports$holdout
-      sample.name <- 'XXXXXXXX' ## Lung NSC
-      sample.name <- 'XXXXXXXX' ## Uncertain
-
-      probs=report$prob_scaled[sample.name,]
-      feat.contrib=subset(report$feat_contrib, sample==sample.name)
-      #report=NULL
+      probs=pred_report$prob_scaled
+      feat.contrib=pred_report$feat_contrib
+      sample.name <- 'DO220848' ## Uncertain
+      plot.title=sample.name
 
       top.n.pred.classes=3
       top.n.features=5
-      max.rel.diff=0.7
-
-      plot.title=NULL
+      max.rel.diff=0.4
+      rel.widths=c(2,1)
    }
 
    ## Init --------------------------------
    require(ggplot2)
 
-   # if(!is.null(report)){
-   #    if(is.null(sample.name)){ stop('When input data is provided with `report`, `sample.name` must also be provided') }
-   #    probs <- report$probs[sample.name,]
-   #    feat.contrib <- subset(report$feat_contrib, sample==sample.name)
-   # } else if(is.null(probs) & is.null(feat.contrib)){
-   #    stop('Input data must be provided to i) `probs` and `feat.contrib`, or ii) `report`')
-   # }
+   if(is.null(rownames(probs))){ rownames(probs) <- 1:nrow(probs) }
+   if(is.null(sample.name) & nrow(probs)==1){
+      sample.name <- rownames(probs)
+      probs <- probs[1,]
+   }
+   if(is.null(sample.name) & nrow(probs)>=1){
+      stop('`probs` contains multiple samples. Please specify a `sample.name`')
+   }
+   probs <- probs[sample.name,]
 
    if(!is.numeric(probs) | !is.vector(probs) | length(probs)==0){
       stop('`probs` must be a named numeric vector')
@@ -79,7 +77,8 @@ patientReport <- function(
       )
    lagged_rel_diff[is.na(lagged_rel_diff)] <- 0
 
-   probs_top <- probs_top[lagged_rel_diff>=max.rel.diff]
+   sel_classes <- seq_along(which.max(lagged_rel_diff>=max.rel.diff))
+   probs_top <- probs_top[sel_classes]
 
    ## Probs --------------------------------
    pd_probs <- data.frame(class=names(probs), prob=unname(probs))
@@ -205,10 +204,12 @@ patientReport <- function(
       )
    )
 
+   ## Combine plots --------------------------------
    plot_title <- NULL
    if(!is.null(plot.title)){
       plot_title <- grid::textGrob(plot.title, x=0.02, hjust=0)
    }
+
    gridExtra::arrangeGrob(
       p_probs, p_contrib, nrow=1,
       top=plot_title, widths=rel.widths
