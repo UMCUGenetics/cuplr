@@ -23,7 +23,10 @@
 extractFeaturesCuplr <- function(in.dir=NULL, input.paths=NULL, out.dir=NULL, verbose=F){
    ## Debugging --------------------------------
    if(F){
-      in.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor/test/DO51126'
+      in.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/doc/data/DO48977/'
+      out.dir=paste0(in.dir,'/output/')
+      dir.create(out.dir, showWarnings=F)
+      
       in.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/features/_all/01_HMF_PCAWG_full/output/XXXXXXXX/symlinks/'
       out.dir='/Users/lnguyen/Desktop/test/'
       verbose=T
@@ -48,7 +51,6 @@ extractFeaturesCuplr <- function(in.dir=NULL, input.paths=NULL, out.dir=NULL, ve
       input.paths <- sapply(input_path_patterns, function(i){
          list.files(path=in.dir, pattern=i, full.names=T)
       })
-      
    }
    
    if(!is.null(input.paths)){
@@ -62,7 +64,7 @@ extractFeaturesCuplr <- function(in.dir=NULL, input.paths=NULL, out.dir=NULL, ve
          )
       }
       
-      valid_input_paths <- sapply(input.paths, function(i){ is.na(i) || file.exists(i) })
+      valid_input_paths <- sapply(input.paths, function(i){ is.na(i) || length(i)!=0 || file.exists(i) })
       if(!all(valid_input_paths)){
          stop(
             "Some `input.paths` do not exist:\n", 
@@ -117,7 +119,7 @@ extractFeaturesCuplr <- function(in.dir=NULL, input.paths=NULL, out.dir=NULL, ve
       vcf.file=input.paths[['purple.smnv']], 
       vcf.fields=c(1,2,4,5,7,8),
       vcf.filter='PASS', keep.chroms=c(1:22,'X'),
-      ref.genome=mutSigExtractor::DEFAULT_GENOME, verbose=verbose>=2
+      ref.genome=mutSigExtractor:::DEFAULT_GENOME, verbose=verbose>=2
    )
    
    ## --------------------------------
@@ -127,8 +129,8 @@ extractFeaturesCuplr <- function(in.dir=NULL, input.paths=NULL, out.dir=NULL, ve
       'raw/smnv_contexts.txt'
    )
    
-   contexts_split <- splitFeaturesByGroup(contexts, rm.tags=T)
-   
+   contexts_split <- splitFeaturesByGroup.default(contexts, rm.tags=T)
+  
    sigs <- list(
       snv=mutSigExtractor::fitToSignatures(
          mut.context.counts=contexts_split$snv, 
@@ -145,7 +147,7 @@ extractFeaturesCuplr <- function(in.dir=NULL, input.paths=NULL, out.dir=NULL, ve
          signature.profiles=mutSigExtractor::INDEL_SIGNATURE_PROFILES
       )
    )
-   
+
    sigs$snv <- combineFeatures.numeric(sigs$snv, regex='^SBS7', target.name='SBS7')
    sigs$snv <- combineFeatures.numeric(sigs$snv, regex='^SBS10', target.name='SBS10')
    sigs$snv <- combineFeatures.numeric(sigs$snv, regex='^SBS17', target.name='SBS17')
