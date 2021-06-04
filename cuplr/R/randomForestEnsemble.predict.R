@@ -4,7 +4,10 @@
 #' @param newdata A data frame or matrix containing new data. (Note: If not given, the out-of-bag
 #' prediction in object is returned)
 #' @param type 'class', 'prob' or 'votes', indicating the type of output: predicted values,
-#' matrix of class probabilities, or matrix of vote counts.
+#' matrix of class probabilities, or matrix of vote counts
+#' @param prob.cal.curves A dataframe containing the calibration curve coordinates for scaling the
+#' raw probabilities outputted by the classifier (with the column names: x, y, class). Scaled
+#' probabilities directly represent accuracy of prediction (i.e. probability of correct prediction)
 #' @param gender.feature.name The name of the feature specifying the gender of each sample
 #' @param classes.female A character vector of female cancer type classes. For male samples (as
 #' determined by `gender.feature.name`), the probabilities outputted by the binary random forests
@@ -27,6 +30,7 @@
 #'
 predict.randomForestEnsemble <- function(
    object, newdata, type='report',
+   prob.cal.curves=NULL,
    gender.feature.name='gender.gender',
    classes.female=c('Cervix','Ovary','Uterus'), classes.male='Prostate',
    calc.feat.contrib=T, top.n.pred.classes=NULL, top.n.features=5,
@@ -35,7 +39,8 @@ predict.randomForestEnsemble <- function(
    # if(F){
    #    object=model
    #    newdata=features
-   #    type='prob'
+   #    type='report'
+   #    prob.cal.curves=prob_cal_curves
    #    gender.feature.name='gender.gender'
    #    classes.female=c('Cervix','Ovary','Uterus')
    #    classes.male='Prostate'
@@ -52,31 +57,36 @@ predict.randomForestEnsemble <- function(
       stop('`type` must be one of the following: prob, class, report')
    }
 
-   ## Prepare data --------------------------------
-   categorical_lvls <- unname(lapply(object$ensemble, function(i){ i$categorical_lvls }))
-   categorical_lvls <- unlist(categorical_lvls, recursive=F)
-   categorical_lvls <- categorical_lvls[!duplicated(categorical_lvls)]
-
-   if(length(categorical_lvls)>1){
-      if(verbose){ message('Assigning categorical variable levels...') }
-      for(i in names(categorical_lvls)){
-         #i='purple.gender'
-         newdata[,i] <- factor(newdata[,i], levels=categorical_lvls[[i]])
+   if(!is.null(prob.cal.curves)){
+      if(!is.data.frame(prob.cal.curves)){
+         stop('`prob.cal.curves` must be a dataframe with the columns: x, y, class')
       }
    }
+
+   ## Prepare data --------------------------------
+   # categorical_lvls <- unname(lapply(object$ensemble, function(i){ i$categorical_lvls }))
+   # categorical_lvls <- unlist(categorical_lvls, recursive=F)
+   # categorical_lvls <- categorical_lvls[!duplicated(categorical_lvls)]
+   #
+   # if(length(categorical_lvls)>1){
+   #    if(verbose){ message('Assigning categorical variable levels...') }
+   #    for(i in names(categorical_lvls)){
+   #       #i='purple.gender'
+   #       newdata[,i] <- factor(newdata[,i], levels=categorical_lvls[[i]])
+   #    }
+   # }
 
    if(is.matrix(object$rmd_sig_profiles)){
       if(verbose){ message('Fitting RMD profiles...') }
       newdata <- (function(){
-         m1 <- object$rmd_sig_profiles   ## rows: bins, cols: signatures
-         m2 <- t(newdata[,rownames(m1)]) ## rows: bins, cols: samples
-
-         fit <- NNLM::nnlm(m1, m2)
-         fit <- as.data.frame(t(fit$coefficients))
+         fit <- mutSigExtractor::fitToSignatures(
+            mut.context.counts=newdata[,rownames(object$rmd_sig_profiles)], ## Select the columns corresponding to RMD bins
+            signature.profiles=object$rmd_sig_profiles
+         )
          colnames(fit) <- paste0('rmd.',colnames(fit))
          cbind(
             fit,
-            rmColumns( newdata, grep('^rmd',colnames(newdata), value=T) )
+            rmColumns( newdata, grep('^rmd',colnames(newdata), value=T) ) ## Remove RMD bin columns
          )
       })()
    }
@@ -96,34 +106,37 @@ predict.randomForestEnsemble <- function(
    }))
 
    ## --------------------------------
-   if(verbose){ message('Adjusting raw probabilities...') }
-
-   ## Re-weigh probs
-   #probs_adjusted <- randomForest:::predict.randomForest(object$prob_weigher, probs_raw, type='prob')
-   probs_adjusted <- probs_raw
+   if(verbose){ message('Adjusting raw probabilities based on sample gender...') }
 
    ## Set probs for disallowed tissue classes to 0
    samples_female <- newdata[,gender.feature.name]
    samples_male <- !samples_female
 
+   probs_adjusted <- probs_raw
    probs_adjusted[samples_female, classes.male] <- 0
    probs_adjusted[samples_male, classes.female] <- 0
 
-   ## Rescale probs to sum to 1
+   ## Adjusted probs to sum to 1
    probs_adjusted <- probs_adjusted / rowSums(probs_adjusted)
 
-   decimal_places <- max(nchar(sub('^\\d*[.]','',probs_raw)))
-   probs_adjusted <- round(probs_adjusted, decimal_places)
+   if(is.null(prob.cal.curves)){
+      probs <- probs_adjusted
+      prob_scaled <- NA
+   } else {
+      class(prob.cal.curves) <- c('isoReg',class(prob.cal.curves))
+      prob_scaled <- probCal(probs=probs_adjusted, cal.curves=prob.cal.curves)
+      probs <- prob_scaled
+   }
 
-   #summary(probs_adjusted[,'Uterus'])
-   if(type=='prob'){ return(probs_adjusted) }
+   if(type=='prob'){ return(probs) }
 
    ## --------------------------------
-   classes_pred <- factor( colnames(probs_adjusted)[ max.col(probs_adjusted) ], levels=colnames(probs_adjusted) )
+   classes_pred <- factor( colnames(probs)[ max.col(probs) ], levels=colnames(probs) )
    if(type=='class'){ return(classes_pred) }
 
    out <- list(
       prob=probs_adjusted,
+      prob_scaled=prob_scaled,
       class_pred=classes_pred
    )
 
@@ -146,9 +159,6 @@ predict.randomForestEnsemble <- function(
          dataT=newdata
       )
    })
-
-   # m1 <- do.call(cbind, lapply(l_feat_contrib, rowSums))
-   # probs_raw
 
    ## --------------------------------
    if(verbose){ message('Formatting feature contrib output as long form dataframe...') }
@@ -189,8 +199,8 @@ predict.randomForestEnsemble <- function(
    }
 
    if(!is.null(top.n.pred.classes)){
-      top_pred_classes <- t(apply(probs_adjusted,1, function(i){
-         colnames(probs_adjusted)[ order(i, decreasing=T) ]
+      top_pred_classes <- t(apply(probs,1, function(i){
+         colnames(probs)[ order(i, decreasing=T) ]
       }))
       top_pred_classes <- top_pred_classes[,1:top.n.pred.classes,drop=F]
       top_pred_classes <- reshape2::melt(top_pred_classes)
@@ -244,5 +254,17 @@ predict.randomForestEnsemble <- function(
    return(out)
 }
 
+#' @export
+print.predReport <- function(object){
+   cat('Objects in list:\n')
+   cat( paste0('$',names(object)) )
 
-
+   cat('\n\n')
+   if('prob_scaled' %in% names(object)){
+      cat('$prob_scaled\n')
+      print(object$prob_scaled)
+   } else {
+      cat('$prob\n')
+      print(object$prob)
+   }
+}
