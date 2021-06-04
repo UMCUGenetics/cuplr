@@ -1,0 +1,3 @@
+snv	3488
+indel	310
+dbs	11

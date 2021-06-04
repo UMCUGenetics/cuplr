@@ -1,0 +1,3 @@
+snv	2006
+indel	117
+dbs	9

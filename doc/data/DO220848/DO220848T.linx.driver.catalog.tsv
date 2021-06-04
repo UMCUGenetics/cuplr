@@ -1,0 +1,5 @@
+chromosome	chromosomeBand	gene	driver	category	likelihoodMethod	driverLikelihood	NA	missense	nonsense	splice	inframe	frameshift	biallelic	minCopyNumber	maxCopyNumber
+9	p21.3	CDKN2A	DEL	TSG	DEL	1.0000	0	0	0	0	0	0	true	0.0934	0.0934
+7	q34	BRAF	MUTATION	ONCO	HOTSPOT	1.0000	0	1	0	0	0	0	false	5.6055	5.6055
+17	q12	RAD51D	MUTATION	TSG	DNDS	0.2443	0	1	0	0	0	0	false	2.1697	2.1697
+10	q23.31	PTEN	HOM_DISRUPTION	TSG	DEL	1.0000	0	0	0	0	0	0	true	1.7183	1.7420
