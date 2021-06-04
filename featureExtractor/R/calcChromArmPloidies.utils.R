@@ -257,15 +257,6 @@ mkGenomeBins <- function(
    )
 
    if(split.centro.bins){
-      #' Insert a row into a dataframe
-      #'
-      #' @param df A dataframe
-      #' @param new.row The row as a vector or dataframe to insert
-      #' @param row.num Row index to insert the row. Rows below this are shifted down.
-      #' @param offset Insert the row at +offset rows after row.num
-      #'
-      #' @return A dataframe
-      #'
       insertRow <- function(df, row.num, new.row=NULL, offset=1) {
          df[seq(row.num+1,nrow(df)+1),] <- df[seq(row.num,nrow(df)),]
          
