@@ -27,6 +27,12 @@ sv            | LINX   | Simple and complex structural variants
 fusion        | LINX   | Presence of gene fusions
 viral_ins     | LINX   | Presence of viral insertions
 
+CUPLR was trained with tumor samples from ~6100 patients from the Hartwig Medical Foundation (HMF)
+and the Pan-Cancer Analysis of Whole Genomes (PCAWG) consortium. Performance was assessed by 15-fold
+cross-validation, as well as on a holdout validation set of ~680 samples.
+
+For details on performance and important features used by CUPLR, please see the PDFs at `doc/perf/`.
+
 # Installation
 ## Dependencies
 CUPLR depends on several R packages for basic functionality. These can be installed as follows:
@@ -49,7 +55,7 @@ CUPLR is composed of the following R packages:
 * `statsExtra`: statistics used for univariate feature selection for training CUPLR
 * `nmf`: non-negative matrix factorization for generating regional mutational density signatures
 
-To download CUPLR, run the following commands in the terminal,:
+To download CUPLR, run the following commands in the terminal:
 ```
 cd /working/dir/
 git clone https://github.com/UMCUGenetics/cuplr/
@@ -164,7 +170,7 @@ as well as the probability calibration curves.
 
 The scores outputted by a random forest need to be calibrated to yield true probabilities. A well 
 calibrated classifier should classify the samples such that among the samples to which it gave a 
-score close to e.g 0.8, approximately 80% actually belong to the positive class. For more info, see 
+score close to e.g. 0.8, approximately 80% actually belong to the positive class. For more info, see 
 the [scikit-learn documentation](https://scikit-learn.org/stable/modules/calibration.html)
 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
@@ -207,9 +213,9 @@ This is primarily useful for clinical reporting.
 
 ```{r, message=FALSE, warning=FALSE}
 patient_report <- patientReport(
-   prob=pred_report$prob_scaled, 
+   probs=pred_report$prob_scaled, 
    feat.contrib=pred_report$feat_contrib, 
-   sample.name='DO51095'
+   sample.name='DO36107'
 )
 ```
 
@@ -227,10 +233,13 @@ grid::grid.draw(patient_report)
 
 ![](doc/supp/patient_report_example.png)
 
-We can see that sample DO51095 is a prostate cancer sample, with and this prediction is supported by
-this sample having a TMPRSS2-ERG fusion, a well-known prostate cancer event.
+DO36107 is a pilocytic astrocytoma cancer sample and we can see that this sample was correctly 
+predicted as such. The prediction is supported by this sample having a KIAA1549-BRAF fusion, a
+well-known event in this cancer type. 
 
-In cases where the probabilities are more uncertain, more feature contribution panels corresponding
-to the top predicted classes will be shown, which will further aid in determining the cancer type.
+We can also see that there are two high probabilities. In cases where the probabilities are more 
+uncertain (like as shown here), more feature contribution panels corresponding to the top predicted 
+classes will be shown. This should aid in determining the cancer type, since it's possible that e.g.
+the 2nd predicted cancer type better matches with evidence from pathology.
 
 
