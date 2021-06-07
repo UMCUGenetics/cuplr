@@ -18,7 +18,7 @@ Feature type  | Source | Description
 ------------- | ------ | --------
 sigs          | VCF    | Relative contribution of SBS, DBS and indel [mutational signatures](https://cancer.sanger.ac.uk/signatures/)
 mut_load      | VCF    | Total number of SBSs, DBSs and indels
-rmd           | VCF    | Signatures extracted (by NMF) on 1Mb [regional mutational density](https://www.nature.com/articles/nature14221) bins
+rmd           | VCF    | Signatures extracted (by NMF) on 1Mb [regional mutational density (RMD)](https://www.nature.com/articles/nature14221) bins
 kataegis      | VCF    | Counts of kataegis foci
 chrom_arm     | PURPLE | Chromosome arm gains/losses compared to the overall genome ploidy
 gender        | PURPLE | Gender as derived from copy number data
@@ -59,7 +59,8 @@ CUPLR is composed of the following R packages:
 * `cuplr`: random forest training, prediction, and performance
 * `featureExtractor`: extract the features used by CUPLR
 * `statsExtra`: statistics used for univariate feature selection for training CUPLR
-* `nmf`: wrapper around NNLM package for non-negative matrix factorization for generating regional mutational density signatures
+* `nmf`: wrapper around the NNLM package for non-negative matrix factorization for generating 
+RMD signatures
 
 To download CUPLR, run the following commands in the terminal:
 ```
@@ -67,8 +68,8 @@ cd /working/dir/
 git clone https://github.com/UMCUGenetics/cuplr/
 ```
 
-Then load the `featureExtractor`, `cuplr`, and `mutSigExtractor` packages. The remaining CUPLR packages (`statsExtra` and `nmf`)
-are only needed for training CUPLR.
+Then load the `featureExtractor`, `cuplr`, and `mutSigExtractor` packages. The remaining CUPLR 
+packages (`statsExtra` and `nmf`) are only needed for training CUPLR.
 ```{r eval=FALSE, error=FALSE}
 cuplr_dir <- '/path/to/cuplr/'
 devtools::load_all(paste0(cuplr_dir,'/featureExtractor/')
