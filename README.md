@@ -31,11 +31,12 @@ from: (i) the somatic VCF file containing SBS, DBS and indel mutations,
 
 CUPLR was trained with tumor samples from \~6100 patients from the
 Hartwig Medical Foundation (HMF) and the Pan-Cancer Analysis of Whole
-Genomes (PCAWG) consortium. Performance was assessed by 15-fold
+Genomes (PCAWG) consortium. The model can predict the primary tumor
+location with an accuracy of \~0.88. Performance was assessed by 15-fold
 cross-validation as well as on a held out set of 680 samples.
 
-For details on performance and the important features used by CUPLR,
-please see the PDFs at `doc/perf/`.
+For details on performance, the top features used by CUPLR, and other
+details, please see the plots at `doc/perf/`.
 
 # Installation
 
@@ -46,8 +47,11 @@ be installed as follows:
 
 ``` r
 install.packages(c('randomForest','reshape2'))
+
+## For calculating random forest feature contributions:
 install.packages('rfFC', repos='http://R-Forge.R-project.org')
 
+## For reading VCFs and extracting mutational signatures:
 install.packages('devtools')
 devtools::install_github('https://github.com/UMCUGenetics/mutSigExtractor/')
 ```
@@ -59,12 +63,12 @@ For details on optional dependencies, please see the DESCRIPTION files.
 
 CUPLR is composed of the following R packages:
 
--   `cuplr`: random forest training and prediction
--   `featureExtractor`: extract all features used by CUPLR
+-   `cuplr`: random forest training, prediction, and performance
+-   `featureExtractor`: extract the features used by CUPLR
 -   `statsExtra`: statistics used for univariate feature selection for
     training CUPLR
--   `nmf`: non-negative matrix factorization for generating regional
-    mutational density signatures
+-   `nmf`: wrapper around NNLM package for non-negative matrix
+    factorization for generating regional mutational density signatures
 
 To download CUPLR, run the following commands in the terminal:
 
@@ -229,23 +233,19 @@ lapply(feature_groups, head)
 ## Predicting cancer type
 
 Now that we have the features, we can predict the cancer type. We first
-need to load CUPLR itself, as well as the probability calibration
-curves.
+need to load CUPLR itself as well as the probability calibration curves.
 
 The scores outputted by a random forest need to be calibrated to yield
-true probabilities. A well calibrated classifier should classify the
-samples such that among the samples to which it gave a score close to
-e.g. 0.8, approximately 80% actually belong to the positive class. For
-more info, see the [scikit-learn
+true probabilities. This means that a probability of 0.9 should mean
+that for example: amongst 100 hypothetical samples predicted as breast
+cancer, 90 of them are actually breast cancer. In other words, true
+probabilities map directly to the accuracy of the prediction. For more
+info, see the [scikit-learn
 documentation](https://scikit-learn.org/stable/modules/calibration.html)
+about this topic.
 
 ``` r
 model <- readRDS(MODEL_PATH)
-prob_cal_curves <- read.delim(PROB_CAL_CURVES_PATH)
-```
-
-``` r
-model <- cacheAndReadData(MODEL_PATH)
 prob_cal_curves <- read.delim(PROB_CAL_CURVES_PATH)
 ```
 
@@ -254,7 +254,7 @@ for each sample. The output of `predict()` is a list containing several
 objects. Here we have specified `calc.feat.contrib=T` which will
 calculate the contribution of each feature to each cancer type
 prediction. This is required to generate the patient report (see next
-section)
+section).
 
 ``` r
 pred_report <- predict(
