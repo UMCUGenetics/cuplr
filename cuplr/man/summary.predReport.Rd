@@ -9,7 +9,7 @@
   top.n.classes = NULL,
   show.class.probs = T,
   simplify.pred.values = F,
-  prob.type = "prob",
+  prob.type = NULL,
   top.n.feat = NULL,
   show.feat.contribs = T,
   object.names = NULL
