@@ -12,10 +12,14 @@
 #' @param top.n.pred.classes The number of panels to display that show the details for the top
 #' predicted classes (including the exact probabilities, and feature contributions).
 #' @param top.n.features The number features to show in the feature contribution plots in the
-#' details pnaels
+#' details panels
 #' @param rel.widths A numeric vector of length 2 specifying the relative widths of the probability
 #' plot and feature contribution plots
-#' @param max.rel.diff
+#' @param prob.thres.min The feature contribution panels will be shown for predicted classes with a
+#' probability higher than this threshold
+#' @param prob.thres.rel.diff The feature contribution panels will be shown for the top predicted
+#' classes, as long as the relative difference between the 1st and 2nd classes, 2nd and 3rd classes,
+#' etc, are higher than this threshold. Note that `prob.thres.min` overrides this threshold
 #'
 #' @return A ggplot grob
 #' @export
@@ -24,21 +28,22 @@ patientReport <- function(
    probs=NULL, feat.contrib=NULL,
    sample.name=NULL, plot.title=sample.name,
    top.n.pred.classes=3, top.n.features=5,
-   max.rel.diff=0.6,
+   prob.thres.min=0.1, prob.thres.rel.diff=0.4,
    rel.widths=c(2,1)
 ){
 
-   if(F){
-      probs=pred_report$prob_scaled
-      feat.contrib=pred_report$feat_contrib
-      sample.name <- 'DO220848' ## Uncertain
-      plot.title=sample.name
-
-      top.n.pred.classes=3
-      top.n.features=5
-      max.rel.diff=0.4
-      rel.widths=c(2,1)
-   }
+   # if(F){
+   #    probs=pred_report$prob_scaled
+   #    feat.contrib=pred_report$feat_contrib
+   #    sample.name <- 'DO36107' ## Uncertain
+   #    plot.title=sample.name
+   #
+   #    top.n.pred.classes=3
+   #    top.n.features=5
+   #    prob.thres.min=0.1
+   #    prob.thres.rel.diff=0.4
+   #    rel.widths=c(2,1)
+   # }
 
    ## Init --------------------------------
    require(ggplot2)
@@ -77,8 +82,20 @@ patientReport <- function(
       )
    lagged_rel_diff[is.na(lagged_rel_diff)] <- 0
 
-   sel_classes <- seq_along(which.max(lagged_rel_diff>=max.rel.diff))
-   probs_top <- probs_top[sel_classes]
+   ## Use trycatch to prevent -Inf when also probs don't meet the thresholds
+   last_sel_class.rel_diff <- tryCatch(
+      expr = { max(which(lagged_rel_diff>=prob.thres.rel.diff)) },
+      warning = function(w){ return(1) }
+   )
+
+   last_sel_class.min_prob <- tryCatch(
+      expr = { max(which(probs_top>=prob.thres.min)) },
+      warning = function(w){ return(1) }
+   )
+
+   last_sel_class <- max(last_sel_class.rel_diff, last_sel_class.min_prob)
+
+   probs_top <- probs_top[ 1:last_sel_class ]
 
    ## Probs --------------------------------
    pd_probs <- data.frame(class=names(probs), prob=unname(probs))
