@@ -11,7 +11,8 @@ patientReport(
   plot.title = sample.name,
   top.n.pred.classes = 3,
   top.n.features = 5,
-  max.rel.diff = 0.6,
+  prob.thres.min = 0.1,
+  prob.thres.rel.diff = 0.4,
   rel.widths = c(2, 1)
 )
 }
@@ -30,9 +31,14 @@ Required when input data is provided with `report`}
 predicted classes (including the exact probabilities, and feature contributions).}
 
 \item{top.n.features}{The number features to show in the feature contribution plots in the
-details pnaels}
+details panels}
 
-\item{max.rel.diff}{}
+\item{prob.thres.min}{The feature contribution panels will be shown for predicted classes with a
+probability higher than this threshold}
+
+\item{prob.thres.rel.diff}{The feature contribution panels will be shown for the top predicted
+classes, as long as the relative difference between the 1st and 2nd classes, 2nd and 3rd classes,
+etc, are higher than this threshold. Note that `prob.thres.min` overrides this threshold}
 
 \item{rel.widths}{A numeric vector of length 2 specifying the relative widths of the probability
 plot and feature contribution plots}
