@@ -29,6 +29,15 @@ output. Below is a summary of the features.
 | fusion       | LINX   | Presence of gene fusions                                                                  |
 | viral\_ins   | LINX   | Presence of viral insertions                                                              |
 
+CUPLR was trained with tumor samples from \~6100 patients from the
+Hartwig Medical Foundation (HMF) and the Pan-Cancer Analysis of Whole
+Genomes (PCAWG) consortium. Performance was assessed by 15-fold
+cross-validation, as well as on a holdout validation set of \~680
+samples.
+
+For details on performance and important features used by CUPLR, please
+see the PDFs at `doc/perf/`.
+
 # Installation
 
 ## Dependencies
@@ -58,7 +67,7 @@ CUPLR is composed of the following R packages:
 -   `nmf`: non-negative matrix factorization for generating regional
     mutational density signatures
 
-To download CUPLR, run the following commands in the terminal,:
+To download CUPLR, run the following commands in the terminal:
 
     cd /working/dir/
     git clone https://github.com/UMCUGenetics/cuplr/
@@ -168,8 +177,8 @@ features[,1:5]
 
     ##           sigs.SBS1  sigs.SBS2 sigs.SBS3 sigs.SBS4  sigs.SBS5
     ## DO220848 0.06598833 0.04049707         0         0 0.02095571
+    ## DO36107  0.33822155 0.00000000         0         0 0.00000000
     ## DO48977  0.17650919 0.04790300         0         0 0.06341170
-    ## DO51095  0.00000000 0.00000000         0         0 0.00000000
 
 ### Summary of feature names
 
@@ -227,7 +236,7 @@ curves.
 The scores outputted by a random forest need to be calibrated to yield
 true probabilities. A well calibrated classifier should classify the
 samples such that among the samples to which it gave a score close to
-e.g 0.8, approximately 80% actually belong to the positive class. For
+e.g. 0.8, approximately 80% actually belong to the positive class. For
 more info, see the [scikit-learn
 documentation](https://scikit-learn.org/stable/modules/calibration.html)
 
@@ -262,30 +271,30 @@ pred_report
     ## $prob $prob_scaled $class_pred $feat_contrib
     ## 
     ## $prob_scaled
-    ##              Biliary       Breast       Cervix CNS_Glioma CNS_Medullo
-    ## DO220848 0.000000000 6.206318e-04 0.0000278392          0           0
-    ## DO48977  0.001187102 7.016440e-04 0.8207116788          0           0
-    ## DO51095  0.004693888 1.914623e-05 0.0000000000          0           0
+    ##               Biliary       Breast       Cervix CNS_Glioma CNS_Medullo
+    ## DO220848 0.000000e+00 0.0006206318 0.0000278392          0 0.000000000
+    ## DO36107  5.850293e-05 0.0000000000 0.0000000000          0 0.003844391
+    ## DO48977  1.187102e-03 0.0007016440 0.8207116788          0 0.000000000
     ##          CNS_PiloAstro   Colorectum Colorectum_NET      Gastric HeadAndNeck_ACC
-    ## DO220848  0.000000e+00 0.0012737281   0.0000000000 0.0000000000               0
-    ## DO48977   0.000000e+00 0.0026945400   0.0000000000 0.0001003129               0
-    ## DO51095   6.998627e-05 0.0005451065   0.0007053233 0.0098180250               0
-    ##          HeadAndNeck_Other Kidney       Liver     Lung_NSC Lung_SC     Lymphoid
-    ## DO220848      0.0001201604      0 0.000000000 0.0057080125       0 3.880966e-05
-    ## DO48977       0.0077212784      0 0.000000000 0.0063026494       0 1.052110e-04
-    ## DO51095       0.0000000000      0 0.000255996 0.0001332586       0 4.366619e-02
-    ##           Mesothelium Myeloid        Ovary Pancreas Pancreas_NET  Prostate
-    ## DO220848 0.0000000000       0 5.013721e-04        0  0.001203551 0.0000000
-    ## DO48977  0.0001084994       0 5.993926e-05        0  0.000000000 0.0000000
-    ## DO51095  0.0179715590       0 0.000000e+00        0  0.000000000 0.8006185
-    ##          Sarcoma_GIST Sarcoma_Leiomyo Sarcoma_Lipo Sarcoma_Other Skin_Melanoma
-    ## DO220848            0    0.0006902753            0  0.0010987696             1
-    ## DO48977             0    0.0000000000            0  0.0008740941             0
-    ## DO51095             0    0.0000000000            0  0.0006535543             0
-    ##           Skin_Other     Thyroid   Urothelial       Uterus
-    ## DO220848 0.004528138 0.003746576 3.852320e-04 0.000000e+00
-    ## DO48977  0.000000000 0.010817591 1.757926e-02 2.099301e-05
-    ## DO51095  0.003908766 0.000000000 2.984463e-05 0.000000e+00
+    ## DO220848     0.0000000 0.0012737281    0.000000000 0.0000000000               0
+    ## DO36107      0.7524084 0.0001364474    0.002592897 0.0001291623               0
+    ## DO48977      0.0000000 0.0026945400    0.000000000 0.0001003129               0
+    ##          HeadAndNeck_Other Kidney        Liver     Lung_NSC      Lung_SC
+    ## DO220848      0.0001201604      0 0.0000000000 0.0057080125 0.0000000000
+    ## DO36107       0.0000000000      0 0.0001441782 0.0004002767 0.0007801295
+    ## DO48977       0.0077212784      0 0.0000000000 0.0063026494 0.0000000000
+    ##              Lymphoid  Mesothelium   Myeloid        Ovary Pancreas Pancreas_NET
+    ## DO220848 3.880966e-05 0.0000000000 0.0000000 5.013721e-04        0 0.0012035507
+    ## DO36107  4.168279e-05 0.0000000000 0.4804667 1.828571e-03        0 0.0005601488
+    ## DO48977  1.052110e-04 0.0001084994 0.0000000 5.993926e-05        0 0.0000000000
+    ##          Prostate Sarcoma_GIST Sarcoma_Leiomyo Sarcoma_Lipo Sarcoma_Other
+    ## DO220848        0            0    0.0006902753            0  0.0010987696
+    ## DO36107         0            0    0.0000000000            0  0.0013391500
+    ## DO48977         0            0    0.0000000000            0  0.0008740941
+    ##          Skin_Melanoma   Skin_Other     Thyroid   Urothelial       Uterus
+    ## DO220848             1 4.528138e-03 0.003746576 3.852320e-04 0.000000e+00
+    ## DO36107              0 2.411788e-05 0.003856974 2.241152e-05 1.351524e-05
+    ## DO48977              0 0.000000e+00 0.010817591 1.757926e-02 2.099301e-05
 
 However, the above raw prediction output is not informative at a glance.
 We can use `summary()` to show the prediction in a neat table.
@@ -300,12 +309,16 @@ summary(
 
     ##     sample  pred_class.1 pred_class.2 pred_class.3 pred_prob.1 pred_prob.2
     ## 1 DO220848 Skin_Melanoma     Lung_NSC   Skin_Other       1.000       0.006
-    ## 2  DO48977        Cervix   Urothelial      Thyroid       0.821       0.018
-    ## 3  DO51095      Prostate     Lymphoid  Mesothelium       0.801       0.044
-    ##   pred_prob.3                   feat.1             feat.2            feat.3
-    ## 1       0.005 rmd.Skin_Melanoma.1=0.17    sigs.SBS7=0.135  sigs.SBS38=0.098
-    ## 2       0.011      viral_ins.HPV=0.305 rmd.Cervix.1=0.279  sigs.SBS13=0.021
-    ## 3       0.018 fusion.TMPRSS2_ERG=0.271  mut_load.snv=0.18 mut_load.dbs=0.07
+    ## 2  DO36107 CNS_PiloAstro      Myeloid      Thyroid       0.752       0.480
+    ## 3  DO48977        Cervix   Urothelial      Thyroid       0.821       0.018
+    ##   pred_prob.3                     feat.1                     feat.2
+    ## 1       0.005   rmd.Skin_Melanoma.1=0.17            sigs.SBS7=0.135
+    ## 2       0.004 fusion.KIAA1549_BRAF=0.354 sv.DUP_[1e+06,1e+07)=0.121
+    ## 3       0.011        viral_ins.HPV=0.305         rmd.Cervix.1=0.279
+    ##                feat.3
+    ## 1    sigs.SBS38=0.098
+    ## 2 mut_load.indel=0.12
+    ## 3    sigs.SBS13=0.021
 
 ## Graphical patient report
 
@@ -315,9 +328,9 @@ reporting.
 
 ``` r
 patient_report <- patientReport(
-   prob=pred_report$prob_scaled, 
+   probs=pred_report$prob_scaled, 
    feat.contrib=pred_report$feat_contrib, 
-   sample.name='DO51095'
+   sample.name='DO36107'
 )
 ```
 
@@ -327,10 +340,14 @@ grid::grid.draw(patient_report)
 
 ![](doc/supp/patient_report_example.png)
 
-We can see that sample DO51095 is a prostate cancer sample, with and
-this prediction is supported by this sample having a TMPRSS2-ERG fusion,
-a well-known prostate cancer event.
+DO36107 is a pilocytic astrocytoma cancer sample and we can see that
+this sample was correctly predicted as such. The prediction is supported
+by this sample having a KIAA1549-BRAF fusion, a well-known event in this
+cancer type.
 
-In cases where the probabilities are more uncertain, more feature
+We can also see that there are two high probabilities. In cases where
+the probabilities are more uncertain (like as shown here), more feature
 contribution panels corresponding to the top predicted classes will be
-shown, which will further aid in determining the cancer type.
+shown. This should aid in determining the cancer type, since it’s
+possible that e.g. the 2nd predicted cancer type better matches with
+evidence from pathology.
