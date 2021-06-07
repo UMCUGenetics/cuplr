@@ -16,18 +16,18 @@ from: (i) the somatic VCF file containing SBS, DBS and indel mutations,
 [LINX](https://github.com/hartwigmedical/hmftools/tree/master/sv-linx)
 (v1.14) output. Below is a summary of the features.
 
-| Feature type | Source | Description                                                                                                          |
-|--------------|--------|----------------------------------------------------------------------------------------------------------------------|
-| sigs         | VCF    | Relative contribution of SBS, DBS and indel [mutational signatures](https://cancer.sanger.ac.uk/signatures/)         |
-| mut\_load    | VCF    | Total number of SBSs, DBSs and indels                                                                                |
-| rmd          | VCF    | Signatures extracted (by NMF) on 1Mb [regional mutational density](https://www.nature.com/articles/nature14221) bins |
-| kataegis     | VCF    | Counts of kataegis foci                                                                                              |
-| chrom\_arm   | PURPLE | Chromosome arm gains/losses compared to the overall genome ploidy                                                    |
-| gender       | PURPLE | Gender as derived from copy number data                                                                              |
-| gene         | LINX   | Deep deletions, amplifications, biallelic losses and mutations of cancer associated genes                            |
-| sv           | LINX   | Simple and complex structural variants                                                                               |
-| fusion       | LINX   | Presence of gene fusions                                                                                             |
-| viral\_ins   | LINX   | Presence of viral sequence insertions                                                                                |
+| Feature type | Source | Description                                                                                                                |
+|--------------|--------|----------------------------------------------------------------------------------------------------------------------------|
+| sigs         | VCF    | Relative contribution of SBS, DBS and indel [mutational signatures](https://cancer.sanger.ac.uk/signatures/)               |
+| mut\_load    | VCF    | Total number of SBSs, DBSs and indels                                                                                      |
+| rmd          | VCF    | Signatures extracted (by NMF) on 1Mb [regional mutational density (RMD)](https://www.nature.com/articles/nature14221) bins |
+| kataegis     | VCF    | Counts of kataegis foci                                                                                                    |
+| chrom\_arm   | PURPLE | Chromosome arm gains/losses compared to the overall genome ploidy                                                          |
+| gender       | PURPLE | Gender as derived from copy number data                                                                                    |
+| gene         | LINX   | Deep deletions, amplifications, biallelic losses and mutations of cancer associated genes                                  |
+| sv           | LINX   | Simple and complex structural variants                                                                                     |
+| fusion       | LINX   | Presence of gene fusions                                                                                                   |
+| viral\_ins   | LINX   | Presence of viral sequence insertions                                                                                      |
 
 CUPLR was trained with tumor samples from \~6100 patients from the
 Hartwig Medical Foundation (HMF) and the Pan-Cancer Analysis of Whole
@@ -67,8 +67,8 @@ CUPLR is composed of the following R packages:
 -   `featureExtractor`: extract the features used by CUPLR
 -   `statsExtra`: statistics used for univariate feature selection for
     training CUPLR
--   `nmf`: wrapper around NNLM package for non-negative matrix
-    factorization for generating regional mutational density signatures
+-   `nmf`: wrapper around the NNLM package for non-negative matrix
+    factorization for generating RMD signatures
 
 To download CUPLR, run the following commands in the terminal:
 
