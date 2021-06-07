@@ -10,28 +10,29 @@ cancer type is the one with the highest probability.
 
 The features used by CUPLR are extracted from the output of the [HMF pipeline](https://github.com/hartwigmedical/pipeline5),
 specifically from: (i) the somatic VCF file containing SBS, DBS and indel mutations, 
-(ii) [PURPLE](https://github.com/hartwigmedical/hmftools/tree/master/purple) output, and 
-(iii) [LINX](https://github.com/hartwigmedical/hmftools/tree/master/sv-linx) output. Below is a 
-summary of the features.
+(ii) [PURPLE](https://github.com/hartwigmedical/hmftools/tree/master/purple) (v2.53) output, and 
+(iii) [LINX](https://github.com/hartwigmedical/hmftools/tree/master/sv-linx) (v1.14) output. Below 
+is a summary of the features.
 
 Feature type  | Source | Description
 ------------- | ------ | --------
-sigs          | VCF    | SBS, DBS and indel [mutational signatures](https://cancer.sanger.ac.uk/signatures/)
+sigs          | VCF    | Relative contribution of SBS, DBS and indel [mutational signatures](https://cancer.sanger.ac.uk/signatures/)
 mut_load      | VCF    | Total number of SBSs, DBSs and indels
-rmd           | VCF    | Regional mutational density signatures
+rmd           | VCF    | Signatures extracted (by NMF) on 1Mb [regional mutational density](https://www.nature.com/articles/nature14221) bins
 kataegis      | VCF    | Counts of kataegis foci
 chrom_arm     | PURPLE | Chromosome arm gains/losses compared to the overall genome ploidy
 gender        | PURPLE | Gender as derived from copy number data
 gene          | LINX   | Deep deletions, amplifications, biallelic losses and mutations of cancer associated genes
 sv            | LINX   | Simple and complex structural variants
 fusion        | LINX   | Presence of gene fusions
-viral_ins     | LINX   | Presence of viral insertions
+viral_ins     | LINX   | Presence of viral sequence insertions
 
 CUPLR was trained with tumor samples from ~6100 patients from the Hartwig Medical Foundation (HMF)
 and the Pan-Cancer Analysis of Whole Genomes (PCAWG) consortium. Performance was assessed by 15-fold
-cross-validation, as well as on a holdout validation set of ~680 samples.
+cross-validation as well as on a held out set of 680 samples.
 
-For details on performance and important features used by CUPLR, please see the PDFs at `doc/perf/`.
+For details on performance and the important features used by CUPLR, please see the PDFs at 
+`doc/perf/`.
 
 # Installation
 ## Dependencies
@@ -45,7 +46,7 @@ devtools::install_github('https://github.com/UMCUGenetics/mutSigExtractor/')
 ```
 
 Certain functions require other R packages (e.g. ggplot2 for plotting). For details on optional 
-dependencies, see the DESCRIPTION files.
+dependencies, please see the DESCRIPTION files.
 
 ## Loading CUPLR
 CUPLR is composed of the following R packages:
