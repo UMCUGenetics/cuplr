@@ -78,5 +78,5 @@ loss.20p	0
 loss.20q	0
 loss.21q	0
 loss.22q	0
-loss.Xp	1
-loss.Xq	1
+loss.Xp	0
+loss.Xq	0
