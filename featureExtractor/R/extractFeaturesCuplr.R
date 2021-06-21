@@ -14,13 +14,18 @@
 #' @param input.paths A named list of the input paths. See `in.dir` for the required names 
 #' @param out.dir (Optional) A directory to write intermediate and final output files. If
 #' unspecified, a dataframe of the features will be returned
+#' @param clonal.variants.only If TRUE, only clonal variants will be used for the mutational 
+#' signature and RMD signature features
 #' @param verbose Show progress messages? 0: No messages. 1: Messages from `extractFeaturesCuplr()`. 
 #' 2: Messages from internal functions called by `extractFeaturesCuplr()`
 #'
 #' @return See `out.dir`
 #' @export
 #'
-extractFeaturesCuplr <- function(in.dir=NULL, input.paths=NULL, out.dir=NULL, verbose=F){
+extractFeaturesCuplr <- function(
+   in.dir=NULL, input.paths=NULL, out.dir=NULL, clonal.variants.only=T, verbose=F
+){
+   
    ## Debugging --------------------------------
    if(F){
       in.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/doc/data/DO48977/'
@@ -125,7 +130,7 @@ extractFeaturesCuplr <- function(in.dir=NULL, input.paths=NULL, out.dir=NULL, ve
    ## --------------------------------
    if(verbose){ message('> SNV/indel/DBS signatures') }
    contexts <- saveAndReadVector(
-      extractContextsSmnvIndel(df=vcf_smnv, as.matrix=F, verbose=verbose>=2),
+      extractContextsSmnvIndel(df=vcf_smnv, as.matrix=F, clonal.variants.only=clonal.variants.only, verbose=verbose>=2),
       'raw/smnv_contexts.txt'
    )
    
@@ -170,7 +175,7 @@ extractFeaturesCuplr <- function(in.dir=NULL, input.paths=NULL, out.dir=NULL, ve
    ## --------------------------------
    if(verbose){ message('> Regional mutational density') }
    rmd_bin_counts <- saveAndReadVector(
-      extractRmd(df=vcf_smnv, bin.size=1e6, as.matrix=F, verbose=verbose>=2),
+      extractRmd(df=vcf_smnv, bin.size=1e6, clonal.variants.only=clonal.variants.only, as.matrix=F, verbose=verbose>=2),
       'raw/rmd_bin_counts.txt'
    )
    
