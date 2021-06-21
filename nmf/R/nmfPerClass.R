@@ -73,17 +73,20 @@ nmfPerClass <- function(
 
    ## --------------------------------
    if(verbose){ message('Removing redundant signatures...') }
+   ## Name signatures like so: {cancer_type}.{denovo_sig_number}
    profiles <- do.call(rbind, lapply(names(l_nmf_out), function(i){
       #i='Anus'
       m <- l_nmf_out[[i]]$H
       rownames(m) <- paste0(i,'.',1:nrow(m))
       return(m)
    }))
+
+   ## Scale signature profiles to sum to 1. (The 'H' matrix from NMF is not by default properly scaled)
    profiles <- profiles/rowSums(profiles)
    profiles[is.na(profiles)] <- 0
 
+   ## Clustering based on pearson correlation
    cor_profiles <- cor(t(profiles))
-
    hc <- hclust(as.dist(1-cor_profiles))
    # plot(hc)
    # abline(h=0)
@@ -96,6 +99,9 @@ nmfPerClass <- function(
       hc$labels,
       cutree(hc, h=max.sig.dist)
    )
+
+   ## For similar signature profiles, select the one from largest cancer type cohort.
+   ## The logic is that the signature extraction from a larger cohort gives a more stable signature.
    class_freqs <- sort(table(response), decreasing=T)
 
    profile_whitelist <- lapply(profile_groups, function(i){
