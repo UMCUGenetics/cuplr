@@ -44,7 +44,7 @@ extractRmd <- function(
    if(clonal.variants.only & nrow(df)!=0){
       if(verbose){ message('Selecting clonal variants') }
       ## Split clonal/subclonal variants
-      df$subclonal_prob <- as.numeric(mutSigExtractor::getInfoValues(df$info,'SUBCL')[,1])
+      df$subclonal_prob <- as.numeric(mutSigExtractor::getInfoValues(df$info,'SUBCL'))
       df$subclonal_prob[is.na(df$subclonal_prob)] <- 0
       df$is_subclonal <- df$subclonal_prob >= 0.8
       df <- df[!df$is_subclonal,]
