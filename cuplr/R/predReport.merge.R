@@ -88,45 +88,4 @@ combineLists <- function(lists, exclude.objects=NULL, show.warnings=T, verbose=F
    return(out)
 }
 
-# #' Combine results from multiple prediction reports into one list object
-# #'
-# #' @param reports A list of reports. Each report (a list) has the one or more of the following
-# #' objects with the names: probs_raw, probs_adjusted, responses_pred, responses_actual,
-# #' feat_contrib, imp
-# #' @param verbose Show progress messages?
-# #'
-# #' @return A list
-# #' @export
-# #'
-# mergePredReports <- function(reports, verbose=T){
-#
-#    reports_merged <- list()
-#
-#    if(verbose){ 'Merging probs_raw...' }
-#    reports_merged$probs_raw <- do.call(rbind, lapply(reports,`[[`,'probs_raw'))
-#
-#    if(verbose){ 'Merging probs_adjusted...' }
-#    reports_merged$probs_adjusted <- do.call(rbind, lapply(reports,`[[`,'probs_adjusted'))
-#
-#    if(verbose){ 'Merging predicted responses...' }
-#    reports_merged$responses_pred <- structure(
-#       unlist(lapply(reports,`[[`,'responses_pred')),
-#       names=unlist(lapply(reports,function(i){ names(i$responses_pred) }))
-#    )
-#
-#    if(verbose){ 'Merging actual responses...' }
-#    reports_merged$responses_actual <- structure(
-#       unlist(lapply(reports,`[[`,'responses_actual')),
-#       names=unlist(lapply(reports,function(i){ names(i$responses_actual) }))
-#    )
-#
-#    if(verbose){ 'Merging feature contributions...' }
-#    reports_merged$feat_contrib <- do.call(rbind, lapply(reports,`[[`,'feat_contrib'))
-#    reports_merged$feat_contrib <- subset(reports_merged$feat_contrib, contrib>0)
-#
-#    if(verbose){ 'Merging feature importances...' }
-#    reports_merged$imp <- aggregateMatrixList(lapply(reports,`[[`,'imp'), as.matrix=T)
-#
-#    return(reports_merged)
-# }
 
