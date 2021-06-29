@@ -32,7 +32,7 @@ from: (i) the somatic VCF file containing SBS, DBS and indel mutations,
 CUPLR was trained with tumor samples from \~6100 patients from the
 Hartwig Medical Foundation (HMF) and the Pan-Cancer Analysis of Whole
 Genomes (PCAWG) consortium. The model can predict the primary tumor
-location with an accuracy of \~0.88. Performance was assessed by 15-fold
+location with an accuracy of \~0.89. Performance was assessed by 15-fold
 cross-validation as well as on a held out set of 680 samples.
 
 For details on performance, the top features used by CUPLR, and other
@@ -120,8 +120,8 @@ features <- extractFeaturesCuplr(
 features[,1:5]
 ```
 
-    ##   sigs.SBS1 sigs.SBS2 sigs.SBS3 sigs.SBS4 sigs.SBS5
-    ## 1 0.1765092  0.047903         0         0 0.0634117
+    ##   sigs.SBS1  sigs.SBS2 sigs.SBS3 sigs.SBS4  sigs.SBS5
+    ## 1 0.1761382 0.04790479         0         0 0.06474053
 
 ### Method 2
 
@@ -179,9 +179,9 @@ features[,1:5]
 ```
 
     ##           sigs.SBS1  sigs.SBS2 sigs.SBS3 sigs.SBS4  sigs.SBS5
-    ## DO220848 0.06598833 0.04049707         0         0 0.02095571
-    ## DO36107  0.33822155 0.00000000         0         0 0.00000000
-    ## DO48977  0.17650919 0.04790300         0         0 0.06341170
+    ## DO220848 0.06581352 0.04094434         0         0 0.02507864
+    ## DO36021  0.34080088 0.00000000         0         0 0.00000000
+    ## DO48977  0.17613819 0.04790479         0         0 0.06474053
 
 ### Summary of feature names
 
@@ -269,31 +269,32 @@ pred_report
     ## Objects in list:
     ## $prob $prob_scaled $class_pred $feat_contrib
     ## 
+    ## Calibrated probabilities:
     ## $prob_scaled
-    ##               Biliary       Breast       Cervix CNS_Glioma CNS_Medullo
-    ## DO220848 0.000000e+00 0.0006206318 0.0000278392          0 0.000000000
-    ## DO36107  5.850293e-05 0.0000000000 0.0000000000          0 0.003844391
-    ## DO48977  1.187102e-03 0.0007016440 0.8207116788          0 0.000000000
-    ##          CNS_PiloAstro   Colorectum Colorectum_NET      Gastric HeadAndNeck_ACC
-    ## DO220848     0.0000000 0.0012737281    0.000000000 0.0000000000               0
-    ## DO36107      0.7524084 0.0001364474    0.002592897 0.0001291623               0
-    ## DO48977      0.0000000 0.0026945400    0.000000000 0.0001003129               0
-    ##          HeadAndNeck_Other Kidney        Liver     Lung_NSC      Lung_SC
-    ## DO220848      0.0001201604      0 0.0000000000 0.0057080125 0.0000000000
-    ## DO36107       0.0000000000      0 0.0001441782 0.0004002767 0.0007801295
-    ## DO48977       0.0077212784      0 0.0000000000 0.0063026494 0.0000000000
-    ##              Lymphoid  Mesothelium   Myeloid        Ovary Pancreas Pancreas_NET
-    ## DO220848 3.880966e-05 0.0000000000 0.0000000 5.013721e-04        0 0.0012035507
-    ## DO36107  4.168279e-05 0.0000000000 0.4804667 1.828571e-03        0 0.0005601488
-    ## DO48977  1.052110e-04 0.0001084994 0.0000000 5.993926e-05        0 0.0000000000
-    ##          Prostate Sarcoma_GIST Sarcoma_Leiomyo Sarcoma_Lipo Sarcoma_Other
-    ## DO220848        0            0    0.0006902753            0  0.0010987696
-    ## DO36107         0            0    0.0000000000            0  0.0013391500
-    ## DO48977         0            0    0.0000000000            0  0.0008740941
-    ##          Skin_Melanoma   Skin_Other     Thyroid   Urothelial       Uterus
-    ## DO220848             1 4.528138e-03 0.003746576 3.852320e-04 0.000000e+00
-    ## DO36107              0 2.411788e-05 0.003856974 2.241152e-05 1.351524e-05
-    ## DO48977              0 0.000000e+00 0.010817591 1.757926e-02 2.099301e-05
+    ##               Biliary       Breast Cervix CNS_Glioma CNS_Medullo CNS_PiloAstro
+    ## DO220848 0.0008266245 0.0002207587      0          0 0.000000000             0
+    ## DO36021  0.0000000000 0.0002843765      0          0 0.005918261             1
+    ## DO48977  0.0007931308 0.0004519789      1          0 0.000000000             0
+    ##            Colorectum Colorectum_NET      Gastric HeadAndNeck_ACC
+    ## DO220848 0.0006985818    0.00000e+00 0.0006604889     0.002330996
+    ## DO36021  0.0007509972    0.00000e+00 0.0003705930     0.004298551
+    ## DO48977  0.0008057063    2.87513e-05 0.0001444532     0.002939222
+    ##          HeadAndNeck_Other Kidney        Liver     Lung_NSC Lung_SC Lymphoid
+    ## DO220848      0.0000000000      0 0.0004229305 0.0041673778       0        0
+    ## DO36021       0.0001407438      0 0.0000000000 0.0003349871       0        0
+    ## DO48977       0.0018763022      0 0.0000000000 0.0068874075       0        0
+    ##          Mesothelium   Myeloid Ovary Pancreas Pancreas_NET Prostate
+    ## DO220848           0 0.0000000     0        0 0.0070713299        0
+    ## DO36021            0 0.5873213     0        0 0.0007230507        0
+    ## DO48977            0 0.0000000     0        0 0.0031045315        0
+    ##          Sarcoma_GIST Sarcoma_Leiomyo Sarcoma_Lipo Sarcoma_Other Skin_Melanoma
+    ## DO220848 0.0008988832    3.558279e-05 0.000000e+00  0.0003662426             1
+    ## DO36021  0.0000000000    2.189710e-05 0.000000e+00  0.0007839208             0
+    ## DO48977  0.0000000000    3.414103e-05 1.082809e-05  0.0026913587             0
+    ##            Skin_Other      Thyroid   Urothelial Uterus
+    ## DO220848 0.0006528694 3.164321e-05 1.863773e-05      0
+    ## DO36021  0.0000000000 5.841824e-05 0.000000e+00      0
+    ## DO48977  0.0000000000 0.000000e+00 1.797124e-03      0
 
 However, the above raw prediction output is not informative at a glance.
 We can use `summary()` to show the prediction in a neat table.
@@ -307,42 +308,53 @@ summary(
 ```
 
     ##     sample  pred_class.1 pred_class.2 pred_class.3 pred_prob.1 pred_prob.2
-    ## 1 DO220848 Skin_Melanoma     Lung_NSC   Skin_Other       1.000       0.006
-    ## 2  DO36107 CNS_PiloAstro      Myeloid      Thyroid       0.752       0.480
-    ## 3  DO48977        Cervix   Urothelial      Thyroid       0.821       0.018
-    ##   pred_prob.3                     feat.1                     feat.2
-    ## 1       0.005   rmd.Skin_Melanoma.1=0.17            sigs.SBS7=0.135
-    ## 2       0.004 fusion.KIAA1549_BRAF=0.354 sv.DUP_[1e+06,1e+07)=0.121
-    ## 3       0.011        viral_ins.HPV=0.305         rmd.Cervix.1=0.279
-    ##                feat.3
-    ## 1    sigs.SBS38=0.098
-    ## 2 mut_load.indel=0.12
-    ## 3    sigs.SBS13=0.021
+    ## 1 DO220848 Skin_Melanoma Pancreas_NET     Lung_NSC           1       0.007
+    ## 2  DO36021 CNS_PiloAstro      Myeloid  CNS_Medullo           1       0.587
+    ## 3  DO48977        Cervix     Lung_NSC Pancreas_NET           1       0.007
+    ##   pred_prob.3                     feat.1               feat.2
+    ## 1       0.004    rmd.Skin_Melanoma.1=0.2       sigs.SBS7=0.18
+    ## 2       0.006 fusion.KIAA1549_BRAF=0.415 mut_load.indel=0.162
+    ## 3       0.003         rmd.Cervix.1=0.409   viral_ins.HPV=0.27
+    ##                       feat.3
+    ## 1            sigs.DBS1=0.136
+    ## 2         mut_load.snv=0.155
+    ## 3 sv.DEL_[1e+03,1e+04)=0.019
 
 ## Graphical patient report
 
-Using `patientReport()` we can plot the class probabilities and feature
-contributions per class. This is primarily useful for clinical
-reporting.
+Using `patientReport()` we show plot the output of CUPLR graphically for
+one patient. The left panel of the patient report shows the cancer type
+probabilities. The right panels show the values of the most important
+features contributing to each of the top predicted cancer types.
+
+In the right panels, the feature value averages in patients with the
+respective predicted cancer type and patients with other cancer types
+are also shown to provide context to the feature values of the patient.
+For numeric features, (e.g. SNV mutational load) the average refers to
+the interquartile mean. For boolean features, (e.g. presence of a gene
+fusion) the average refers to the proportion of patients with the
+feature, with the patient feature values of 0% and 100% indicating
+absence/presence respectively.
 
 ``` r
 patient_report <- patientReport(
    probs=pred_report$prob_scaled, 
    feat.contrib=pred_report$feat_contrib, 
-   sample.name='DO36107'
+   sample.name='DO36021',
+   rel.widths=c(1.4, 1) ## Adjusts the relative width of the plot panels
 )
 ```
 
 ``` r
-grid::grid.draw(patient_report)
+plot(patient_report)
 ```
 
 ![](doc/supp/patient_report_example.png)
 
-DO36107 is a pilocytic astrocytoma cancer sample and we can see that
-this sample was correctly predicted as such. The prediction is supported
-by this sample having a KIAA1549-BRAF fusion, a well-known event in this
-cancer type.
+Here we can see that DO36021 is a pilocytic astrocytoma cancer sample
+and we can see that this sample was correctly predicted as such. The
+prediction is supported by this sample having a KIAA1549-BRAF fusion, a
+well-known event in this cancer type.
 
 We can also see that there are two high probabilities. In cases where
 the probabilities are more uncertain (like as shown here), more feature
