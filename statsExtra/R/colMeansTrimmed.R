@@ -9,6 +9,10 @@
 #'
 colMeansTrimmed <- function(m, trim=0.25, na.rm=F){
    if(!is.matrix(m) | !is.numeric(m)){ stop('`m` must be a numeric matrix') }
+   if(nrow(m)==1){
+      #warning('Matrix only contains one sample. Returning the original values')
+      return(m[1,])
+   }
 
    m <- apply(m,2,sort)
 
