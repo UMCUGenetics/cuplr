@@ -30,7 +30,7 @@ snv.T[C>G]A	21
 snv.T[C>G]C	14
 snv.T[C>G]G	3
 snv.T[C>G]T	23
-snv.A[C>T]A	29
+snv.A[C>T]A	30
 snv.A[C>T]C	28
 snv.A[C>T]G	63
 snv.A[C>T]T	32
@@ -42,7 +42,7 @@ snv.G[C>T]A	15
 snv.G[C>T]C	27
 snv.G[C>T]G	53
 snv.G[C>T]T	30
-snv.T[C>T]A	126
+snv.T[C>T]A	127
 snv.T[C>T]C	184
 snv.T[C>T]G	46
 snv.T[C>T]T	117
