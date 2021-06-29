@@ -23,7 +23,7 @@
 #' @export
 #'
 extractFeaturesCuplr <- function(
-   in.dir=NULL, input.paths=NULL, out.dir=NULL, clonal.variants.only=T, verbose=F
+   in.dir=NULL, input.paths=NULL, out.dir=NULL, clonal.variants.only=F, verbose=F
 ){
    
    ## Debugging --------------------------------
