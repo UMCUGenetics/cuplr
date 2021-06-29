@@ -16,20 +16,3 @@
    }
 }
 
-# if(F){
-#    model_dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.17a_noClonalSplit/'
-#    pkg_dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/'
-#
-#    file.copy(
-#       paste0(model_dir,'/final/model.rds'),
-#       paste0(pkg_dir,'/cuplr/inst/model.rds'),
-#       overwrite=T
-#    )
-#
-#    file.copy(
-#       paste0(model_dir,'/report/prob_calib_curves.txt'),
-#       paste0(pkg_dir,'/cuplr/inst/prob_calib_curves.txt'),
-#       overwrite=T
-#    )
-# }
-
