@@ -36,18 +36,18 @@ predict.randomForestEnsemble <- function(
    calc.feat.contrib=T, top.n.pred.classes=NULL, top.n.features=5,
    verbose=F
 ){
-   # if(F){
-   #    object=model
-   #    newdata=features
-   #    type='report'
-   #    prob.cal.curves=prob_cal_curves
-   #    gender.feature.name='gender.gender'
-   #    classes.female=c('Cervix','Ovary','Uterus')
-   #    classes.male='Prostate'
-   #    top.n.pred.classes=NULL
-   #    top.n.features=5
-   #    verbose=T
-   # }
+   if(F){
+      object=model
+      newdata=features
+      type='report'
+      prob.cal.curves=cal_curves
+      gender.feature.name='gender.gender'
+      classes.female=c('Cervix','Ovary','Uterus')
+      classes.male='Prostate'
+      top.n.pred.classes=NULL
+      top.n.features=5
+      verbose=T
+   }
 
    ## Checks --------------------------------
    if(!is.data.frame(newdata)){ stop('`newdata` must be a dataframe') }
@@ -64,18 +64,6 @@ predict.randomForestEnsemble <- function(
    }
 
    ## Prepare data --------------------------------
-   # categorical_lvls <- unname(lapply(object$ensemble, function(i){ i$categorical_lvls }))
-   # categorical_lvls <- unlist(categorical_lvls, recursive=F)
-   # categorical_lvls <- categorical_lvls[!duplicated(categorical_lvls)]
-   #
-   # if(length(categorical_lvls)>1){
-   #    if(verbose){ message('Assigning categorical variable levels...') }
-   #    for(i in names(categorical_lvls)){
-   #       #i='purple.gender'
-   #       newdata[,i] <- factor(newdata[,i], levels=categorical_lvls[[i]])
-   #    }
-   # }
-
    if(is.matrix(object$rmd_sig_profiles)){
       if(verbose){ message('Fitting RMD profiles...') }
       newdata <- (function(){
@@ -121,7 +109,7 @@ predict.randomForestEnsemble <- function(
 
    if(is.null(prob.cal.curves)){
       probs <- probs_adjusted
-      prob_scaled <- NA
+      prob_scaled <- NULL
    } else {
       class(prob.cal.curves) <- c('isoReg',class(prob.cal.curves))
       prob_scaled <- probCal(probs=probs_adjusted, cal.curves=prob.cal.curves)
@@ -193,7 +181,7 @@ predict.randomForestEnsemble <- function(
    feat_contrib$feature_rank <- unlist(lapply(rle_out$lengths, function(i){ 1:i }))
    feat_contrib$group <- NULL; rm(rle_out)
 
-   ## Reduce object size by removing irrelevant data
+   ## Reduce dataframe size by removing unused data
    if(!is.null(top.n.features)){
       feat_contrib <- feat_contrib[feat_contrib$feature_rank<=top.n.features,]
    }
@@ -214,24 +202,8 @@ predict.randomForestEnsemble <- function(
       rm(top_pred_classes)
    }
 
-   rownames(feat_contrib) <- NULL
-
    ## --------------------------------
    if(verbose){ message('Gathering feature summary stats...') }
-   feat_sel <- do.call(rbind, lapply(names(object$ensemble), function(i){
-      #i='Prostate'
-      df <- object$ensemble[[i]]$feat_sel
-      cbind(binary_rf=i, df)
-   }))
-
-   ## Get cohort averages
-   index <- match(
-      paste0(feat_contrib$binary_rf,':',feat_contrib$feature),
-      paste0(feat_sel$binary_rf,':',feat_sel$feature)
-   )
-   feat_contrib$avg_case <- feat_sel$avg_case[index]
-   feat_contrib$avg_ctrl <- feat_sel$avg_ctrl[index]
-   rm(index)
 
    ## Get feature values per sample
    newdata_ss <- newdata[,unique(as.character(feat_contrib$feature)),drop=F] ## Subset for features in `feat_contrib`
@@ -243,11 +215,31 @@ predict.randomForestEnsemble <- function(
       paste0(feat_contrib$sample,':',feat_contrib$feature),
       paste0(newdata_ss$sample,':',newdata_ss$feature)
    )
-   feat_contrib$value <- newdata_ss$value[index]
+   feat_contrib$sample_value <- newdata_ss$value[index]
    rm(index, newdata_ss)
 
-   ##
+   ## Get feature statistics per class
+   feat_stats <- object$feat_stats
+   index <- match(
+      paste0(feat_contrib$binary_rf,':',feat_contrib$feature),
+      paste0(feat_stats$class,':',feat_stats$feature)
+   )
+
+   feat_contrib <- cbind(
+      feat_contrib,
+      feat_stats[index,c('min_all','max_all','avg_case','avg_ctrl','avg_metric')]
+   )
+   rownames(feat_contrib) <- NULL
+
+   # index <-
+   #    paste0(feat_stats$class,':',feat_stats$feature) %in%
+   #    paste0(feat_contrib$binary_rf,':',feat_contrib$feature)
+   #
+   # feat_stats <- feat_stats[index,]
+
    out$feat_contrib <- feat_contrib
+   #out$feat_stats <- feat_stats
+   #rm(feat_stats)
 
    ## --------------------------------
    class(out) <- c('predReport', class(out))
@@ -260,11 +252,11 @@ print.predReport <- function(object){
    cat( paste0('$',names(object)) )
 
    cat('\n\n')
-   if('prob_scaled' %in% names(object)){
-      cat('$prob_scaled\n')
+   if(!is.null(object$prob_scaled)){
+      cat('Calibrated probabilities:\n$prob_scaled\n')
       print(object$prob_scaled)
    } else {
-      cat('$prob\n')
+      cat('Raw probabilities:\n$prob\n')
       print(object$prob)
    }
 }
