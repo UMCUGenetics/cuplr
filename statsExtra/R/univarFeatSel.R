@@ -10,9 +10,9 @@
 #' each class label) are performed for each feature. A feature is kept if any of the pairwise tests
 #' give a significant pvalue/qvalue.
 #'
-#' @param x A matrix or dataframe of features
-#' @param y A vector of class labels. For binary classification a logical vector. For
-#' multiclass classification a factor.
+#' @param x A dataframe of features where rows are samples
+#' @param y A vector of class labels for each sample in `x`. For binary classification a logical
+#' vector. For multiclass classification a character or factor vector.
 #' @param alternative A vector containing 'two.sided','greater' or 'less', corresponding to each
 #' feature
 #' @param max.pvalue pvalue threshold for keeping features. Default: 0.01
@@ -202,7 +202,7 @@ univarFeatSel.default <- function(
 
          avg_logical <- numeric()
          if(ncol(x.logical)!=0){
-            avg_logical <- colMeans(x.logical, na.rm=T)
+            avg_logical <- colMeans(x.logical, na.rm=T) ## Using colMeans() is equal taking the proportion of TRUE
          }
 
          c(avg_numeric, avg_logical)
