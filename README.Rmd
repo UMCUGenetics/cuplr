@@ -30,7 +30,7 @@ viral_ins     | LINX   | Presence of viral sequence insertions
 
 CUPLR was trained with tumor samples from ~6100 patients from the Hartwig Medical Foundation (HMF)
 and the Pan-Cancer Analysis of Whole Genomes (PCAWG) consortium. The model can predict the primary 
-tumor location with an accuracy of ~0.88. Performance was assessed by 15-fold cross-validation as 
+tumor location with an accuracy of ~0.89. Performance was assessed by 15-fold cross-validation as 
 well as on a held out set of 680 samples.
 
 For details on performance, the top features used by CUPLR, and other details, please see the plots 
@@ -187,7 +187,8 @@ prob_cal_curves <- read.delim(PROB_CAL_CURVES_PATH)
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-model <- cacheAndReadData(MODEL_PATH)
+## Execute this!
+model <- cacheAndReadData(MODEL_PATH, overwrite=T)
 prob_cal_curves <- read.delim(PROB_CAL_CURVES_PATH)
 ```
 
@@ -216,34 +217,43 @@ summary(
 ```
 
 ## Graphical patient report
-Using `patientReport()` we can plot the class probabilities and feature contributions per class.
-This is primarily useful for clinical reporting.
+Using `patientReport()` we show plot the output of CUPLR graphically for one patient. The left panel
+of the patient report shows the cancer type probabilities. The right panels show the values of the
+most important features contributing to each of the top predicted cancer types.
+
+In the right panels, the feature value averages in patients with the respective predicted cancer
+type and patients with other cancer types are also shown to provide context to the feature values of
+the patient. For numeric features, (e.g. SNV mutational load) the average refers to the
+interquartile mean. For boolean features, (e.g. presence of a gene fusion) the average refers to the
+proportion of patients with the feature, with the patient feature values of 0% and 100% indicating
+absence/presence respectively.
 
 ```{r, message=FALSE, warning=FALSE}
 patient_report <- patientReport(
    probs=pred_report$prob_scaled, 
    feat.contrib=pred_report$feat_contrib, 
-   sample.name='DO36107'
+   sample.name='DO36021',
+   rel.widths=c(1.4, 1) ## Adjusts the relative width of the plot panels
 )
 ```
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
 if(F){
-   png(paste0(cuplr_dir,'/doc/supp/patient_report_example.png'), 1000, 700, res=150)
-   grid::grid.draw(patient_report)
+   png(paste0(cuplr_dir,'/doc/supp/patient_report_example.png'), 1200, 900, res=150)
+   plot(patient_report)
    dev.off()   
 }
 ```
 
 ```{r eval=FALSE}
-grid::grid.draw(patient_report)
+plot(patient_report)
 ```
 
 ![](doc/supp/patient_report_example.png)
 
-DO36107 is a pilocytic astrocytoma cancer sample and we can see that this sample was correctly 
-predicted as such. The prediction is supported by this sample having a KIAA1549-BRAF fusion, a
-well-known event in this cancer type. 
+Here we can see that DO36021 is a pilocytic astrocytoma cancer sample and we can see that this
+sample was correctly predicted as such. The prediction is supported by this sample having a
+KIAA1549-BRAF fusion, a well-known event in this cancer type.
 
 We can also see that there are two high probabilities. In cases where the probabilities are more 
 uncertain (like as shown here), more feature contribution panels corresponding to the top predicted 
