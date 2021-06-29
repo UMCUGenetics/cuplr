@@ -1,27 +1,26 @@
-## Data for debugging ================================
-if(F){
-   base_dir <- list(
-      hpc='/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/',
-      mnt='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/',
-      local='/Users/lnguyen/Documents/projects/P0013_WGS_patterns_Diagn/'
-   )
-
-   for(i in base_dir){
-      if(dir.exists(i)){
-         base_dir <- i
-         break
-      }
-   }
-
-   devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/commonUtils/'))
-   devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/cuplr/'))
-   library(mltoolkit)
-
-   features <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.10f_rmd1mbSigs/features/features.txt.gz')
-   features$response <- as.factor(features$response)
-   fold_indexes <- readRDS('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.10f_rmd1mbSigs/cv_out/01/fold_indexes.rds')
-}
-
+# ## Data for debugging ================================
+# if(F){
+#    base_dir <- list(
+#       hpc='/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/',
+#       mnt='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/',
+#       local='/Users/lnguyen/Documents/projects/P0013_WGS_patterns_Diagn/'
+#    )
+#
+#    for(i in base_dir){
+#       if(dir.exists(i)){
+#          base_dir <- i
+#          break
+#       }
+#    }
+#
+#    devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/commonUtils/'))
+#    devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/cuplr/'))
+#    library(mltoolkit)
+#
+#    features <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.10f_rmd1mbSigs/features/features.txt.gz')
+#    features$response <- as.factor(features$response)
+#    fold_indexes <- readRDS('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.10f_rmd1mbSigs/cv_out/01/fold_indexes.rds')
+# }
 
 ####################################################################################################
 #' Remove columns by name
@@ -63,7 +62,6 @@ dfToFeaturesAndResponse <- function(df, colname.response='response'){
 
    list(x=x, y=y, y_ohe=y_ohe)
 }
-
 
 ####################################################################################################
 #' Perform cross validation
@@ -273,6 +271,7 @@ trainRandomForest <- function(
             min.cramer.v=feat.sel.min.cramer.v,
             sel.top.n.features=feat.sel.top.n.features,
             whitelist=feat.sel.whitelist,
+            show.avg=F,
             verbose=(verbose>=3)
          )
 
@@ -342,7 +341,6 @@ trainRandomForest <- function(
          }))
       })
 
-
       resampling_grid$perf <- sapply(perfs_inner_cv, mean)
       resampling_grid$sd <- sapply(perfs_inner_cv, sd)
       resampling_grid$best <- FALSE
@@ -408,13 +406,13 @@ trainRandomForest <- function(
    model$resampling_grid <- out$resampling_grid
    rm(out)
 
-   ## Store levels from categorical features
-   categorical_lvls <- lapply(x, levels)
-   categorical_lvls <- categorical_lvls[ !sapply(categorical_lvls, is.null) ]
-   categorical_lvls <- categorical_lvls[names(categorical_lvls) %in% colnames(x)]
-
-   model$categorical_lvls <- categorical_lvls
-   rm(categorical_lvls)
+   # ## Store levels from categorical features
+   # categorical_lvls <- lapply(x, levels)
+   # categorical_lvls <- categorical_lvls[ !sapply(categorical_lvls, is.null) ]
+   # categorical_lvls <- categorical_lvls[names(categorical_lvls) %in% colnames(x)]
+   #
+   # model$categorical_lvls <- categorical_lvls
+   # rm(categorical_lvls)
 
    # ##----------------------------------------------------------------------
    # if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Calculating feature importance...') }
@@ -595,28 +593,6 @@ trainRandomForestEnsemble <- function(
       })
    }
 
-   # ##----------------------------------------------------------------------
-   # if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Splitting data for training main ensemble and probability weigher...') }
-   # inner_folds_indexes <- mltoolkit::createCvTrainTestSets(
-   #    train, k=inner.holdout.fraction[2],
-   #    stratify.by.col=colname.response, return.data=F
-   # )
-   # inner_folds_indexes <- lapply(inner_folds_indexes,`[[`,'test')
-   #
-   # train_data <- list()
-   #
-   # train_data$ensemble <- train[
-   #    sort(unlist(inner_folds_indexes[
-   #       (inner.holdout.fraction[1]+1) : inner.holdout.fraction[2]
-   #    ]))
-   # ,]
-   #
-   # train_data$prob_weigher <- train[
-   #    sort(unlist(inner_folds_indexes[
-   #       1:inner.holdout.fraction[1]
-   #    ]))
-   # ,]
-
    ##----------------------------------------------------------------------
    #y_ohe <- oneHotEncode(as.factor(train_data$ensemble[,colname.response]))
    y_ohe <- oneHotEncode(as.factor(train[,colname.response]))
@@ -682,52 +658,6 @@ trainRandomForestEnsemble <- function(
 
    #train_data$ensemble <- NULL
 
-   # ##----------------------------------------------------------------------
-   # if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Training random forest probability weigher...') }
-   #
-   # tmp.prob_weigher <- paste0(tmp.dir,'/prob_weigher.rds')
-   # if(!file.exists(tmp.prob_weigher)){
-   #    holdout_probs <- do.call(cbind, lapply(out$ensemble, function(model){
-   #       #i=ensemble$Breast
-   #       randomForest:::predict.randomForest(
-   #          model,
-   #          rmColumns(train_data$prob_weigher, colname.response),
-   #          type='prob'
-   #       )[,1]
-   #    }))
-   #
-   #    holdout_probs <- cbind(
-   #       response=train_data$prob_weigher[,colname.response],
-   #       as.data.frame(holdout_probs)
-   #    )
-   #
-   #    out$prob_weigher <- randomForest::randomForest(
-   #       x=rmColumns(holdout_probs, colname.response),
-   #       y=holdout_probs[,colname.response],
-   #       strata=y,
-   #       proximity=F, ntree=500, importance=T,
-   #       keep.inbag=T, replace=F, ## required for calculating local increments
-   #       na.action=na.roughfix,
-   #       do.trace=F
-   #    )
-   #
-   #    invisible(capture.output(
-   #       out$prob_weigher$localIncrements <- rfFC::getLocalIncrements(
-   #          out$prob_weigher,
-   #          rmColumns(holdout_probs, colname.response)
-   #       )
-   #    ))
-   #    saveRDS(out$prob_weigher, tmp.prob_weigher)
-   #    rm(holdout_probs)
-   #
-   # } else {
-   #
-   #    if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Loading random forest probability weigher...') }
-   #    out$prob_weigher <- readRDS(tmp.prob_weigher)
-   # }
-   #
-   # train_data$prob_weigher <- NULL
-
    ##----------------------------------------------------------------------
    if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Calculating feature importance...') }
    exist_features <- unique(unlist(lapply(out$ensemble, function(model){
@@ -747,7 +677,15 @@ trainRandomForestEnsemble <- function(
       return(v)
    }))
 
-   ## --------
+   ##----------------------------------------------------------------------
+   if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Calculating feature stats per class...') }
+   out$feat_stats <- featStatsPerClass(
+      x=rmColumns(train, colname.response),
+      y=train[,colname.response],
+      verbose=(verbose==2)
+   )
+
+   ##----------------------------------------------------------------------
    if(!is.null(test)){
       if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Predicting on test set...') }
       out$test_set <- list(
