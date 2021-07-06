@@ -4,7 +4,10 @@
 #' @param x.lab x-axis labels
 #' @param y.lab y-axis labels
 #' @param legend.name Legend title
-#' @param show.labels Show raw values within each cell?
+#' @param show.labels Show value labels within each cell?
+#' @param custom.labels A matrix of the same dimensions as `m`. When `show.labels`==TRUE, these
+#' custom value labels will be shown instead
+#' @param label.size Size of the value labels
 #' @param palette Name of the brewer color palette
 #' @param palette.direction Color palette direction. Can be 1 (forward) or -1 (reverse).
 #' @param invert.y Invert the y-axis?
@@ -15,8 +18,9 @@
 #'
 heatmapFromMatrix <- function(
    m, x.lab=NULL, y.lab=NULL, legend.name='value',
-   show.labels=F, custom.labels=NULL, palette='YlGnBu', palette.direction=-1, invert.y=F,
-   x.title.position='bottom'
+   show.labels=F, custom.labels=NULL, label.size=2.5,
+   palette='YlGnBu', palette.direction=-1, fill.limits=NULL,
+   invert.y=F, x.title.position='bottom'
 ){
 
    #m=t(imp)
@@ -49,7 +53,7 @@ heatmapFromMatrix <- function(
          geom_tile(aes(fill=value), color='grey') +
          scale_fill_distiller(
             name=legend.name,
-            palette=palette, direction=palette.direction,
+            palette=palette, direction=palette.direction, limits=fill.limits,
             guide=guide_colorbar(
                frame.colour='black', ticks.colour='black',
                direction='horizontal', title.position='top', reverse=T, barwidth=4, barheight=1,
@@ -73,7 +77,7 @@ heatmapFromMatrix <- function(
    }
 
    if(show.labels){
-      p <- p + geom_text(data=m_melt, aes(label=label), size=2.7)
+      p <- p + geom_text(data=m_melt, aes(label=label), size=label.size)
    }
 
    if(is.null(x.lab)){
@@ -110,34 +114,37 @@ heatmapFromMatrix <- function(
 #' @param metrics A character vector indicating which performance metrics to show in the upper plot.
 #' See documentation for mltoolkit to see which metrics are available
 #' @param plot.title Plot title
+#' @param label.size Size of the value labels
 #'
 #' @return A cowplot object
 #' @export
 #'
 confusionHeatmap <- function(
    actual=NULL, probs=NULL, predicted=NULL,
-   which.plots=c('perf','counts','confusion'),
-   rel.heights=c(perf=0.3, counts=0.15, confusion=1),
+   which.plots=c('counts','perf','confusion'),
+   rel.heights=c(counts=0.3, perf=0.1, confusion=1),
 
    ## Confusion heatmap
    sort.classes=F, rel.values=T, predicted.classes.only=F,
 
    ## Performance metrics
-   metrics=c('f1','prec','tpr'), show.weighted.mean=T,
+   metrics=c('precision','f1'), show.weighted.mean=T,
 
-   plot.title=NULL
+   ## Plotting args
+   plot.title=NULL, label.size=2.5
 ){
    if(F){
       report=pred_reports$CV
       actual=report$class_actual
       probs=report$prob_scaled
 
-      sort.classes=F; rel.values=T; predicted.classes.only=T;
-      which.plots=c('counts','confusion')
-      rel.heights=c(perf=0.3, counts=0.15, confusion=1)
+      sort.classes=F; rel.values=T; predicted.classes.only=F;
+      which.plots=c('counts','perf','confusion')
+      rel.heights=c(counts=0.3, perf=0.1, confusion=1)
 
-      metrics=c('f1','prec','tpr')
+      metrics=c('precision','f1','true positive rate')
       show.weighted.mean=T
+      plot.title=NULL; label.size=2.5
    }
 
    ## Init ----------------------------
@@ -154,28 +161,34 @@ confusionHeatmap <- function(
    if(!is.factor(predicted)){ stop('`predicted` must be a factor') }
 
    ## Only show classes that are present in predicted
+   if(!is.null(probs)){
+      predicted_classes <- colnames(probs)
+   } else {
+      predicted_classes <- levels(predicted)
+   }
+
    if(predicted.classes.only){
-      is_predicted_class <- actual %in% levels(predicted)
+      is_predicted_class <- actual %in% predicted_classes
       actual <- actual[is_predicted_class]
       predicted <- predicted[is_predicted_class]
 
-      classes <- levels(predicted)
    } else {
       ## Make levels the same between actual and predicted
       classes <- sort(unique(c(
-         levels(predicted),
+         predicted_classes,
          levels(actual)
       )))
 
       classes <- c(
-         classes[classes %in% predicted],
-         classes[!(classes %in% predicted)]
+         classes[classes %in% predicted_classes],
+         classes[!(classes %in% levels(actual))]
       )
    }
 
    actual <- factor(actual, classes)
    predicted <- factor(predicted, classes)
 
+   ## Initialize output
    plots <- list()
 
    ## Large confusion matrix ----------------------------
@@ -189,10 +202,16 @@ confusionHeatmap <- function(
       overall_acc <- round(overall_acc / length(actual), 2)
    }
 
-   class_order <- if(sort.classes){ names(sort(diag(tab), decreasing=T)) } else { names(diag(tab)) }
+   ## Sort classes
+   class_order <- if(sort.classes){
+      names(sort(diag(tab), decreasing=T))
+   } else {
+      names(diag(tab))
+   }
    tab <- tab[class_order,class_order]
 
-   tab <- tab[levels(droplevels(predicted)),] ## remove non-existing prediction levels
+   ## Only keep predicted classes on prediction axis
+   tab <- tab[predicted_classes,]
 
    ## Add dummy row and column for overall performance
    tab <- cbind(OVERALL=NA,tab)
@@ -201,7 +220,8 @@ confusionHeatmap <- function(
 
    if('confusion' %in% which.plots){
       plots$confusion <- heatmapFromMatrix(
-         tab, show.labels=T, x.lab='Actual class', y.lab='Predicted class', invert.y=T,
+         tab, show.labels=T, label.size=label.size,
+         x.lab='Actual class', y.lab='Predicted class', invert.y=T,
          legend.name=if(rel.values){ 'Column fraction' } else { 'Counts' }
       ) +
          theme(
@@ -244,7 +264,7 @@ confusionHeatmap <- function(
 
       plots$counts <- ggplot(pd_counts, aes(y=measure, x=class)) +
          geom_tile(aes(fill=frac), color='grey') +
-         geom_text(aes(label=value), size=2.7) +
+         geom_text(aes(label=value), size=label.size) +
          geom_hline(yintercept=1.5, size=0.5) +
          scale_fill_distiller(palette='RdYlGn', na.value='white', limits=c(-1,1), direction=1, guide=F) +
          scale_x_discrete(expand=c(0,0), position='top') +
@@ -259,16 +279,6 @@ confusionHeatmap <- function(
          )
    }
 
-   # if('counts' %in% which.plots){
-   #    plots$counts <-
-   #       heatmapFromMatrix(t(as.matrix(counts)), palette='none', show.labels=T, x.title.position='top') +
-   #       geom_hline(yintercept=1.5, size=0.5) +
-   #       theme(
-   #          axis.text.x.bottom=element_blank(),
-   #          axis.title=element_blank()
-   #       )
-   # }
-
    ## Performance stats ----------------------------
    if('perf' %in% which.plots){
       confusion <- mltoolkit::confusionMatrix(
@@ -277,6 +287,7 @@ confusionHeatmap <- function(
          simplify=T
       )
 
+      #metrics=c('f1','precision')
       perf <- mltoolkit::calcPerf(confusion, metrics)
       rownames(perf) <- perf[,1]; perf[,1] <- NULL
 
@@ -301,9 +312,19 @@ confusionHeatmap <- function(
       perf <- rbind(perf_summary, perf)
       perf <- round(perf, 2)
 
+      ## Capitalize first letter of metric names
+      firstupper <- function(x) {
+         substr(x, 1, 1) <- toupper(substr(x, 1, 1))
+         x
+      }
+      colnames(perf) <- firstupper(colnames(perf))
+
+      ## Plot
       plots$perf <- heatmapFromMatrix(
-         t(perf), palette='RdYlGn', palette.direction=1, show.labels=T,
-         y.lab='Perf.', legend.name='Metric value', x.title.position='top'
+         t(perf),
+         palette='RdYlGn', palette.direction=1,
+         show.labels=T, label.size=label.size,
+         invert.y=T, y.lab='Perf.', legend.name='Metric value', x.title.position='top'
       ) +
          guides(fill=F) +
          theme(
@@ -312,10 +333,10 @@ confusionHeatmap <- function(
          )
    }
 
-
    ## Combine --------------------------------
-   plots <- rev(plots)
+   plots <- plots[which.plots]
 
+   ## Assign rel heights based on `rel.heights` names or index
    if(length(names(rel.heights))!=0){
       rel_heights <- rel.heights[names(plots)]
    } else {
@@ -323,7 +344,7 @@ confusionHeatmap <- function(
       names(rel_heights) <- names(plots)
    }
 
-
+   ##
    plots <- lapply(plots, function(i){
       i + theme(
          axis.text.x.bottom=element_blank(),
@@ -332,20 +353,20 @@ confusionHeatmap <- function(
       )
    })
 
+   ## Add x-axis labels and/or title to top plot
    plots[[1]] <- plots[[1]] +
       theme(
          axis.text.x.top=element_text(angle=90, hjust=0, vjust=0.5),
-         #axis.text.x.top=element_text(angle=45, hjust=0, vjust=0),
          axis.ticks.x=element_line()
       )
    if(!is.null(plot.title)){
       plots[[1]] <- plots[[1]] + ggtitle(plot.title)
    }
 
+   ## Add x-axis labels bottom plot
    plots[[length(plots)]] <- plots[[length(plots)]] +
       theme(
          axis.text.x.bottom=element_text(angle=90, hjust=1, vjust=0.5),
-         #axis.text.x.bottom=element_text(angle=45, hjust=1, vjust=1),
          axis.title.x.bottom=element_text(),
          axis.ticks.x=element_line()
       )
