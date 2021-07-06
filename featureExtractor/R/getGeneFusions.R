@@ -66,7 +66,7 @@ getGeneFusions <- function(linx.fusions, whitelist.path=GENE_FUSION_WHITELIST){
    
    ## Group similar fusions under a common name --------------------------------
    grouping_regex <- list(
-      ## HeadAndNeck_ACC
+      ## HeadAndNeck_SC
       'MYB/MYBL1_NFIB'='^(MYB_NFIB|MYBL1_NFIB)$', 
       
       ## Lymphoid
