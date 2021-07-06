@@ -11,8 +11,10 @@ heatmapFromMatrix(
   legend.name = "value",
   show.labels = F,
   custom.labels = NULL,
+  label.size = 2.5,
   palette = "YlGnBu",
   palette.direction = -1,
+  fill.limits = NULL,
   invert.y = F,
   x.title.position = "bottom"
 )
@@ -26,7 +28,12 @@ heatmapFromMatrix(
 
 \item{legend.name}{Legend title}
 
-\item{show.labels}{Show raw values within each cell?}
+\item{show.labels}{Show value labels within each cell?}
+
+\item{custom.labels}{A matrix of the same dimensions as `m`. When `show.labels`==TRUE, these
+custom value labels will be shown instead}
+
+\item{label.size}{Size of the value labels}
 
 \item{palette}{Name of the brewer color palette}
 

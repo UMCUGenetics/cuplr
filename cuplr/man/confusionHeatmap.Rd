@@ -8,14 +8,15 @@ confusionHeatmap(
   actual = NULL,
   probs = NULL,
   predicted = NULL,
-  which.plots = c("perf", "counts", "confusion"),
-  rel.heights = c(perf = 0.3, counts = 0.15, confusion = 1),
+  which.plots = c("counts", "perf", "confusion"),
+  rel.heights = c(counts = 0.3, perf = 0.1, confusion = 1),
   sort.classes = F,
   rel.values = T,
   predicted.classes.only = F,
-  metrics = c("f1", "prec", "tpr"),
+  metrics = c("precision", "f1"),
   show.weighted.mean = T,
-  plot.title = NULL
+  plot.title = NULL,
+  label.size = 2.5
 )
 }
 \arguments{
@@ -41,6 +42,8 @@ values: 'perf','counts','confusion'.}
 See documentation for mltoolkit to see which metrics are available}
 
 \item{plot.title}{Plot title}
+
+\item{label.size}{Size of the value labels}
 }
 \value{
 A cowplot object
