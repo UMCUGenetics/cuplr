@@ -553,44 +553,48 @@ trainRandomForestEnsemble <- function(
    out$rmd_sig_profiles <- NA
 
    if(do.rmd.nmf){
-      if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Performing NMF on RMD features...') }
+      if(!any(grepl('^rmd',colnames(train)))){
+         if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] `do.rmd.nmf`==T but no rmd features found. Skipping NMF...') }
+      } else {
+         if(verbose){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] Performing NMF on RMD features...') }
 
-      if(!is.null(tmp.dir)){ dir.create(paste0(tmp.dir,'/nmf/'), showWarnings=F) }
+         if(!is.null(tmp.dir)){ dir.create(paste0(tmp.dir,'/nmf/'), showWarnings=F) }
 
-      rmd_sig_profiles <- nmfPerClass(
-         A=train[,grep('^rmd',colnames(train))],
-         response=train[,colname.response],
-         tmp.dir=paste0(tmp.dir,'/nmf/'),
-         multi.core=multi.core,
-         verbose=verbose
-      )
-
-      out$rmd_sig_profiles <- t(rmd_sig_profiles$sig_profiles)
-      rm(rmd_sig_profiles)
-
-      train <- (function(){
-         m1 <- out$rmd_sig_profiles
-         m2 <- t(train[,rownames(m1)])
-
-         fit <- NNLM::nnlm(m1, m2)
-         fit <- as.data.frame(t(fit$coefficients))
-         colnames(fit) <- paste0('rmd.', colnames(fit))
-
-         cbind(
+         rmd_sig_profiles <- nmfPerClass(
+            A=train[,grep('^rmd',colnames(train))],
             response=train[,colname.response],
-            fit,
-            rmColumns(
-               train,
-               c(grep('^rmd',colnames(train),value=T), colname.response)
-            )
+            tmp.dir=paste0(tmp.dir,'/nmf/'),
+            multi.core=multi.core,
+            verbose=verbose
          )
-      })()
 
-      args.trainRandomForest <- within(args.trainRandomForest,{
-         feat.sel.alternative <- feat.sel.alternative[ colnames(train)[-1] ]
-         names(feat.sel.alternative) <- colnames(train)[-1]
-         feat.sel.alternative[is.na(feat.sel.alternative)] <- 'greater'
-      })
+         out$rmd_sig_profiles <- t(rmd_sig_profiles$sig_profiles)
+         rm(rmd_sig_profiles)
+
+         train <- (function(){
+            m1 <- out$rmd_sig_profiles
+            m2 <- t(train[,rownames(m1)])
+
+            fit <- NNLM::nnlm(m1, m2)
+            fit <- as.data.frame(t(fit$coefficients))
+            colnames(fit) <- paste0('rmd.', colnames(fit))
+
+            cbind(
+               response=train[,colname.response],
+               fit,
+               rmColumns(
+                  train,
+                  c(grep('^rmd',colnames(train),value=T), colname.response)
+               )
+            )
+         })()
+
+         args.trainRandomForest <- within(args.trainRandomForest,{
+            feat.sel.alternative <- feat.sel.alternative[ colnames(train)[-1] ]
+            names(feat.sel.alternative) <- colnames(train)[-1]
+            feat.sel.alternative[is.na(feat.sel.alternative)] <- 'greater'
+         })
+      }
    }
 
    ##----------------------------------------------------------------------
