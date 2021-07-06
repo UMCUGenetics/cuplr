@@ -1,5 +1,7 @@
 #' Reliability plot
 #'
+#' @rdname reliabilityPlot
+#'
 #' @description Bin probabilities and calculate the proportion of positive class samples per bin.
 #' The proportion of positive class samples (y-values) will be plotted against the midpoint of each
 #' probability bin (x-values), and a curve will connect the points. A 'filtered' curve is also shown
@@ -14,18 +16,20 @@
 #' @param bootstrap.iters Number of bootstrap iterations to calculate error bars (standard deviation)
 #' @param bootstrap.prop Proportion of all samples to sample from for boostrapping
 #' @param seed Bootstrap seed
-#' @param show.labels Show labels at each point
+#' @param verbose Show progress messages?
+#' @param stats The output of `reliabilityStats()`
 #' @param min.samples.per.bin Points with fewer samples than this will no be considered for the
 #' overlaid (filtered) reliability curve
-#' @param verbose Show progress messages?
+#' @param show.labels Show labels at each point
+#' @param facet.nrow Number of facet rows in plot
+#' @param facet.ncol Number of facet columns in plot
 #'
-#' @return A ggplot object
+#' @return For `reliabilityStats()` a dataframe. For `reliabilityPlot()` a ggplot
 #' @export
 #'
-reliabilityPlot <- function(
+reliabilityStats <- function(
    actual=NULL, probs=NULL, report=NULL,
-   n.bins=10, bootstrap.iters=50, bootstrap.prop=0.66, seed=1,
-   show.labels=T, min.samples.per.bin=4, verbose=F
+   n.bins=10, bootstrap.iters=50, bootstrap.prop=0.66, seed=1, verbose=F
 ){
 
    # if(F){
@@ -66,6 +70,7 @@ reliabilityPlot <- function(
    ) / 2
 
    ## Bootstrap init
+   ## Subsampling to calculate error bars
    n_samples <- length(actual)
    bootstrap_size <- round( bootstrap.prop * n_samples )
 
@@ -77,28 +82,30 @@ reliabilityPlot <- function(
 
       if(verbose){ message('> ',i) }
 
-      ## Prep data
+      ## Initialize input data
       df <- data.frame(
          prob=probs[,i],
          response=actual==i,
          row.names=NULL
       )
 
+      ## Calculate probability bin mid points
       df$bin_mid <- cut(df$prob, breaks=bins, include.lowest=T, labels=bin_mids)
 
-      ## Main
+      ## Main function to calculate summary stats for one iteration
       calcStats <- function(df){
+         ## Calculate stats separately for each bin
          #df_split <- split(bootstrap_out, bootstrap_out$bin_mid)
          df_split <- split(df, df$bin_mid)
          agg <- do.call(rbind, lapply(df_split, function(j){
             #j=df_split[[1]]
             if(nrow(j)!=0){
                data.frame(
-                  prob.mean=mean(j$prob, na.rm=T),
-                  frac_pos=mean(j$response, na.rm=T),
+                  prob.mean=mean(j$prob, na.rm=T), ## Mean raw probability
+                  frac_pos=mean(j$response, na.rm=T), ## Fraction of samples with positive label
                   #frac_pos.sd=sd(j$response, na.rm=T),
-                  n_pos=sum(j$response, na.rm=T),
-                  n_samples=nrow(j)
+                  n_pos=sum(j$response, na.rm=T), ## Number of samples with positive label
+                  n_samples=nrow(j) ## Total number of samples
                )
             } else {
                data.frame(
@@ -112,6 +119,7 @@ reliabilityPlot <- function(
 
          }))
          #agg$frac_pos.sd[ is.na(agg$frac_pos.sd) ] <- 0
+
          agg <- cbind(bin_mid=as.numeric(rownames(agg)), agg)
          return(agg)
       }
@@ -120,6 +128,7 @@ reliabilityPlot <- function(
       #    return( calcStats(df) )
       # }
 
+      ## Repeat summary
       bootstrap_out <- do.call(rbind, lapply(1:bootstrap.iters, function(j){
          res <- calcStats( df[sample(1:n_samples, bootstrap_size),] )
          res$boot_iter <- j
@@ -127,8 +136,9 @@ reliabilityPlot <- function(
       }))
       rownames(bootstrap_out) <- NULL
 
+      ## Summary stats across *all* iterations
+      ## Add 'empty' row when a bin has zero samples
       bootstrap_out <- split(bootstrap_out, bootstrap_out$bin_mid)
-
       out <- do.call(rbind, lapply(bootstrap_out, function(j){
          #j=bootstrap_out[[1]]
 
@@ -150,56 +160,70 @@ reliabilityPlot <- function(
             )
          }
       }))
-      out$frac_pos.sd
+      #out$frac_pos.sd
       out <- data.frame(bin_mid=as.numeric(rownames(out)), out, row.names=NULL)
 
       return(out)
    })
    names(stats) <- uniq_classes
 
-   # ## Make curve isotonic (y always increasing) --------------------------------
-   # stats <- lapply(stats, function(i){
-   #    #i=stats[[1]]
-   #
-   #    current_frac_pos <- i$frac_pos[1]
-   #    #current_frac_pos=0.892015873
-   #    i$frac_pos_iso <- sapply(i$frac_pos, function(j){
-   #       #j=0.608247423
-   #       if(j > current_frac_pos){
-   #          current_frac_pos <<- j
-   #       }
-   #       return(current_frac_pos)
-   #    })
-   #
-   #    return(i)
-   # })
-
+   ## Merge results from all classes
    stats <- do.call(rbind, lapply(names(stats), function(i){
       cbind(class=i, stats[[i]])
    }))
    stats$class <- factor(stats$class, uniq_classes)
 
+   return(stats)
+}
+
+#' @rdname reliabilityPlot
+reliabilityPlot <- function(
+   ## Input data
+   actual=NULL, probs=NULL, report=NULL, stats=NULL,
+
+   ## Plotting args
+   min.samples.per.bin=4, show.labels=T, facet.nrow=NULL, facet.ncol=NULL,
+   ...
+){
+
+   ## Init --------------------------------
+   if(is.null(stats)){
+      if(!is.null(report)){
+         stats <- reliabilityStats(report=report, ...)
+      } else if(!is.null(actual) & !is.null(prob)){
+         stats <- reliabilityStats(actual=actual, probs=probs, ...)
+      } else {
+         stop('Input must be provided to: i) `actual` and `probs`, ii) `report`, or iii) `stats`')
+      }
+   }
+
    ## Plot --------------------------------
-   if(verbose){ message('Generating reliability plot...') }
-   pd <- stats
-   pd <- pd[!is.na(pd$frac_pos),]
+   ## Filter out rows where bins have no samples
+   stats <- stats[!is.na(stats$frac_pos),]
 
-   pd$n_pos <- round(pd$n_pos.mean)
-   pd$n_samples <- round(pd$n_samples.mean)
-   pd$ge_min_samples_per_bin <- pd$n_samples >= min.samples.per.bin
+   ## Use whole numbers for samples
+   stats$n_pos <- round(stats$n_pos.mean)
+   stats$n_samples <- round(stats$n_samples.mean)
 
-   pd$label <- paste0(pd$n_pos,'/',pd$n_samples)
-   pd$label.ypos <- 0
-   pd$label.ypos[pd$bin_mid<0.5] <- 1
+   ## Mark bins with few samples to plot
+   stats$ge_min_samples_per_bin <- stats$n_samples >= min.samples.per.bin
 
-   pd$label.hjust <- 0
-   pd$label.hjust[pd$bin_mid<0.5] <- 1
+   ## Sample size labels
+   stats$label <- paste0(stats$n_pos,'/',stats$n_samples)
 
+   ## Align labels towards top and bottom of plot
+   stats$label.ypos <- 0
+   stats$label.ypos[stats$bin_mid<0.5] <- 1
+
+   stats$label.hjust <- 0
+   stats$label.hjust[stats$bin_mid<0.5] <- 1
+
+   ## Line/dot colors
    color_raw <- 'grey50'
    color_filt <- 'indianred'
 
-   p <- ggplot(pd, aes(x=bin_mid, y=frac_pos)) +
-      facet_wrap(class~.) +
+   p <- ggplot(stats, aes(x=bin_mid, y=frac_pos)) +
+      facet_wrap(class~., nrow=facet.nrow, ncol=facet.ncol) +
 
       geom_abline(slope=1, intercept=0, linetype='dashed', color='lightgrey') +
 
@@ -212,22 +236,24 @@ reliabilityPlot <- function(
       geom_point(aes(fill=ge_min_samples_per_bin), shape=21, color='black') +
       scale_fill_manual(
          values=c(color_raw, color_filt),
-         name='Samples per bin', labels=paste0(c('<','>='),min.samples.per.bin)
+         name='Samples per bin:', labels=paste0(c('<','>='),min.samples.per.bin)
       ) +
 
       ## Filtered curve
-      geom_path(data=subset(pd, ge_min_samples_per_bin), size=0.4, color=color_filt) +
+      geom_path(data=subset(stats, ge_min_samples_per_bin), size=0.4, color=color_filt) +
 
       ## Axes
       scale_y_continuous(breaks=seq(0,1,0.2), name='Frac. target class samples in bin') +
-      scale_x_continuous(breaks=seq(0,1,0.2), name='Prob. bin midpoint') +
+      scale_x_continuous(breaks=seq(0,1,0.2), name='Probability bin midpoint') +
       coord_cartesian(xlim=c(0,1), ylim=c(0,1)) +
 
       theme_bw() +
       theme(
          panel.grid.minor.x=element_blank(),
          panel.grid.minor.y=element_blank(),
-         legend.position='bottom'
+         legend.position='bottom',
+         legend.margin=margin(0,0,0,0),
+         legend.box.margin=margin(-5, 0, 0, 0)
       )
 
    if(show.labels){
