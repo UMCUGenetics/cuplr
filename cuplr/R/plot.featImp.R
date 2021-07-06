@@ -1,3 +1,20 @@
+FEATURE_TYPE_COLORS <- c(
+   ## Muted colors
+   sigs="#8DD3C7", ## Set3:1 Teal
+   rmd="#BEBADA", ## Set3:3 Lavender
+   mut_load="#DAB986", ## Misc Brown
+   sv="#D9D9D9", ## Set3:9 Grey
+   gene="#FCCDE5", ## Set3:8 Pink
+
+   ## Bright colors
+   fusion="#FDB462", ## Set3:6 Light orange
+   chrom_arm="#80B1D3", ## Set3:5 Blue
+   gender="#FB8072", ## Set3:4 Red
+   viral_ins="#B3DE69", ## Set3:7 Lime
+   kataegis="#FFFFB3" ## Set3:2 Pale yellow
+)
+
+####################################################################################################
 #' Plot feature importance
 #'
 #' @rdname plot.featImp
