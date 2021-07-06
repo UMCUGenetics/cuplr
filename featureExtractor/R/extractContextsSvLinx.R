@@ -54,7 +54,8 @@ extractContextsSvLinx <- function(vis.sv.data=NULL){
       complex.largest_cluster <- 0
    }
    
-   ## Ongoing structural events (use relative counts) --------------------------------
+   ## Ongoing structural events --------------------------------
+   ## For ongoing structural events, use relative counts; i.e. divide by the total number of events
    sv_load <- length(unique(linx_svs$ClusterId))
    
    LINEs <- length(unique(
@@ -86,7 +87,7 @@ extractContextsSvLinx <- function(vis.sv.data=NULL){
 #' @return An integer vector
 #' @export
 #'
-countSimpleSvEvents <- function(linx.svs, bin.breaks=c(0,10^(3:7),Inf)){
+countSimpleSvEvents <- function(linx.svs, bin.breaks=c(10^(3:7),Inf)){
    
    bin_intervals <- levels(cut(0, bin.breaks, right=FALSE, include.lowest=FALSE))
    context_names <- c(
@@ -113,24 +114,32 @@ countSimpleSvEvents <- function(linx.svs, bin.breaks=c(0,10^(3:7),Inf)){
    
    df <- df[
       df$ClusterId %in% cluster_in_same_chrom$ClusterId[ cluster_in_same_chrom$x ]
-      ,]
+   ,]
    
    NULL -> df$ChrStart -> df$ChrEnd -> df$is_same_chrom -> cluster_in_same_chrom
    
-   ## Calculate SV lengths
+   ## Flatten clusters of SVs into one row. 
    pos_min <- aggregate(df$PosStart, list(ClusterId=df$ClusterId), min)
    pos_max <- aggregate(df$PosEnd, list(ClusterId=df$ClusterId), max)
    
    df_flat <- unique( df[,c('ClusterId', 'ResolvedType')] )
    df_flat$start <- pos_min$x[ match(df_flat$ClusterId, pos_min$ClusterId) ]
    df_flat$end <- pos_max$x[ match(df_flat$ClusterId, pos_max$ClusterId) ]
+   
+   ## Calculate SV lengths
+   # ## start coords are 1-based
+   # all(df_flat$start <= df_flat$end)
+   # df_flat[df_flat$start == df_flat$end,]
    df_flat$length <- 1 + df_flat$end - df_flat$start
-   ## all(df_flat$start <= df_flat$end)
-   ## df_flat[df_flat$start == df_flat$end,]
-   ## start coords are 1-based
+   
+   ## Bin SVs by length
+   df_flat$length_bin <- cut(df_flat$length, bin.breaks, right=FALSE, include.lowest=FALSE)
+   
+   ## Remove SVs not falling into the bins specified in bin.breaks
+   df_flat <- df_flat[!is.na(df_flat$length_bin),]
+   if(nrow(df_flat)==0){ return(context_counts) }
    
    ## Make SV type/length contexts
-   df_flat$length_bin <- cut(df_flat$length, bin.breaks, right=FALSE, include.lowest=FALSE)
    df_flat$context <- paste0(df_flat$ResolvedType, '_', df_flat$length_bin)
    
    ## Make context vector
