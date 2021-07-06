@@ -246,13 +246,13 @@ extractFeaturesCuplr <- function(
    )
    if(verbose>=2){ message() }
    
-   ## --------------------------------
-   if(verbose){ message('> Kataegis') }
-   features$kataegis <- saveAndReadVector(
-      detectKataegis(df=vcf_smnv, output.type='count', verbose=verbose>=2),
-      'features/kataegis.txt'
-   )
-   if(verbose>=2){ message() }
+   # ## --------------------------------
+   # if(verbose){ message('> Kataegis') }
+   # features$kataegis <- saveAndReadVector(
+   #    detectKataegis(df=vcf_smnv, output.type='count', verbose=verbose>=2),
+   #    'features/kataegis.txt'
+   # )
+   # if(verbose>=2){ message() }
    
    ## Output ================================
    features <- lapply(features, function(i){
