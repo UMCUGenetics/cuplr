@@ -13,7 +13,8 @@ patientReport(
   top.n.features = 5,
   prob.thres.min = 0.1,
   prob.thres.rel.diff = 0.4,
-  rel.widths = c(2, 1)
+  which.plots = c("probs", "feat.values"),
+  rel.widths = c(1.4, 1)
 )
 }
 \arguments{
@@ -40,11 +41,14 @@ probability higher than this threshold}
 classes, as long as the relative difference between the 1st and 2nd classes, 2nd and 3rd classes,
 etc, are higher than this threshold. Note that `prob.thres.min` overrides this threshold}
 
-\item{rel.widths}{A numeric vector of length 2 specifying the relative widths of the probability
-plot and feature contribution plots}
+\item{which.plots}{A character vector indicating which plots to show. Can be 'probs',
+'feat.values', and/or 'feat.contribs'}
+
+\item{rel.widths}{A numeric vector of the same length as `which.plots` specifying the relative
+widths of the subplots}
 }
 \value{
-A ggplot grob
+A cowplot of ggplot objects
 }
 \description{
 The patient report shows the predicted probabilities of each cancer type on a radar
