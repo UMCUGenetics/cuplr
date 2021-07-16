@@ -1,17 +1,14 @@
 FEATURE_TYPE_COLORS <- c(
-   ## Muted colors
-   sigs="#8DD3C7", ## Set3:1 Teal
    rmd="#BEBADA", ## Set3:3 Lavender
+   sigs="#8DD3C7", ## Set3:1 Teal
    mut_load="#DAB986", ## Misc Brown
-   sv="#D9D9D9", ## Set3:9 Grey
    gene="#FCCDE5", ## Set3:8 Pink
-
-   ## Bright colors
-   fusion="#FDB462", ## Set3:6 Light orange
    chrom_arm="#80B1D3", ## Set3:5 Blue
    gender="#FB8072", ## Set3:4 Red
-   viral_ins="#B3DE69", ## Set3:7 Lime
-   kataegis="#FFFFB3" ## Set3:2 Pale yellow
+   sv="#FFFFB3", ## Set3:2 Pale yellow
+   fusion="#FDB462", ## Set3:6 Light orange
+   viral_ins="#B3DE69" ## Set3:7 Lime
+   #kataegis="#FFFFB3" ## Set3:2 Pale yellow
 )
 
 ####################################################################################################
@@ -142,6 +139,9 @@ topFeatures <- function(
       color_pal <- feature.type.colors
    }
 
+   ## Remove non-existing feature types
+   color_pal <- color_pal[names(color_pal) %in% df$feature_type]
+
    ## Plot --------------------------------
    main <- function(pd){
       #pd=df
@@ -155,7 +155,7 @@ topFeatures <- function(
          geom_bar(aes(fill=feature_type), stat='identity', width=1, size=0.25, color='grey25') +
          scale_fill_manual(values=color_pal, limits=names(color_pal)) +
          geom_text(aes(label=label, y=label_ypos), angle=90, hjust=0, size=2.5, color='black') +
-         labs(y='Feature importance', x='Rank', fill='Feature type') +
+         labs(y='Feature importance (mean decrease in accuracy)', x='Rank', fill='Feature type') +
          theme_bw() +
          theme(
             panel.grid.minor=element_blank()
@@ -224,7 +224,7 @@ maxImpPerFeatureType <- function(m, infer.feature.type.func=NULL){
    )
    max_imps <- do.call(cbind, max_imps)
    rownames(max_imps) <- rownames(m)
-   max_imps <- max_imps[,order(colMedians(max_imps), decreasing=T)]
+   max_imps <- max_imps[,order(matrixStats::colMedians(max_imps), decreasing=T)]
 
    ## Plot --------------------------------
    df <- reshape2::melt(max_imps)
@@ -236,7 +236,10 @@ maxImpPerFeatureType <- function(m, infer.feature.type.func=NULL){
    ggplot(df, aes(x=x_index, y=class)) +
       geom_tile(aes(fill=max_imp), color='black', size=0.3) +
       geom_text(aes(label=round(max_imp,2)), size=2.7) +
-      scale_fill_distiller(name='Max importance per feature type', palette='Spectral') +
+      scale_fill_distiller(
+         name='Max importance per feature type\n(mean decrease in accuracy)', palette='Spectral',
+         guide=guide_colorbar(frame.colour='black', ticks.colour='black', title.vjust=1, title.position='right')
+      ) +
 
       scale_x_continuous(
          name='Feature type', expand=c(0,0),
@@ -248,6 +251,8 @@ maxImpPerFeatureType <- function(m, infer.feature.type.func=NULL){
       theme(
          panel.grid=element_blank(),
          axis.title.x.top=element_blank(),
+         axis.text.x.top=element_text(angle=45, hjust=0),
+         axis.text.x.bottom=element_text(angle=45, hjust=1),
          legend.position='bottom'
       )
 }
