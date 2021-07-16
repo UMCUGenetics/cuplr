@@ -45,10 +45,7 @@ patientReport <- function(
    if(F){
       ##
       sample.name='XXXXXXXX' ## 2 top classes
-      sample.name='DO51138'
-      sample.name='DO52732'
-      sample.name='XXXXXXXX'
-      sample.name='XXXXXXXX'
+      sample.name='DO35949'
 
       probs=pred_reports$holdout$prob_scaled
       feat.contrib=pred_reports$holdout$feat_contrib
@@ -369,10 +366,10 @@ patientReport <- function(
 
    ## Subset dataframes for each plot component --------------------------------
    ## Dummy data frame to initialize ggplot
-   pd_featval.dummy <- subset(
+   pd_featval.init <- subset(
       pd_featval,
       value_type=='min_all',
-      select=c(feature_tag, feature, binary_rf,value.scaled)
+      select=c(feature_tag, feature, binary_rf, value.scaled, is_wide_range)
    )
 
    featUnits <- function(feature.name){
@@ -381,10 +378,10 @@ patientReport <- function(
       ## Occurrence: default
       feature_units <- rep('Occurrence',length(feature.name))
 
-      feature_units[grepl('^rmd[.]',feature.name)] <- 'Contribution'
+      feature_units[grepl('^rmd[.]',feature.name)] <- 'Prop. of SBSs'
       feature_units[grepl('^mut_load[.]',feature.name)] <- '# of mutations'
       feature_units[grepl('^chrom_arm[.]',feature.name)] <- 'CN diff vs genome CN'
-      feature_units[feature_units==gender.feature.name] <- 'Prop. male'
+      feature_units[feature.name==gender.feature.name] <- 'Prop. female'
 
       ##
       feature_units[grepl('^sigs[.]SBS',feature.name)] <- 'Prop. of SBSs'
@@ -394,7 +391,7 @@ patientReport <- function(
       ##
       feature_units[
          grepl('^sv[.]LINEs$',feature.name) |
-            grepl('^sv[.](DEL|DUP)_',feature.name)
+         grepl('^sv[.](DEL|DUP)_',feature.name)
       ] <- 'Prop. of SVs'
 
       feature_units[
@@ -405,8 +402,12 @@ patientReport <- function(
 
       structure(feature_units, names=feature.name)
    }
-   pd_featval.dummy$value.units <- featUnits(pd_featval.dummy$feature)
-   pd_featval.dummy$x_pos <- as.integer(pd_featval.dummy$feature_tag)
+   pd_featval.init$x_pos <- as.integer(pd_featval.init$feature_tag)
+
+   pd_featval.init$value.units <- featUnits(pd_featval.init$feature)
+   pd_featval.init <- within(pd_featval.init, {
+      value.units[is_wide_range] <- paste0(value.units[is_wide_range],' (log scale)')
+   })
 
    ## Segment between case and ctrl averages
    pd_featval.direction <- reshape2::dcast(
@@ -425,19 +426,19 @@ patientReport <- function(
    pd_featval.range$hjust[pd_featval.range$value_type=='max_all'] <- 1
 
    ## Main values
-   pd_featval.main <- subset(pd_featval, value_type %in% c('sample_value','avg_ctrl'))
-   pd_featval.main$value_type <- factor(pd_featval.main$value_type, c('sample_value','avg_ctrl'))
+   sel_value_types <- c('sample_value','avg_case','avg_ctrl')
+   pd_featval.main <- subset(pd_featval, value_type %in% sel_value_types)
+   pd_featval.main$value_type <- factor(pd_featval.main$value_type, sel_value_types)
 
    ## Plot --------------------------------
-   # color.min_max_segment <- 'black'
-   # color.min_max_text <- 'black'
-   color.avg_ctrl <- 'steelblue'
-   color.sample_value <- 'indianred'
+   color.avg_ctrl <- 'grey50'
+   color.avg_case <- 'midnightblue'
+   color.sample_value <- 'red2'
 
    p_featval <-
       ggplot(
          #subset(pd_featval, value_type %in% c('avg_ctrl','sample_value','min_all','max_all')),
-         pd_featval.dummy,
+         pd_featval.init,
          aes(x=feature_tag, y=value.scaled)
       ) +
 
@@ -459,7 +460,7 @@ patientReport <- function(
          mapping=aes(label=value_label, hjust=hjust), nudge_x=-0.2, size=2.7
       ) +
       geom_text( ## Unit label
-         data=pd_featval.dummy,
+         data=pd_featval.init,
          mapping=aes(label=value.units), y=0.5, nudge_x=-0.2, size=2.7
       ) +
 
@@ -483,8 +484,8 @@ patientReport <- function(
          alpha=0
       ) +
       scale_color_manual(
-         values=c(sample_value=color.sample_value, avg_ctrl=color.avg_ctrl),
-         labels=c(sample_value='Value in sample',avg_ctrl='Avg. value in other cancer types')
+         values=c(color.sample_value, color.avg_case, color.avg_ctrl),
+         labels=c('Value in sample','Avg. in target cancer type','Avg. in other cancer types')
       ) +
       guides(color=guide_legend(override.aes=list(alpha=1, shape=15, size=5))) +
 
