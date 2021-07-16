@@ -133,6 +133,9 @@ predict.logReg <- function(object, newdata, scale01=T){
 #' each `actual` class. If 'plot', returns a ggplot object. If 'plotdata', returns a list with the
 #' raw plot data
 #' @param method Type of regression to perform. Can be 'isotonic' or 'logistic'.
+#' @param prob.prescale Scale probs from 0 to 1 for each sample before fitting or applying the
+#' calibration curves
+#' @param facet.ncol Number of facet columns when `output`=='plot'
 #' @param cal.curves The output from `probCalCurves(..., output='curve')`
 #'
 #' @description `probCalCurves()` generates calibration curves to map raw classifier
@@ -147,7 +150,8 @@ predict.logReg <- function(object, newdata, scale01=T){
 #'
 probCalCurves <- function(
    actual=NULL, probs=NULL, report=NULL,
-   output=c('curve','plot','plotdata'), method=c('isotonic','logistic')
+   output=c('curve','plot','plotdata'), method=c('isotonic','logistic'), prob.prescale=T,
+   facet.ncol=NULL
 ){
    # if(F){
    #    report=pred_reports$CV
@@ -163,6 +167,12 @@ probCalCurves <- function(
 
    output <- match.arg(output, c('curve','plot','plotdata'))
    method <- match.arg(method, c('isotonic','logistic'))
+
+   if(prob.prescale){
+      ## Adjusted probs to sum to 1
+      ## In theory not necessary but leads to better calibrated prob performance
+      probs <- probs / rowSums(probs)
+   }
 
    ## Main --------------------------------
    uniq_classes <- colnames(probs)
@@ -220,7 +230,7 @@ probCalCurves <- function(
 
    ggplot(curve_coords, aes(x=x, y=y)) +
 
-      facet_wrap(class~.) +
+      facet_wrap(class~., ncol=facet.ncol) +
 
       geom_abline(slope=1, intercept=0, linetype='dashed', color='grey') +
 
@@ -241,7 +251,7 @@ probCalCurves <- function(
 #' @rdname probCal
 #' @export
 #'
-probCal <- function(probs, cal.curves){
+probCal <- function(probs, cal.curves, prob.prescale=T){
    # if(F){
    #    probs=pred_reports$CV$prob
    #    cal.curves=cal_curves
@@ -253,6 +263,10 @@ probCal <- function(probs, cal.curves){
    }
 
    ## Main --------------------------------
+   if(prob.prescale){
+      probs <- probs / rowSums(probs)
+   }
+
    probs_scaled <- lapply(colnames(probs), function(i){
       #i='HeadAndNeck_Other'
       predict(cal.curves[cal.curves$class==i,], probs[,i])
