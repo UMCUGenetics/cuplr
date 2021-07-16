@@ -104,13 +104,15 @@ predict.randomForestEnsemble <- function(
    probs_adjusted[samples_female, classes.male] <- 0
    probs_adjusted[samples_male, classes.female] <- 0
 
-   ## Adjusted probs to sum to 1
-   probs_adjusted <- probs_adjusted / rowSums(probs_adjusted)
+   # ## Adjusted probs to sum to 1
+   # ## In theory not necessary but leads to better calibrated prob performance
+   # probs_adjusted <- probs_adjusted / rowSums(probs_adjusted)
 
    if(is.null(prob.cal.curves)){
       probs <- probs_adjusted
       prob_scaled <- NULL
    } else {
+      if(verbose){ message('Calibrating probabilities...') }
       class(prob.cal.curves) <- c('isoReg',class(prob.cal.curves))
       prob_scaled <- probCal(probs=probs_adjusted, cal.curves=prob.cal.curves)
       probs <- prob_scaled
