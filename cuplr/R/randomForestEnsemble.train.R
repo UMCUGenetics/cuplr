@@ -582,6 +582,8 @@ trainRandomForestEnsemble <- function(
 
             fit <- NNLM::nnlm(m1, m2)
             fit <- as.data.frame(t(fit$coefficients))
+            fit <- fit / rowSums(fit)
+            fit[is.na(fit)] <- 0
             colnames(fit) <- paste0('rmd.', colnames(fit))
 
             cbind(

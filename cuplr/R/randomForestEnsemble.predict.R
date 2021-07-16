@@ -71,6 +71,8 @@ predict.randomForestEnsemble <- function(
             mut.context.counts=newdata[,rownames(object$rmd_sig_profiles)], ## Select the columns corresponding to RMD bins
             signature.profiles=object$rmd_sig_profiles
          )
+         fit <- fit / rowSums(fit)
+         fit[is.na(fit)] <- 0
          colnames(fit) <- paste0('rmd.',colnames(fit))
          cbind(
             fit,
