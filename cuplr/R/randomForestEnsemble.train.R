@@ -201,27 +201,30 @@ trainRandomForest <- function(
    model.tmp.path=NULL,
    seed=NULL, msg.prefix=NULL, verbose=1
 ){
-   if(F){
-      #train=folds[[1]]$train
-      #test=folds[[1]]$test
-      colname.response='response'
+   # if(F){
+   #    #train=folds[[1]]$train
+   #    #test=folds[[1]]$test
+   #    colname.response='response'
+   #
+   #    ## univariate feature slection
+   #    do.feat.sel=T; feat.sel.alternative=NULL;
+   #    feat.sel.max.pvalue=0.01;
+   #    feat.sel.min.cliff.delta=0.1;
+   #    feat.sel.min.cramer.v=0.1;
+   #    feat.sel.top.n.features=300;
+   #    feat.sel.whitelist=NULL;
+   #
+   #    ## class balancing
+   #    balance.classes=c('none','resample','class_weights'); k.inner=5;
+   #    n.resamples.true=4; n.resamples.false=4; midpoint.type='geometric';
+   #    min.size.diff=NULL; max.upsample.ratio=10;
+   #
+   #    ntree=500; get.local.increments=T;
+   #    seed=NULL; msg.prefix=NULL; verbose=3
+   # }
 
-      ## univariate feature slection
-      do.feat.sel=T; feat.sel.alternative=NULL;
-      feat.sel.max.pvalue=0.01;
-      feat.sel.min.cliff.delta=0.1;
-      feat.sel.min.cramer.v=0.1;
-      feat.sel.top.n.features=300;
-      feat.sel.whitelist=NULL;
-
-      ## class balancing
-      balance.classes=c('none','resample','class_weights'); k.inner=5;
-      n.resamples.true=4; n.resamples.false=4; midpoint.type='geometric';
-      min.size.diff=NULL; max.upsample.ratio=10;
-
-      ntree=500; get.local.increments=T;
-      seed=NULL; msg.prefix=NULL; verbose=3
-   }
+   ## Init --------------------------------------------------------
+   require(randomForest)
 
    if(!is.null(seed)){ set.seed(seed) }
 
@@ -515,6 +518,8 @@ trainRandomForestEnsemble <- function(
 
 
    ## Init --------------------------------------------------------
+   require(randomForest)
+
    if(!is.null(seed)){ set.seed(seed) }
 
    msg_prefix <- if(!is.null(msg.prefix)){ msg.prefix } else { '' }
