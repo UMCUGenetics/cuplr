@@ -9,9 +9,8 @@ License: GPLv3
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.1
-Depends:
-	randomForest
 Imports:
+	randomForest,
 	mutSigExtractor,
 	rfFC,
 	reshape2
@@ -22,6 +21,7 @@ Suggests:
 	parallel,
 	doParallel,
 	ggplot2,
+	ggrepel,
 	gridExtra,
 	cowplot,
 	RColorBrewer
