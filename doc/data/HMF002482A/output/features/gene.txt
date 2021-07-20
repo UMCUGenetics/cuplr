@@ -33,7 +33,7 @@ AMER1.monoall	FALSE
 APC.amp	FALSE
 APC.deep_del	FALSE
 APC.biall	FALSE
-APC.monoall	TRUE
+APC.monoall	FALSE
 AR.amp	FALSE
 AR.deep_del	FALSE
 AR.biall	FALSE
@@ -342,10 +342,6 @@ JAK2.amp	FALSE
 JAK2.deep_del	FALSE
 JAK2.biall	FALSE
 JAK2.monoall	FALSE
-JMJD4.amp	FALSE
-JMJD4.deep_del	FALSE
-JMJD4.biall	FALSE
-JMJD4.monoall	FALSE
 KDM5C.amp	FALSE
 KDM5C.deep_del	FALSE
 KDM5C.biall	FALSE
@@ -366,10 +362,6 @@ KIT.amp	FALSE
 KIT.deep_del	FALSE
 KIT.biall	FALSE
 KIT.monoall	FALSE
-KLF5.amp	FALSE
-KLF5.deep_del	FALSE
-KLF5.biall	FALSE
-KLF5.monoall	FALSE
 KMT2D.amp	FALSE
 KMT2D.deep_del	FALSE
 KMT2D.biall	FALSE
@@ -377,7 +369,7 @@ KMT2D.monoall	FALSE
 KRAS.amp	FALSE
 KRAS.deep_del	FALSE
 KRAS.biall	FALSE
-KRAS.monoall	FALSE
+KRAS.monoall	TRUE
 LATS2.amp	FALSE
 LATS2.deep_del	FALSE
 LATS2.biall	FALSE
@@ -534,6 +526,10 @@ PPP2R1A.amp	FALSE
 PPP2R1A.deep_del	FALSE
 PPP2R1A.biall	FALSE
 PPP2R1A.monoall	FALSE
+PPP2R2A.amp	FALSE
+PPP2R2A.deep_del	FALSE
+PPP2R2A.biall	FALSE
+PPP2R2A.monoall	FALSE
 PPP6C.amp	FALSE
 PPP6C.deep_del	FALSE
 PPP6C.biall	FALSE
@@ -586,6 +582,10 @@ RAF1.amp	FALSE
 RAF1.deep_del	FALSE
 RAF1.biall	FALSE
 RAF1.monoall	FALSE
+RASA1.amp	FALSE
+RASA1.deep_del	FALSE
+RASA1.biall	FALSE
+RASA1.monoall	FALSE
 RB1.amp	FALSE
 RB1.deep_del	FALSE
 RB1.biall	FALSE
@@ -651,7 +651,7 @@ SMAD3.deep_del	FALSE
 SMAD3.biall	FALSE
 SMAD3.monoall	FALSE
 SMAD4.amp	FALSE
-SMAD4.deep_del	FALSE
+SMAD4.deep_del	TRUE
 SMAD4.biall	FALSE
 SMAD4.monoall	FALSE
 SMARCA4.amp	FALSE
@@ -666,10 +666,6 @@ SMO.amp	FALSE
 SMO.deep_del	FALSE
 SMO.biall	FALSE
 SMO.monoall	FALSE
-SMTNL2.amp	FALSE
-SMTNL2.deep_del	FALSE
-SMTNL2.biall	FALSE
-SMTNL2.monoall	FALSE
 SOCS1.amp	FALSE
 SOCS1.deep_del	FALSE
 SOCS1.biall	FALSE
@@ -700,7 +696,7 @@ STAG2.biall	FALSE
 STAG2.monoall	FALSE
 STK11.amp	FALSE
 STK11.deep_del	FALSE
-STK11.biall	TRUE
+STK11.biall	FALSE
 STK11.monoall	FALSE
 STS.amp	FALSE
 STS.deep_del	FALSE
@@ -742,6 +738,10 @@ TNFRSF14.amp	FALSE
 TNFRSF14.deep_del	FALSE
 TNFRSF14.biall	FALSE
 TNFRSF14.monoall	FALSE
+TOP1.amp	FALSE
+TOP1.deep_del	FALSE
+TOP1.biall	FALSE
+TOP1.monoall	FALSE
 TOP2A.amp	FALSE
 TOP2A.deep_del	FALSE
 TOP2A.biall	FALSE

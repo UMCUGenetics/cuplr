@@ -1,3 +1,3 @@
 chromosome	chromosomeBand	gene	driver	category	likelihoodMethod	driverLikelihood	NA	missense	nonsense	splice	inframe	frameshift	biallelic	minCopyNumber	maxCopyNumber
-19	p13.3	STK11	MUTATION	TSG	BIALLELIC	1.0000	0	0	0	0	0	1	true	1.9801	1.9801
-5	q22.2	APC	MUTATION	TSG	DNDS	0.7247	0	1	0	0	0	0	false	3.0563	3.0563
+18	q21.2	SMAD4	DEL	TSG	DEL	1.0000	0	0	0	0	0	0	true	0.0193	0.0193
+12	p12.1	KRAS	MUTATION	ONCO	HOTSPOT	1.0000	0	1	0	0	0	0	false	3.0389	3.0389

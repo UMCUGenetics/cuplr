@@ -1,3 +1,0 @@
-snv	3489
-indel	310
-dbs	11
