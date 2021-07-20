@@ -33,6 +33,7 @@ FEATURE_TYPE_COLORS <- c(
 #' @param facet.nrow Number of facet rows
 #' @param axis.x.breaks A numeric vector indicating the x-axis breaks
 #' @param hide.legend Hide legend?
+#' @param drop.legend.levels Remove legend keys for feature types that don't exist in the plot?
 #' @param as.list If FALSE (default), a faceted ggplot is returned (one facet for each class). If
 #' TRUE, each class is plotted as separate ggplot and a list of these is returned
 #'
@@ -44,7 +45,7 @@ topFeatures <- function(
    feature.type.colors=NULL,
    infer.feature.type=F, infer.feature.type.func=NULL,
    facet.ncol=NULL, facet.nrow=NULL,
-   axis.x.breaks=NULL, hide.legend=F,
+   axis.x.breaks=NULL, hide.legend=F, drop.legend.levels=T,
    as.list=F
 ){
    if(F){
@@ -140,7 +141,9 @@ topFeatures <- function(
    }
 
    ## Remove non-existing feature types
-   color_pal <- color_pal[names(color_pal) %in% df$feature_type]
+   if(drop.legend.levels){
+      color_pal <- color_pal[names(color_pal) %in% df$feature_type]
+   }
 
    ## Plot --------------------------------
    main <- function(pd){
@@ -153,7 +156,7 @@ topFeatures <- function(
 
       p <- p +
          geom_bar(aes(fill=feature_type), stat='identity', width=1, size=0.25, color='grey25') +
-         scale_fill_manual(values=color_pal, limits=names(color_pal)) +
+         scale_fill_manual(values=color_pal, limits=names(color_pal), drop=drop.legend.levels) +
          geom_text(aes(label=label, y=label_ypos), angle=90, hjust=0, size=2.5, color='black') +
          labs(y='Feature importance (mean decrease in accuracy)', x='Rank', fill='Feature type') +
          theme_bw() +
