@@ -98,18 +98,24 @@ heatmapFromMatrix <- function(
 ####################################################################################################
 #' Plot heatmap of classifier performance
 #'
+#' @rdname confusionHeatmap
+#'
 #' @description Creates two plots. Upper plot shows performance metrics per cancer type and lower
 #' plot shows the number or % of samples correctly/incorrectly classified
 #'
 #' @param actual A factor vector of the actual classes
 #' @param probs A matrix where rows are samples, cols are binary random forest names, and cells are
 #' the prediction probabilities from each random forest
-#' @param predicted A factor vector of the predicted classes
+#' @param predicted A factor vector of the predicted classes. Alternative input to probs.
+#' @param top.n (Only for `confusionHeatmap2()`) An integer or integer vector specifying the top-N
+#' accuracy to show
+#' @param output Can be 'plot' (a cowplot object of all the plots) or 'plotlist' (a list of ggplot
+#' objects)
 #' @param which.plots Which plots to show? A character vector with one or more of the following
 #' values: 'perf','counts','confusion'.
 #' @param rel.heights A numeric vector of length 3. Relative heights of the plots
 #' @param sort.classes Sort cancer type by number of % sample of correctly classified
-#' @param rel.values In lower plot, show absolute number or %
+#' @param rel.values In the confusion matrix plot, show absolute number or %
 #' @param predicted.classes.only Only show classes that are present in predicted
 #' @param metrics A character vector indicating which performance metrics to show in the upper plot.
 #' See documentation for mltoolkit to see which metrics are available
@@ -120,7 +126,7 @@ heatmapFromMatrix <- function(
 #' @export
 #'
 confusionHeatmap <- function(
-   actual=NULL, probs=NULL, predicted=NULL,
+   actual=NULL, probs=NULL, predicted=NULL, output='plots',
    which.plots=c('counts','perf','confusion'),
    rel.heights=c(counts=0.3, perf=0.1, confusion=1),
 
@@ -128,7 +134,7 @@ confusionHeatmap <- function(
    sort.classes=F, rel.values=T, predicted.classes.only=F,
 
    ## Performance metrics
-   metrics=c('precision','f1'), show.weighted.mean=T,
+   metrics=c('recall','precision'), show.weighted.mean=T,
 
    ## Plotting args
    plot.title=NULL, label.size=2.5
@@ -142,7 +148,7 @@ confusionHeatmap <- function(
       which.plots=c('counts','perf','confusion')
       rel.heights=c(counts=0.3, perf=0.1, confusion=1)
 
-      metrics=c('precision','f1','true positive rate')
+      metrics=c('recall','precision')
       show.weighted.mean=T
       plot.title=NULL; label.size=2.5
    }
@@ -188,11 +194,15 @@ confusionHeatmap <- function(
    actual <- factor(actual, classes)
    predicted <- factor(predicted, classes)
 
+   ##
+   output <- match.arg(output, c('plot','plotlist'))
+
    ## Initialize output
    plots <- list()
 
    ## Large confusion matrix ----------------------------
    tab <- table(predicted, actual)
+   #diag(tab) <- 0
 
    overall_acc <- sum( as.character(predicted)==as.character(actual) )
    if(rel.values){
@@ -214,8 +224,8 @@ confusionHeatmap <- function(
    tab <- tab[predicted_classes,]
 
    ## Add dummy row and column for overall performance
-   tab <- cbind(OVERALL=NA,tab)
-   tab <- rbind(OVERALL=NA,tab)
+   tab <- cbind(All=NA,tab)
+   tab <- rbind(All=NA,tab)
    tab[1,1] <- overall_acc
 
    if('confusion' %in% which.plots){
@@ -232,43 +242,46 @@ confusionHeatmap <- function(
    }
 
    ## Correct/incorrect samples per class ----------------------------
-   ##
-   class_counts <- table(actual)
-   class_counts <- class_counts[class_order]
-   class_counts <- c(Total=length(actual), class_counts)
-
-   correct_counts <- unlist(lapply(split(data.frame(actual, predicted), actual), function(i){
-      sum(i$actual==i$predicted)
-   }))
-   correct_counts <- correct_counts[class_order]
-   correct_counts <- c(Total=sum(actual==predicted),correct_counts)
-
-   counts <- data.frame(Total=class_counts, Correct=correct_counts)
-   counts$Incorrect <- counts$Total - counts$Correct
-
-   ##
    if('counts' %in% which.plots){
+      ##
+      class_counts <- table(actual)
+      class_counts <- class_counts[class_order]
+      class_counts <- c(total=length(actual), class_counts)
+
+      correct_counts <- unlist(lapply(split(data.frame(actual, predicted), actual), function(i){
+         sum(i$actual==i$predicted)
+      }))
+      correct_counts <- correct_counts[class_order]
+      correct_counts <- c(total=sum(actual==predicted),correct_counts)
+
+      counts <- data.frame(total=class_counts, correct=correct_counts)
+      counts$incorrect <- counts$total - counts$correct
+
+      ##
       pd_counts <- structure(
          reshape2::melt(as.matrix(counts)),
          names=c('class','measure','value')
       )
 
+      ## Calculate fraction correct
       pd_counts$class <- as.character(pd_counts$class)
-      pd_counts$Total <- counts[pd_counts$class,'Total']
-      pd_counts$frac <- pd_counts$value / pd_counts$Total
-      pd_counts$frac[pd_counts$measure=='Total'] <- NA
-      pd_counts$frac[pd_counts$measure=='Incorrect'] <- -pd_counts$frac[pd_counts$measure=='Incorrect']
+      pd_counts$total <- counts[pd_counts$class,'total']
+      pd_counts$frac <- pd_counts$value / pd_counts$total
 
-      pd_counts$class[pd_counts$class=='Total'] <- 'OVERALL'
+      pd_counts$fill_value <- pd_counts$frac
+      pd_counts$fill_value[pd_counts$measure=='total'] <- NA
+      pd_counts$fill_value[pd_counts$measure=='incorrect'] <- -pd_counts$fill_value[pd_counts$measure=='incorrect']
+
+      pd_counts$class[pd_counts$class=='total'] <- 'All'
       pd_counts$class <- factor(pd_counts$class, unique(pd_counts$class))
 
       plots$counts <- ggplot(pd_counts, aes(y=measure, x=class)) +
-         geom_tile(aes(fill=frac), color='grey') +
+         geom_tile(aes(fill=fill_value), color='grey') +
          geom_text(aes(label=value), size=label.size) +
          geom_hline(yintercept=1.5, size=0.5) +
          scale_fill_distiller(palette='RdYlGn', na.value='white', limits=c(-1,1), direction=1, guide=F) +
          scale_x_discrete(expand=c(0,0), position='top') +
-         scale_y_discrete(expand=c(0,0)) +
+         scale_y_discrete(expand=c(0,0), labels=tools::toTitleCase) +
          theme_bw() +
          theme(
             panel.grid=element_blank(),
@@ -298,7 +311,7 @@ confusionHeatmap <- function(
       ## Summary stats
       if(show.weighted.mean){
          perf_summary <- rbind(
-            OVERALL=apply(perf_ss,2,function(i){
+            All=apply(perf_ss,2,function(i){
                weights <- table(actual)/length(actual)
                weights <- weights[names(i)]
                weighted.mean(i, weights)
@@ -306,7 +319,7 @@ confusionHeatmap <- function(
          )
       } else {
          perf_summary <- rbind(
-            OVERALL = apply(perf_ss,2,mean)
+            All = apply(perf_ss,2,mean)
          )
       }
       perf <- rbind(perf_summary, perf)
@@ -371,11 +384,192 @@ confusionHeatmap <- function(
          axis.ticks.x=element_line()
       )
 
+   ##
+   if(output=='plotlist'){ return(plots) }
+
+   ##
    cowplot::plot_grid(
       plotlist=plots,
       ncol=1, align='v', axis='tblr', rel_heights=rel_heights
    )
 
+}
+
+####################################################################################################
+#' @rdname confusionHeatmap
+confusionHeatmap2 <- function(
+   actual=NULL, probs=NULL, top.n=2, rel.heights=c(18,11,100), rel.values=T, plot.title=NULL
+){
+   if(F){
+      report=pred_reports$CV
+      actual=report$class_actual
+      probs=report$prob_scaled
+      rel.heights=c(100,11,18)
+      top.n=2
+      rel.values=T
+      plot.title='test'
+   }
+
+   ## Init ----------------------------
+   ## Make factor for predictions
+   predicted <- factor(
+      colnames(probs)[ max.col(probs) ],
+      colnames(probs)
+   )
+   predicted_classes <- colnames(probs)
+
+   if(!is.factor(actual)){ stop('`actual` must be a factor') }
+
+   ## Only show classes that are present in predicted
+   is_predicted_class <- actual %in% predicted_classes
+   actual <- actual[is_predicted_class]
+   predicted <- predicted[is_predicted_class]
+   rm(is_predicted_class)
+
+   ##
+   actual <- factor(actual, classes)
+   predicted <- factor(predicted, classes)
+
+   ## Large confusion matrix ----------------------------
+   cm_raw <- table(predicted, actual)
+   actual_counts <- table(actual)
+
+   ## Only keep predicted classes on prediction axis
+   cm <- cm_raw
+   cm <- cm[predicted_classes,]
+
+   ## Convert to fraction classified as which class
+   overall_acc <- sum( as.character(predicted)==as.character(actual) )
+   if(rel.values){
+      cm <- apply(cm,2,function(i){ i/sum(i) })
+      cm <- round(cm,2)
+      overall_acc <- round(overall_acc / sum(actual_counts), 2)
+   }
+
+   ## Add overall accuracy
+   cm <- cbind(All=NA,cm)
+   cm <- rbind(All=NA,cm)
+   cm[1,1] <- overall_acc
+
+   pd_cm <- reshape2::melt(cm)
+   colnames(pd_cm) <- c('predicted','actual','value')
+
+   ## top-N accuracy (aka top-N recall) ----------------------------
+   topn_acc <- topnAcc(actual=actual, probs=probs, output='values', top.n=top.n)
+   topn_acc$fill_value <- topn_acc$frac
+
+   topn_acc <- topn_acc[order(topn_acc$class_num),]
+   #topn_acc$group <- paste0('Top-',topn_acc$class_num,' recall')
+   #topn_acc$label <- round(topn_acc$frac, 2)
+
+   topn_acc$group <- paste0('Top-',topn_acc$class_num,' correct')
+
+   ##
+   constant_cols <- c('actual','fill_value','group')
+   pd_topn_acc <- (function(){
+      df1 <- topn_acc[,c(constant_cols,'frac')]
+      df1$value_type <- 'Frac.'
+      colnames(df1)[colnames(df1)=='frac'] <- 'value'
+
+      df2 <- topn_acc[,c(constant_cols,'correct')]
+      df2$value_type <- 'No.'
+      colnames(df2)[colnames(df2)=='correct'] <- 'value'
+      df2$fill_value <- NA
+
+      rbind(df1, df2)
+   })()
+   pd_topn_acc$label <- round(pd_topn_acc$value,2)
+
+   pd_topn_acc <- as.data.frame(lapply(pd_topn_acc, function(i){
+      if(is.numeric(i)){ return(i) }
+      factor(i, unique(i))
+   }))
+
+   ##
+   pd_total <- (function(){
+      df <- topn_acc[
+         topn_acc$group==unique(topn_acc$group)[1],
+         c(constant_cols,'total')
+      ]
+      df$group <- 'Total no. of samples'
+      df$fill_value <- as.numeric(NA)
+      return(df)
+   })()
+
+   ## Plotting ----------------------------
+   ##
+   require(ggplot2)
+   plotHeatmap <- function(
+      df, x='actual', y='predicted', fill='value', label='value',
+      label.fontface='plain', label.size=2.5,
+      palette='YlGnBu', palette.direction=-1, na.value='grey50', fill.limits=c(NA,NA),
+      axis.y.title=waiver(), axis.x.title=waiver(), axis.x.position='bottom'
+   ){
+      ggplot(df, aes_string(x=x, y=y, fill=fill, label=label)) +
+         geom_tile(color='grey') +
+         geom_text(size=label.size, fontface=label.fontface) +
+         scale_fill_distiller(palette=palette, direction=palette.direction, na.value=na.value, limits=fill.limits) +
+         scale_x_discrete(name=axis.x.title, expand=c(0,0), position=axis.x.position) +
+         scale_y_discrete(name=axis.y.title, expand=c(0,0), limits=rev) +
+         theme_bw() +
+         theme(
+            panel.grid=element_blank(),
+            axis.text.x.bottom=element_text(angle=90, hjust=1, vjust=0.5),
+            axis.text.x.top=element_text(angle=90, hjust=0, vjust=0.5),
+            legend.position='none'
+         )
+   }
+
+   ## Generate plots
+   plots <- list()
+
+   ##
+   plots$confusion <- plotHeatmap(
+      pd_cm, x='actual', y='predicted',fill='value',label='value', axis.x.position='top',
+      axis.y.title='Predicted class', axis.x.title='Actual class'
+   )
+
+   if(!is.null(plot.title)){
+      plots$confusion <- plots$confusion + ggtitle(plot.title)
+   }
+
+   ##
+   fill_limits <- with(
+      topn_acc,
+      c(min(frac), max(frac))
+   )
+   plots$recall <- plotHeatmap(
+      pd_topn_acc, x='actual',y='value_type',fill='fill_value',label='label', axis.x.position='top',
+      fill.limits=fill_limits, palette='RdYlGn', palette.direction=1, na.value='white'
+   ) +
+      facet_wrap(~group, ncol=1, strip.position='left') +
+      theme(
+         strip.placement='outside',
+         strip.text.y.left=element_text(angle=0),
+         strip.background.y=element_rect(color=NA),
+         axis.title.y=element_blank(),
+         axis.title.x=element_blank(),
+         axis.text.x.top=element_blank(),
+         axis.ticks.x.top=element_blank(),
+         plot.margin=unit(c(0,0,2,0),'pt')
+      )
+
+   ##
+   plots$total <- plotHeatmap(
+      pd_total, x='actual',y='group',fill='fill_value',label='total', axis.x.position='bottom',
+      na.value='white', label.fontface='bold'
+   ) +
+      theme(
+         axis.title.y=element_blank(),
+         axis.title.x=element_blank(),
+         #plot.margin=unit(c(0,0,0,0),'pt')
+      )
+
+   ##
+   cowplot::plot_grid(
+      plotlist=plots, ncol=1, align='v', axis='tblr',
+      rel_heights=rel.heights
+   )
 }
 
 ####################################################################################################
