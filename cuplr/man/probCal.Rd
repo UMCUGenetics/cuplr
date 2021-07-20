@@ -10,10 +10,12 @@ probCalCurves(
   probs = NULL,
   report = NULL,
   output = c("curve", "plot", "plotdata"),
-  method = c("isotonic", "logistic")
+  method = c("isotonic", "logistic"),
+  prob.prescale = T,
+  facet.ncol = NULL
 )
 
-probCal(probs, cal.curves)
+probCal(probs, cal.curves, prob.prescale = T)
 }
 \arguments{
 \item{actual}{A vector of the actual classes}
@@ -28,6 +30,11 @@ each `actual` class. If 'plot', returns a ggplot object. If 'plotdata', returns 
 raw plot data}
 
 \item{method}{Type of regression to perform. Can be 'isotonic' or 'logistic'.}
+
+\item{prob.prescale}{Scale probs from 0 to 1 for each sample before fitting or applying the
+calibration curves}
+
+\item{facet.ncol}{Number of facet columns when `output`=='plot'}
 
 \item{cal.curves}{The output from `probCalCurves(..., output='curve')`}
 }
