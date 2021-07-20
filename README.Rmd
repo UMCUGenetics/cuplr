@@ -18,8 +18,7 @@ Feature type  | Source | Description
 ------------- | ------ | --------
 sigs          | VCF    | Relative contribution of SBS, DBS and indel [mutational signatures](https://cancer.sanger.ac.uk/signatures/)
 mut_load      | VCF    | Total number of SBSs, DBSs and indels
-rmd           | VCF    | Signatures extracted (by NMF) on 1Mb [regional mutational density (RMD)](https://www.nature.com/articles/nature14221) bins
-kataegis      | VCF    | Counts of kataegis foci
+rmd           | VCF    | [Regional mutational density (RMD)](https://www.nature.com/articles/nature14221) profiles as extracted by NMF
 chrom_arm     | PURPLE | Chromosome arm gains/losses compared to the overall genome ploidy
 gender        | PURPLE | Gender as derived from copy number data
 gene          | LINX   | Deep deletions, amplifications, biallelic losses and mutations of cancer associated genes
@@ -28,10 +27,10 @@ fusion        | LINX   | Presence of gene fusions
 viral_ins     | LINX   | Presence of viral sequence insertions
 
 
-CUPLR was trained with tumor samples from ~6100 patients from the Hartwig Medical Foundation (HMF)
+CUPLR was trained with tumor samples from 6139 patients from the Hartwig Medical Foundation (HMF)
 and the Pan-Cancer Analysis of Whole Genomes (PCAWG) consortium. The model can predict the primary 
-tumor location with an accuracy of ~0.89. Performance was assessed by 15-fold cross-validation as 
-well as on a held out set of 680 samples.
+tumor location with an accuracy of 0.91 based on cross-validation and 0.88 based on predictions on
+a held out test set.
 
 For details on performance, the top features used by CUPLR, and other details, please see the plots 
 at `doc/perf/`.
@@ -96,16 +95,16 @@ Make sure that this vector has the names shown below. The below code will return
 with the values for each feature.
 
 ```{r, message=FALSE, warning=FALSE}
-sample_dir <- paste0(cuplr_dir,'/doc/data/DO48977/')
+sample_dir <- paste0(cuplr_dir,'/doc/data/DO36021/')
 features <- extractFeaturesCuplr(
    input.paths=c(
-      purple.smnv=        paste0(sample_dir,'/DO48977T.purple.somatic.vcf.gz'),   ## *.purple.somatic.vcf.gz
-      purple.cnv=         paste0(sample_dir,'/DO48977T.purple.cnv.somatic.tsv'),  ## *.purple.cnv.somatic.tsv
-      purple.purity=      paste0(sample_dir,'/DO48977T.purple.purity.tsv'),       ## *.purple.purity.tsv
-      linx.drivers=       paste0(sample_dir,'/DO48977T.linx.driver.catalog.tsv'), ## *.linx.driver.catalog.tsv
-      linx.fusions=       paste0(sample_dir,'/DO48977T.linx.fusion.tsv'),         ## *.linx.fusion.tsv
-      linx.viral.inserts= paste0(sample_dir,'/DO48977T.linx.viral_inserts.tsv'),  ## *.linx.viral_inserts.tsv
-      linx.vis.sv.data=   paste0(sample_dir,'/DO48977T.linx.vis_sv_data.tsv')     ## *.linx.vis_sv_data.tsv
+      purple.smnv=        paste0(sample_dir,'/DO36021T.purple.somatic.vcf.gz'),   ## *.purple.somatic.vcf.gz
+      purple.cnv=         paste0(sample_dir,'/DO36021T.purple.cnv.somatic.tsv'),  ## *.purple.cnv.somatic.tsv
+      purple.purity=      paste0(sample_dir,'/DO36021T.purple.purity.tsv'),       ## *.purple.purity.tsv
+      linx.drivers=       paste0(sample_dir,'/DO36021T.linx.driver.catalog.tsv'), ## *.linx.driver.catalog.tsv
+      linx.fusions=       paste0(sample_dir,'/DO36021T.linx.fusion.tsv'),         ## *.linx.fusion.tsv
+      linx.viral.inserts= paste0(sample_dir,'/DO36021T.linx.viral_inserts.tsv'),  ## *.linx.viral_inserts.tsv
+      linx.vis.sv.data=   paste0(sample_dir,'/DO36021T.linx.vis_sv_data.tsv')     ## *.linx.vis_sv_data.tsv
    )
 )
 features[,1:5]
@@ -223,7 +222,7 @@ most important features contributing to each of the top predicted cancer types.
 
 In the right panels, the feature value averages in patients with the respective predicted cancer
 type and patients with other cancer types are also shown to provide context to the feature values of
-the patient. For numeric features, (e.g. SNV mutational load) the average refers to the
+the patient. For numeric features, (e.g. SBS mutational load) the average refers to the
 interquartile mean. For boolean features, (e.g. presence of a gene fusion) the average refers to the
 proportion of patients with the feature, with the patient feature values of 0% and 100% indicating
 absence/presence respectively.
@@ -232,32 +231,48 @@ absence/presence respectively.
 patient_report <- patientReport(
    probs=pred_report$prob_scaled, 
    feat.contrib=pred_report$feat_contrib, 
-   sample.name='DO36021',
-   rel.widths=c(1.4, 1) ## Adjusts the relative width of the plot panels
+   sample.name='HMF002482A',
+   
+   ## Adjusts the relative width of the plot panels
+   rel.widths=c(1.4, 1, 1),
+   
+   ## Shows all 3 panels. Set to 2 to show only the first 2, or 1 to show only the first
+   level.of.detail=3 
 )
 ```
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
 if(F){
-   png(paste0(cuplr_dir,'/doc/supp/patient_report_example.png'), 1200, 900, res=150)
+   png(paste0(cuplr_dir,'/doc/supp/patient_report_example.png'), 1500, 900, res=150)
    plot(patient_report)
    dev.off()   
 }
 ```
-
 ```{r eval=FALSE}
 plot(patient_report)
 ```
-
 ![](doc/supp/patient_report_example.png)
+The above sample is a cervical cancer samples and we can see in the first panel that this sample was 
+correctly predicted as such. 
 
-Here we can see that DO36021 is a pilocytic astrocytoma cancer sample and we can see that this
-sample was correctly predicted as such. The prediction is supported by this sample having a
-KIAA1549-BRAF fusion, a well-known event in this cancer type.
+In the middle panel, we can see that the prediction is primarily supported by 
+this sample having human papillomavirus (HPV) DNA integration, as well as having the RMD profile of 
+cervical cancer.
 
-We can also see that there are two high probabilities. In cases where the probabilities are more 
-uncertain (like as shown here), more feature contribution panels corresponding to the top predicted 
-classes will be shown. This should aid in determining the cancer type, since it's possible that e.g.
-the 2nd predicted cancer type better matches with evidence from pathology.
+The third panel shows the feature values compared to the average feature values in cervical cancer
+(blue) and in other cancer types (red). The arrow indicates whether the feature value in the sample
+is higher or lower than the average in other cancer types. We can see that HPV DNA integrations 
+occur in 87.7% of cervical cancer samples, but in almost 0% of other cancer type samples. The sample
+value is 1 (100% occurrence) indicating that this feature is present in this sample. Conversely,
+the cervical cancer prediction for this sample is also supported by this sample having fewer (0%) 
+SBSs contributing to the RMD profile of head and neck cancer compared to in other cancer types 
+(almost 0%).
+
+We can also see in the first panel that there are two high probabilities. In cases where the 
+probabilities are more uncertain (like as shown here), more feature contribution panels 
+corresponding to the top predicted classes will be shown. This should aid in determining the cancer
+type, since it's possible that e.g. the 2nd predicted cancer type better matches with evidence from 
+pathology.
+
 
 
