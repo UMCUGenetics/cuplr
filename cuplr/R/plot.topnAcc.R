@@ -1,6 +1,7 @@
 #' Plot top-n accuracy
 #'
-#' @description For samples within each actual class, plot the top-n accuracy of said actual class.
+#' @description topnAcc(): For samples within each actual class, plot the top-n accuracy of said
+#' actual class. topnCorrect():
 #'
 #' @param report A list with the objects with the names: prob, class_actual
 #' @param actual A vector of the actual classes
@@ -18,25 +19,27 @@
 #' @return A ggplot object or a dataframe
 #' @export
 #'
+#' @rdname topnAcc
 topnAcc <- function(
    report=NULL, actual=NULL, probs=NULL, top.n=3, output=c('plot','values'),
    show.all.classes.stats=T, max.prob=NULL, label.direction='horizontal'
 ){
-   # if(F){
-   #    report <- pred_reports$CV
-   #
-   #    actual=report$class_actual
-   #    probs=report$prob_scaled
-   #
-   #    top.n=3
-   #    show.all.classes.stats=T
-   #    max.prob=NULL
-   #
-   #    output='plot'
-   # }
+   if(F){
+      report <- pred_reports$CV
+
+      actual=report$class_actual
+      probs=report$prob_scaled
+
+      top.n=3
+      show.all.classes.stats=T
+      max.prob=NULL
+
+      output='plot'
+   }
 
    ## Init --------------------------------
-   require(ggplot2)
+   output <- match.arg(output, c('plot','values'))
+   label.direction <- match.arg(label.direction, c('vertical','horizontal'))
 
    if(!is.null(report)){
       actual <- report$class_actual
@@ -52,10 +55,7 @@ topnAcc <- function(
       actual <- as.factor(actual)
    }
 
-   output <- match.arg(output, c('plot','values'))
-   label.direction <- match.arg(label.direction, c('vertical','horizontal'))
-
-   ## --------------------------------
+   ## Main --------------------------------
    uniq_classes <- colnames(probs)
    top_classes <- t(apply(probs,1,function(i){
       uniq_classes[order(i, decreasing=T)]
@@ -68,6 +68,10 @@ topnAcc <- function(
       } else {
          top_n <- top.n
       }
+   }
+
+   if(top.n==1){
+      return( top_classes[,1]==actual )
    }
 
    top_correct <- sweep(top_classes[,top_n],1, actual, '==')
@@ -89,8 +93,8 @@ topnAcc <- function(
    ## Additional data
    sample_indexes <- match(df$sample, rownames(probs))
    df$actual <- actual[ sample_indexes ]
-   df$max_prob <- matrixStats::rowMaxs(probs)[ sample_indexes ]
    if(!is.null(max.prob)){
+      df$max_prob <- matrixStats::rowMaxs(probs)[ sample_indexes ]
       df <- df[df$max_prob<=max.prob,]
    }
 
@@ -110,22 +114,22 @@ topnAcc <- function(
          sum
       )
    })
-   colnames(df_agg)[ncol(df_agg)] <- 'count'
+   colnames(df_agg)[ncol(df_agg)] <- 'correct'
 
-   n_samples <- with(df, {
+   total <- with(df, {
       out <- aggregate(sample, list(actual), function(x){ length(unique(x)) })
       structure(out$x, names=as.character(out[,1]))
    })
 
-   df_agg$n_samples <- as.integer( n_samples[df_agg$actual] )
-   df_agg$frac <- df_agg$count / df_agg$n_samples
+   df_agg$total <- as.integer( total[df_agg$actual] )
+   df_agg$frac <- df_agg$correct / df_agg$total
 
    if(output=='values'){ return(df_agg) }
 
    ## Plot --------------------------------
    ## Labels
-   df_agg$actual.n_samples <- with(df_agg,paste0(
-      actual,' (',n_samples,')'
+   df_agg$actual.total <- with(df_agg,paste0(
+      actual,' (',total,')'
    ))
 
    if(label.direction=='horizontal'){
@@ -133,20 +137,22 @@ topnAcc <- function(
       label_hjust <- 0.5
       label_vjust <- 0
       df_agg$label <- with(df_agg, paste0(
-         round(frac,2), '\n(',count,')'
+         round(frac,2), '\n(',correct,')'
       ))
    } else {
       label_angle <- 90
       label_hjust <- 0
       label_vjust <- 0.5
       df_agg$label <- with(df_agg, paste0(
-         round(frac,2),' (',count,')'
+         round(frac,2),' (',correct,')'
       ))
    }
 
    ## Main
+   require(ggplot2)
+
    ggplot(df_agg, aes(x=class_num, y=frac, group=1)) +
-      facet_wrap(~actual.n_samples) +
+      facet_wrap(~actual.total) +
       geom_bar(aes(fill=class_num), stat='identity', color='black', size=0.3, show.legend=F) +
       scale_fill_gradient(low='#4390BC', high='#EFF6B9') +
 
