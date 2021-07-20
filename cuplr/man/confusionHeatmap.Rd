@@ -2,21 +2,32 @@
 % Please edit documentation in R/plot.confusionHeatmap.R
 \name{confusionHeatmap}
 \alias{confusionHeatmap}
+\alias{confusionHeatmap2}
 \title{Plot heatmap of classifier performance}
 \usage{
 confusionHeatmap(
   actual = NULL,
   probs = NULL,
   predicted = NULL,
+  output = "plots",
   which.plots = c("counts", "perf", "confusion"),
   rel.heights = c(counts = 0.3, perf = 0.1, confusion = 1),
   sort.classes = F,
   rel.values = T,
   predicted.classes.only = F,
-  metrics = c("precision", "f1"),
+  metrics = c("recall", "precision"),
   show.weighted.mean = T,
   plot.title = NULL,
   label.size = 2.5
+)
+
+confusionHeatmap2(
+  actual = NULL,
+  probs = NULL,
+  top.n = 2,
+  rel.heights = c(18, 11, 100),
+  rel.values = T,
+  plot.title = NULL
 )
 }
 \arguments{
@@ -25,7 +36,10 @@ confusionHeatmap(
 \item{probs}{A matrix where rows are samples, cols are binary random forest names, and cells are
 the prediction probabilities from each random forest}
 
-\item{predicted}{A factor vector of the predicted classes}
+\item{predicted}{A factor vector of the predicted classes. Alternative input to probs.}
+
+\item{output}{Can be 'plot' (a cowplot object of all the plots) or 'plotlist' (a list of ggplot
+objects)}
 
 \item{which.plots}{Which plots to show? A character vector with one or more of the following
 values: 'perf','counts','confusion'.}
@@ -34,7 +48,7 @@ values: 'perf','counts','confusion'.}
 
 \item{sort.classes}{Sort cancer type by number of % sample of correctly classified}
 
-\item{rel.values}{In lower plot, show absolute number or %}
+\item{rel.values}{In the confusion matrix plot, show absolute number or %}
 
 \item{predicted.classes.only}{Only show classes that are present in predicted}
 
@@ -44,6 +58,9 @@ See documentation for mltoolkit to see which metrics are available}
 \item{plot.title}{Plot title}
 
 \item{label.size}{Size of the value labels}
+
+\item{top.n}{(Only for `confusionHeatmap2()`) An integer or integer vector specifying the top-N
+accuracy to show}
 }
 \value{
 A cowplot object

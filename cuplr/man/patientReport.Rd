@@ -9,12 +9,17 @@ patientReport(
   feat.contrib = NULL,
   sample.name = NULL,
   plot.title = sample.name,
-  top.n.pred.classes = 3,
+  top.n.class.probs = 10,
+  top.n.class.features = 3,
   top.n.features = 5,
   prob.thres.min = 0.1,
   prob.thres.rel.diff = 0.4,
-  which.plots = c("probs", "feat.values"),
-  rel.widths = c(1.4, 1)
+  gender.feature.name = "gender.gender",
+  prob.label.size = 3.5,
+  feature.label.size = 3.5,
+  drop.feature.type.levels = TRUE,
+  level.of.detail = 3,
+  rel.widths = c(1.3, 1, 1)
 )
 }
 \arguments{
@@ -28,7 +33,9 @@ Required when input data is provided with `report`}
 
 \item{plot.title}{Plot title}
 
-\item{top.n.pred.classes}{The number of panels to display that show the details for the top
+\item{top.n.class.probs}{The number of bars to show for the predicted class probabilities}
+
+\item{top.n.class.features}{The number of panels to display that show the details for the top
 predicted classes (including the exact probabilities, and feature contributions).}
 
 \item{top.n.features}{The number features to show in the feature contribution plots in the
@@ -41,11 +48,17 @@ probability higher than this threshold}
 classes, as long as the relative difference between the 1st and 2nd classes, 2nd and 3rd classes,
 etc, are higher than this threshold. Note that `prob.thres.min` overrides this threshold}
 
-\item{which.plots}{A character vector indicating which plots to show. Can be 'probs',
-'feat.values', and/or 'feat.contribs'}
+\item{gender.feature.name}{The name of the feature specifying the gender of each sample}
 
-\item{rel.widths}{A numeric vector of the same length as `which.plots` specifying the relative
-widths of the subplots}
+\item{prob.label.size}{A numeric value specifying the size of the probability labels}
+
+\item{feature.label.size}{A numeric value specifying the size of the feature labels}
+
+\item{level.of.detail}{An integer specifying which subplots to show. 1: Probabilities, 2:
+Feature contributions, 3: Feature values. Specifying e.g. 3 will result in plots 1 and 2 also
+being shown}
+
+\item{rel.widths}{A numeric vector specifying the relative widths of the subplots}
 }
 \value{
 A cowplot of ggplot objects

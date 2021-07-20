@@ -9,9 +9,10 @@ topnAcc(
   actual = NULL,
   probs = NULL,
   top.n = 3,
-  output = c("plot", "raw"),
+  output = c("plot", "values"),
   show.all.classes.stats = T,
-  max.prob = NULL
+  max.prob = NULL,
+  label.direction = "horizontal"
 )
 }
 \arguments{
@@ -24,16 +25,21 @@ the prediction probabilities from each random forest}
 
 \item{top.n}{Number of top classes to show stats for}
 
-\item{output}{If 'plot', returns a ggplot object, else 'raw' returns the raw data}
+\item{output}{If 'plot', returns a ggplot object, else 'values' returns a dataframe with the
+values}
 
 \item{show.all.classes.stats}{Show the panel with the stats for all samples (i.e. not split by
 actual class)}
 
 \item{max.prob}{Filter for samples <= than this probability}
+
+\item{label.direction}{Can be 'horizontal' or 'vertical'. Direction of the labels indicating the
+values for each bar.}
 }
 \value{
-A ggplot object
+A ggplot object or a dataframe
 }
 \description{
-For samples within each actual class, plot the top-n accuracy of said actual class.
+topnAcc(): For samples within each actual class, plot the top-n accuracy of said
+actual class. topnCorrect():
 }

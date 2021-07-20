@@ -15,6 +15,7 @@ topFeatures(
   facet.nrow = NULL,
   axis.x.breaks = NULL,
   hide.legend = F,
+  drop.legend.levels = T,
   as.list = F
 )
 
@@ -42,6 +43,8 @@ types}
 \item{axis.x.breaks}{A numeric vector indicating the x-axis breaks}
 
 \item{hide.legend}{Hide legend?}
+
+\item{drop.legend.levels}{Remove legend keys for feature types that don't exist in the plot?}
 
 \item{as.list}{If FALSE (default), a faceted ggplot is returned (one facet for each class). If
 TRUE, each class is plotted as separate ggplot and a list of these is returned}
