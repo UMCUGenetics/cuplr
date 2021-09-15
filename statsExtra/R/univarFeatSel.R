@@ -251,7 +251,7 @@ univarFeatSel.default <- function(
    ## Return feature names or filtered feature matrix
    keep_features <- names(is_pass_feature)[is_pass_feature]
    if(length(keep_features) < min.features){
-      keep_features <- names(keep_features)[1:min.features]
+      keep_features <- names(is_pass_feature)[1:min.features]
    } else if(!is.null(sel.top.n.features)){
       top_n_features <- min(length(keep_features), sel.top.n.features, ncol(x))
       keep_features <- keep_features[ 1:top_n_features ]
