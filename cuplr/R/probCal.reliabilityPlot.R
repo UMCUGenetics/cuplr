@@ -236,7 +236,7 @@ reliabilityPlot <- function(
       geom_point(aes(fill=ge_min_samples_per_bin), shape=21, color='black') +
       scale_fill_manual(
          values=c(color_raw, color_filt),
-         name='Samples per bin:', labels=paste0(c('<','>='),min.samples.per.bin)
+         name='Samples per bin:', labels=c('>=0',paste0('>=',min.samples.per.bin))
       ) +
 
       ## Filtered curve
