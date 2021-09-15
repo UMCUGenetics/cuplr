@@ -10,12 +10,10 @@
 #' @param prob.type Can be 'prob' (raw probabilities) or 'prob_scaled' (scaled probabilities)
 #' @param top.n.feat An integer specifying the top features contributing to the top predicted
 #' class to show
+#' @param top.n.feat.classes An integer specifying the number of top classes for which to show the
+#' top contributing features
 #' @param show.feat.contribs When `top.n.feat`==TRUE, also show the feature
 #' contributions?
-#' @param object.names Specify custom object names within `report` with a named character vector in
-#' the form: `c(prob='prob',class_actual='class_actual',feat_contrib='feat_contrib')`.
-#' The vector values are the custom object names, and the vector names correspond to the names used
-#' internally in the function. `object.names` can be NULL, or one or more named values
 #'
 #' @return A dataframe
 #'
@@ -25,19 +23,19 @@
 summary.predReport <- function(
    report,
    top.n.classes=NULL, show.class.probs=T, simplify.pred.values=F, prob.type=NULL,
-   top.n.feat=NULL, show.feat.contribs=T, object.names=NULL
+   top.n.feat=NULL, top.n.feat.classes=1, show.feat.contribs=T
 ){
 
-   # if(F){
-   #    report=pred_reports$CV
-   #    top.n.classes=3
-   #    show.class.probs=T
-   #    simplify.pred.values=T
-   #    prob.type='prob'
-   #    top.n.feat=3
-   #    show.feat.contribs=T
-   #    object.names=NULL
-   # }
+   if(F){
+      report=pred_reports$CUP
+      top.n.classes=3
+      show.class.probs=T
+      simplify.pred.values=T
+      prob.type='prob'
+      top.n.feat.classes=1
+      top.n.feat=3
+      show.feat.contribs=T
+   }
 
    ## Init --------------------------------
    ##
@@ -50,7 +48,7 @@ summary.predReport <- function(
    }
 
    if(is.null(prob.type)){
-      if('prob_scaled' %in% names(report)){
+      if(!is.null(report$prob_scaled)){
          prob.type <- 'prob_scaled'
       } else {
          prob.type <- 'prob'
@@ -68,8 +66,13 @@ summary.predReport <- function(
       df$actual_class <- report$class_actual
 
       top_correct <- sweep(top_classes, 1, report$class_actual, '==')
-      df$pred_correct <- max.col(top_correct)
-      rm(top_correct)
+
+      ## Get the top pred class that is the correct class
+      df$pred_correct <- max.col(top_correct, ties.method='last')
+
+      ## Assign 0 when actual class doesn't match any of the predicted classes
+      df$pred_correct[ rowSums(top_correct)==0 ] <- 0
+      #rm(top_correct)
    }
 
    if(is.null(top.n.classes)){
@@ -100,7 +103,7 @@ summary.predReport <- function(
 
       df <- data.frame(df, pred)
    }
-   rm(top_probs, top_classes)
+   #rm(top_probs, top_classes)
 
    ## Top contributing features --------------------------------
    if(!is.null(top.n.feat)){
@@ -109,32 +112,42 @@ summary.predReport <- function(
          top.n.feat <- 1:top.n.feat
       }
 
-      feat_contrib <- report$feat_contrib
-      feat_contrib <- feat_contrib[feat_contrib$feature_rank %in% top.n.feat,]
+      feat_contrib <- subset(report$feat_contrib, feature_rank %in% top.n.feat)
 
-      feat_contrib <- feat_contrib[
-         paste0(feat_contrib$sample,'_',feat_contrib$binary_rf) %in%
-         paste0(df$sample,'_',df$pred_class.1)
-      ,]
+      m_feat_contrib <- lapply(1:top.n.feat.classes, function(i){
+         #i=1
 
-      rle_out <- rle( paste0(feat_contrib$sample,'_',feat_contrib$binary_rf) )
-      feat_contrib$index <- unlist(lapply(rle_out$lengths, function(i){ 1:i }))
-      feat_contrib <- feat_contrib[
-         feat_contrib$index %in% top.n.feat,
-         c('sample','feature','index','contrib')
-      ]
+         feat_contrib_ss <- feat_contrib[
+            paste0(feat_contrib$sample,'_',feat_contrib$binary_rf) %in%
+               paste0(df$sample,'_',top_classes[,i])
+            ,]
 
-      if(show.feat.contribs){
-         feat_contrib$string <- paste0( feat_contrib$feature, '=', round(feat_contrib$contrib,3) )
-      } else {
-         feat_contrib$string <- feat_contrib$feature
-      }
+         ## Get feature rank within each sample
+         rle_out <- rle( paste0(feat_contrib_ss$sample,'_',feat_contrib_ss$binary_rf) )
+         feat_contrib_ss$index <- unlist(lapply(rle_out$lengths, function(i){ 1:i }))
+         feat_contrib_ss <- feat_contrib_ss[
+            feat_contrib_ss$index %in% top.n.feat,
+            c('sample','feature','index','contrib')
+         ]
 
-      m_feat_contrib <- reshape2::dcast(data=feat_contrib, formula=sample~index, value.var='string', fill=NA_real_)
-      rownames(m_feat_contrib) <- m_feat_contrib[,1]; m_feat_contrib <- m_feat_contrib[,-1]
-      m_feat_contrib <- m_feat_contrib[as.character(df$sample),]
+         ## Make final string output
+         if(show.feat.contribs){
+            feat_contrib_ss$string <- paste0( feat_contrib_ss$feature, '=', round(feat_contrib_ss$contrib,3) )
+         } else {
+            feat_contrib_ss$string <- feat_contrib_ss$feature
+         }
 
-      colnames(m_feat_contrib) <- paste0('feat.',colnames(m_feat_contrib))
+         ## Convert long to wide form dataframe
+         m <- reshape2::dcast(data=feat_contrib_ss, formula=sample~index, value.var='string', fill=NA_real_)
+         rownames(m) <- m[,1]; m <- m[,-1]
+         m <- m[as.character(df$sample),]
+
+         ## Add column names
+         colnames(m) <- paste0('feat_contrib.',i,'.',colnames(m))
+
+         return(m)
+      })
+      m_feat_contrib <- do.call(cbind, m_feat_contrib)
 
       df <- data.frame(df, m_feat_contrib, row.names=NULL)
    }
