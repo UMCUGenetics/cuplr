@@ -24,6 +24,16 @@ getGeneFusions <- function(linx.fusions, whitelist.path=GENE_FUSION_WHITELIST){
    } else {
       stop('`linx.fusions` must be a path or a dataframe')
    }
+   
+   ## Old version of linx use CamelCase for colnames
+   ## New version uses camelCase <-- convert colnames to this format
+   firstLower <- function(x) {
+      substr(x, 1, 1) <- tolower(substr(x, 1, 1))
+      return(x)
+   }
+   colnames(fusions) <- firstLower(colnames(fusions))
+   
+   ##
    gene_fusion_whitelist <- read.table(whitelist.path, header=F, stringsAsFactors=F)[,1]
    
    ## Initialize output
