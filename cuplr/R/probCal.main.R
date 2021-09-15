@@ -240,7 +240,7 @@ probCalCurves <- function(
       ## Curve from fit
       geom_line() +
 
-      scale_y_continuous(name='Calibrated prob.\n(red: sample label)') +
+      scale_y_continuous(name='Calibrated prob.\n(red dot: one sample)') +
       scale_x_continuous(name='Raw prob. (from classifier)') +
       theme_bw() +
       theme(
