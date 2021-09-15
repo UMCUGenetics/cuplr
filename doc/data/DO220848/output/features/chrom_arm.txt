@@ -1,3 +1,4 @@
+genome_cn	2
 gain.1p	0
 gain.1q	3
 gain.2p	2
