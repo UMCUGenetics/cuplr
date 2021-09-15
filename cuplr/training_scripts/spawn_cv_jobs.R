@@ -24,5 +24,5 @@ spawnCvJobs(
    df=training_labels,
    train.data.path=paste0(wd,'/features/features.rds'),
    train.script.path=paste0(wd,'/do_train.R'),
-   k=15, time='3:00:00', mem='60G', n.tasks.per.node=20
+   k=15, time='3:00:00', mem='60G', n.tasks.per.node=20, seed=7
 )

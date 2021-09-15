@@ -1,7 +1,7 @@
 ## Init ================================
 options(stringsAsFactors=F)
 
-WRITE_OUTPUT <- TRUE
+WRITE_OUTPUT <- FALSE
 
 ## Paths --------------------------------
 path_prefix <- c(
@@ -25,9 +25,15 @@ model_dir <- paste0(paste0(base_dir,'/CUPs_classifier/processed/cuplr/cuplr/mode
 out_dir <- paste0(model_dir,'/report/')
 dir.create(out_dir, showWarnings=F)
 
-model <- cacheAndReadData(paste0(model_dir,'/final/model.rds'), overwrite=T)
 features <- cacheAndReadData(paste0(model_dir,'/features/features_allSamples.rds'), overwrite=T)
-metadata <- read.delim(paste0(model_dir,'/features/training_metadata.txt.gz'))
+metadata <- googlesheets4::read_sheet(
+   'https://docs.google.com/spreadsheets/d/1iJrFN3sbHKlk7qDQorsGMO55apMN2ai3WXv9_aVpSFs/edit?usp=sharing',
+   sheet='proc'
+)
+
+model <- cacheAndReadData(paste0(model_dir,'/final/model.rds'), overwrite=T)
+#metadata <- read.delim(paste0(model_dir,'/features/training_metadata.txt.gz'))
+
 # with(
 #    subset(metadata, in_train_set | in_val_set),
 #    table(cohort)
@@ -69,39 +75,60 @@ val_samples$excluded <- metadata$sample_id[
    )
 ]
 
-## Pred reports in one list
+## HMF and PCAWG
 pred_reports <- c(
    list(CV=pred_reports.cv),
    lapply(val_samples, function(i){
-      predict(
+      out <- predict(
          object=model,
          newdata=features[i,],
          calc.feat.contrib=T, type='report', top.n.pred.classes=NULL
       )
+      out$class_actual <- as.factor(
+         metadata$cancer_type[ match(rownames(out$prob), metadata$sample_id) ]
+      )
+
+      return(out)
    })
 )
 
+# ## Organoids
+# metadata_organoids <- googlesheets4::read_sheet(
+#    'https://docs.google.com/spreadsheets/d/1hc-LoeZAQCnvd7oK7E4gzLk18uOzACKQqhzxuhRuftY/edit?usp=sharing',
+#    sheet='proc'
+# )
+#
+# googlesheets4::write_sheet(
+#    subset(pred_summ, group=='organoids')[,1:13],
+#    'https://docs.google.com/spreadsheets/d/1hc-LoeZAQCnvd7oK7E4gzLk18uOzACKQqhzxuhRuftY/edit?usp=sharing',
+#    sheet='cuplr_preds'
+# )
+#
+#
+# # features_organoids <- cacheAndReadData(paste0(base_dir,'/CUPs_classifier/processed/features/_all/06_organoids/all_features.txt.gz'))
+# # features_organoids[,c('mut_load.snv','mut_load.indel')]
+# #
+# # features_organoids <- (function(){
+# #    sel_samples <- subset(metadata_organoids, !is_replicate, sample_id, drop=T)
+# #    features_organoids[rownames(features_organoids) %in% sel_samples,]
+# # })()
+#
+# pred_reports$organoids <- predict(
+#    object=model,
+#    newdata=features_organoids,
+#    #newdata=features_organoids[subset(metadata_organoids, !is_replicate, sample_id, drop=T),],
+#    calc.feat.contrib=T, type='report', top.n.pred.classes=NULL
+# )
+#
+# pred_reports$organoids$class_actual <- as.factor(
+#    metadata_organoids$cancer_type[ match(rownames(pred_reports$organoids$prob), metadata_organoids$sample_id) ]
+# )
+
+## Fix the class of the objects
 pred_reports <- lapply(pred_reports, function(i){
-   i$class_actual <- as.factor(
-      metadata$cancer_type[ match(rownames(i$prob), metadata$sample_id) ]
-   )
    class(i) <- c('predReport',class(i))
    return(i)
 })
-
-# (function(){
-#    male_samples <- rownames(features)[ features$gender.gender==FALSE ]
-#    m <- pred_reports$CV$prob
-#    m <- m[rownames(m) %in% male_samples,c('Ovary','Cervix','Uterus')]
-#    m[order(-rowSums(m)),]
-# })()
-#
-# (function(){
-#    female_samples <- rownames(features)[ features$gender.gender==TRUE ]
-#    m <- pred_reports$CV$prob
-#    m <- m[rownames(m) %in% female_samples,'Prostate',drop=F]
-#    m[order(-rowSums(m)),]
-# })()
 
 
 ## Prob calibration ================================
@@ -117,20 +144,91 @@ pred_reports <- lapply(pred_reports, function(i){
 
 ## Summary table --------------------------------
 pred_summ <- do.call(rbind, lapply(names(pred_reports), function(i){
-   df <- summary(pred_reports[[i]], top.n.classes=3, top.n.feat=5, prob.type='prob_scaled')
+   df <- summary(pred_reports[[i]], top.n.classes=3, top.n.feat=5, top.n.feat.classes=3, prob.type='prob_scaled')
    data.frame(group=i, df)
 }))
+#View(subset(pred_summ, group=='CUP'))
+
+anonymizeSampleId <- function(sample.id){
+   #sample.id=pred_summ$sample
+   #cohort <- metadata$cohort[match(sample.id, metadata$sample_id)]
+   #is_hmf_sample <- cohort=='HMF'
+   is_hmf_sample <- grepl('^(CPCT|WIDE|DRUP)',sample.id)
+
+   out <- sample.id
+   out[is_hmf_sample] <- metadata$sample_id_2[match(sample.id[is_hmf_sample], metadata$sample_id)]
+
+   return(out)
+}
+
+insColAfter <- function(df, v, after, colname=NULL){
+   if(is.character(after)){
+      after <- which(colnames(df)==after)
+   }
+
+   df_l <- df[1:after]
+   df_r <- df[(after+1):ncol(df)]
+
+   df_new <- cbind(df_l, v, df_r)
+
+   if(!is.null(colname)){
+      colnames(df_new)[(after+1)] <- colname
+   }
+
+   return(df_new)
+}
+
+pred_summ <- insColAfter(
+   pred_summ, v=anonymizeSampleId(pred_summ$sample), after='sample', colname='sample_anon'
+)
 
 if(WRITE_OUTPUT){
    write.table(pred_summ, paste0(out_dir,'/pred_summ.txt'), sep='\t', quote=F, row.names=F)
+
+   googlesheets4::sheet_write(
+      subset(pred_summ, group %in% c('CV','holdout')),
+      'https://docs.google.com/spreadsheets/d/1tohqMnafg9XVApOnhVhBDUL3r4VAAfUk628KlmSOdUs/edit?usp=sharing',
+      sheet='CV_holdout.raw'
+   )
+
+   googlesheets4::sheet_write(
+      subset(pred_summ, group=='CUP'),
+      'https://docs.google.com/spreadsheets/d/1tohqMnafg9XVApOnhVhBDUL3r4VAAfUk628KlmSOdUs/edit?usp=sharing',
+      sheet='CUP.raw'
+   )
 }
 
-## Low acc classes
-# df <- calcFracCorrect(
-#    actual=pred_reports$CV$class_actual,
-#    predicted=pred_reports$CV$class_pred
+# with(
+#    pred_reports$organoids,
+#    confusionHeatmap2(
+#       actual=class_actual, probs=prob_scaled,
+#       rel.heights=c(100,11,22), plot.title='Cross-validation'
+#    )
 # )
-# dim(subset(df, frac_correct>=0.8))
+# View(subset(pred_summ, group=='organoids'))
+#
+# features_organoids[
+#    c('Breast_1007T1','Breast_1046T1','Breast_1240T1','Breast_542T1','Pancreas_3238T1'),
+#    c('mut_load.indel','mut_load.snv')
+# ]
+#
+# df <- features_organoids[,c('mut_load.snv','mut_load.indel')]
+# df[order(-df$mut_load.snv),]
+#
+# summary(
+#    features[
+#       subset(metadata, cancer_type=='Breast', sample_id, drop=T),
+#       c('mut_load.snv','mut_load.indel')
+#    ]
+# )
+#
+# summary(
+#    features[
+#       subset(metadata, cancer_type=='Ovary', sample_id, drop=T),
+#       c('mut_load.snv','mut_load.indel')
+#    ]
+# )
+
 
 ## Plot --------------------------------
 if(WRITE_OUTPUT){
@@ -251,17 +349,6 @@ if(WRITE_OUTPUT){
 ## Patient report examples ================================
 # View(subset(pred_summ, group=='holdout'))
 if(WRITE_OUTPUT){
-   ##
-   anonymizeSampleId <- function(sample.id){
-      #sample.id=rownames(features)
-      cohort <- metadata$cohort[match(sample.id, metadata$sample_id)]
-      is_hmf_sample <- cohort=='HMF'
-
-      out <- sample.id
-      out[is_hmf_sample] <- metadata$sample_id_2[match(sample.id[is_hmf_sample], metadata$sample_id)]
-
-      return(out)
-   }
 
    ##
    patientReportWrapper <- function(report, sample.name){
@@ -286,7 +373,7 @@ if(WRITE_OUTPUT){
 
    patient_reports <- list(
       patientReportWrapper(pred_reports$holdout,'DO35949'), ## CNS_PiloAstro
-      patientReportWrapper(pred_reports$holdout,'XXXXXXXX') ## Cervix
+      patientReportWrapper(pred_reports$holdout, sample.name='XXXXXXXX') ## Lung_SC
    )
    patient_reports <- cowplot::plot_grid(plotlist=patient_reports, ncol=1, rel_heights=c(1,1.6))
 
@@ -294,16 +381,23 @@ if(WRITE_OUTPUT){
    patient_reports
    dev.off()
 
-   # pdf(paste0(out_dir,'/patient_reports.pdf'), 10, 7)
-   # patientReportWrapper(pred_reports$holdout,'DO35949') ## CNS_PiloAstro
-   # patientReportWrapper(pred_reports$holdout,'XXXXXXXX') ## Skin_Other
-   # dev.off()
+   # View(subset(pred_summ, group=='holdout'))
+   # patientReportWrapper(pred_reports$holdout, sample.name='XXXXXXXX')
 }
 
 
 ## Main plots ================================
 ## Feature importance --------------------------------
 if(WRITE_OUTPUT){
+
+   imp_exp <- t(model$imp)
+   imp_exp <- data.frame(feature=rownames(imp_exp), imp_exp, row.names=NULL)
+
+   googlesheets4::sheet_write(
+      imp_exp,
+      'https://docs.google.com/spreadsheets/d/1HGxh7pn8fwh7PWC9Th2G-1YzlX-CtTBhmyQxeSWzMXE/edit?usp=sharing',
+      sheet='imp'
+   )
 
    ## --------------------------------
    topFeaturesWrapper <- function(m, plot.title=NULL, facet.ncol=5){
@@ -342,7 +436,7 @@ if(WRITE_OUTPUT){
 
    p_imp_sel <- (function(){
       sel_cancer_types <- c(
-         'Cervix','CNS_PiloAstro','HeadAndNeck_Other','HeadAndNeck_SG',
+         'Cervix','CNS_PiloAstro','HeadAndNeck_SG','Lung_NSC',
          'Prostate','Sarcoma_GIST','Sarcoma_Lipo','Skin_Other'
       )
       m_imp <- model$imp[sort(sel_cancer_types),]
@@ -353,6 +447,7 @@ if(WRITE_OUTPUT){
             label.theme=element_text(angle=90, hjust=1, vjust=0.5, size=9)
          )) +
          theme(
+            #plot.margin=unit(c(0.01,0.04,0.01,0.01),'npc'),
             legend.position='bottom',
             legend.spacing.x=unit(0,'pt')
          )
@@ -381,6 +476,21 @@ if(WRITE_OUTPUT){
    dev.off()
 }
 
+## Write table for feature description --------------------------------
+if(WRITE_OUTPUT){
+   df <- data.frame(
+      feature_type=NA,
+      feature_name=colnames(model$imp)
+   )
+   df$feature_type <- sub('[.].+','',df$feature_name)
+
+   googlesheets4::sheet_write(
+      df,
+      'https://docs.google.com/spreadsheets/d/1e0gxxgy-jqwtM20Yqxp-UXcoS_OLjZqawWW44-e-rDw/edit?usp=sharing',
+      sheet='raw'
+   )
+}
+
 ## Confusion matrix --------------------------------
 if(WRITE_OUTPUT){
 
@@ -403,97 +513,47 @@ if(WRITE_OUTPUT){
    ))
 
    dev.off()
-
-   # pdf(paste0(out_dir,'/confusion_heatmap.pdf'), 10.5, 10)
-   #
-   # plot(with(
-   #    pred_reports$CV,
-   #    confusionHeatmap(
-   #       actual=class_actual, probs=prob_scaled,
-   #       metrics=c('precision','recall'),
-   #       which.plots=c('counts','perf','confusion'), rel.heights=c(0.31, 0.07, 1),
-   #       plot.title='Cross-validation'
-   #    )
-   # ))
-   #
-   # plot(with(
-   #    pred_reports$holdout,
-   #    confusionHeatmap(
-   #       actual=class_actual, probs=prob_scaled,
-   #       metrics=c('precision','recall'),
-   #       which.plots=c('counts','perf','confusion'), rel.heights=c(0.31, 0.07, 1),
-   #       plot.title='Holdout'
-   #    )
-   # ))
-   #
-   # dev.off()
 }
 
 ## Difference between CV and holdout perf --------------------------------
 if(WRITE_OUTPUT){
-   p_cv_holdout_perf_diff <- (function(){
-      ## Calculate precision/recall
-      calcPerfWrapper <- function(report){
-         #report=pred_reports$CV
 
-         require(mltoolkit)
+   p_diff_cv_holdout <- (function(){
+      ## Calc accuracy
+      df_cv <- with(pred_reports$CV, calcFracCorrect(class_actual, class_pred))
+      df_cv$group <- 'CV'
 
-         confusion <- confusionMatrix(
-            predicted=oneHotEncode(report$class_pred),
-            actual=report$class_actual,
-            simplify=T
-         )
+      df_h <- with(pred_reports$holdout, calcFracCorrect(class_actual, class_pred))
+      df_h$group <- 'holdout'
 
-         perf <- calcPerf(confusion, metrics=c('recall','precision'))
-         perf$n_total <- confusion$tp + confusion$fn
-
-         return(perf)
-      }
-
-      perf_holdout <- calcPerfWrapper(pred_reports$holdout)
-      perf_cv <- calcPerfWrapper(pred_reports$CV)
-
-      ## Calculate % difference
-      percDiff <- function(x,y){ abs(x-y) / pmax(x,y) }
-      perf_diff <- data.frame(
-         class=perf_holdout$class,
-         Recall=percDiff(perf_holdout$recall, perf_cv$recall),
-         Precision=percDiff(perf_holdout$precision, perf_cv$precision)
+      df <- data.frame(
+         class=df_cv$class,
+         frac_correct.cv=df_cv$frac_correct,
+         frac_correct.holdout=df_h$frac_correct,
+         n_total.cv=df_cv$n_total,
+         n_total.holdout=df_h$n_total
       )
-      perf_diff <- reshape2::melt(perf_diff, id.vars='class')
-      colnames(perf_diff) <- c('class','metric','perc_diff')
+      df$n_total <- df$n_total.cv + df$n_total.holdout
+      df <- subset(df, class!='All')
 
-      ## Calculate cohort totals
-      n_total <- table(c(
-         as.character(pred_reports$holdout$class_actual),
-         as.character(pred_reports$CV$class_actual)
-      ))
-      n_holdout <- table(pred_reports$holdout$class_actual)
+      ## Calc diff between holdout and CV accuracy
+      relDiff <- function(x,y){ abs(x-y) / pmax(x,y) }
+      df$frac_correct.perc_diff <- relDiff(df$frac_correct.h, df$frac_correct.cv)
 
-      perf_diff$n_total <- as.integer(n_total[ as.character(perf_diff$class) ])
-      perf_diff$n_holdout <- as.integer(n_holdout[ as.character(perf_diff$class) ])
-
-      ## Make label
-      perf_diff$label <- paste0(perf_diff$class,' (',perf_diff$n_holdout,')')
+      ## Point labels
+      df$label <- paste0(df$class,' (',df$n_total.holdout,')')
 
       ## Plot
-      ggplot(perf_diff, aes(x=n_total, y=perc_diff)) +
-         facet_wrap(.~metric) +
-         #xlim(-100,NA) +
-         #ylim(-0.1,NA) +
+      ggplot(df, aes(x=n_total, y=frac_correct.perc_diff)) +
          geom_point(color='red') +
          ggrepel::geom_text_repel(aes(label=label), size=2.5, segment.size=0.2, nudge_y=0.01, nudge_x=40) +
-         ylab('% difference between\nCV and holdout performance') +
-         xlab('x-axis: Total # of samples per cancer type\nLabel values: # of samples per cancer type in holdout set') +
-
-         theme_bw() +
-         theme(
-            #panel.grid.minor=element_blank()
-         )
+         ylab('Relative difference in accuracy\nbetween CV and holdout sets') +
+         xlab('x-axis: Total no. of samples per cancer type\nLabel values: No. of samples per cancer type in holdout set') +
+         theme_bw()
    })()
 
-   pdf(paste0(out_dir,'/cv_holdout_perf_diff.pdf'), 10, 7)
-   plot(p_cv_holdout_perf_diff)
+   pdf(paste0(out_dir,'/diff_cv_holdout.pdf'), 7, 6)
+   plot(p_diff_cv_holdout)
    dev.off()
 }
 
@@ -553,7 +613,7 @@ if(WRITE_OUTPUT){
       perf_split <- lapply(perf_split, function(i){
          #i=perf_split[[1]]
          i_All <- i[1,]
-         'All' -> i_All$cancer_type_raw -> i_All$cancer_type_subgroup -> i_All$cancer_type_group
+         'All' -> i_All$cancer_type_raw -> i_All$cancer_type_subgroup -> i_All$cancer_type_group -> i_All$cancer_type_color_group
          i_All$n_samples <- sum(i$n_samples)
          i_All$recall <- microAvg(i$recall, i$n_samples)
          i_All$precision <- microAvg(i$precision, i$n_samples)
@@ -573,7 +633,7 @@ if(WRITE_OUTPUT){
       perf_split <- split(perf, perf$cancer_type_group)
       perf_split <- lapply(perf_split, function(i){
          #i=perf_split[[1]]
-         i$color_index <- as.integer(droplevels(i$cancer_type_subgroup))
+         i$color_index <- as.integer(droplevels(i$cancer_type_color_group))
          return(i)
       })
 
@@ -628,11 +688,148 @@ if(WRITE_OUTPUT){
             axis.text.x=element_text(angle=90, hjust=1, vjust=0.5)
          )
    })
+   names(lp_perf_comparison) <- metric_names
+
+   lp_perf_comparison$recall <- lp_perf_comparison$recall + ylab('Fraction of samples correctly predicted')
 
    pdf(paste0(out_dir,'/perf_comparison.pdf'), 12, 11)
    #plot(lp_perf_comparison[[1]])
    for(i in lp_perf_comparison){ plot(i) }
    dev.off()
+}
+
+## Impact of MSI, HRD --------------------------------
+if(WRITE_OUTPUT){
+
+   devtools::load_all(paste0(base_dir,'/CUPs_classifier/processed/cuplr/statsExtra/'))
+
+   incorrect_pred_enr <- (function(){
+      ##
+      df <- subset(pred_summ, group %in% c('CV','holdout'))
+      df$actual_class <- as.character(df$actual_class)
+      df$is_correct_pred <- df$actual_class==df$pred_class.1
+
+      ## Add MSI and HRD status
+      df <- cbind(
+         df,
+         metadata[
+            match(df$sample, metadata$sample_id),
+            c('msi_status','hr_status','smoking_history','treatment_platinum','treatment_5FU')
+         ]
+      )
+
+      ## Parse characters to bool
+      df$has_msi <- df$msi_status=='MSI'
+
+      df$has_hrd <- NA
+      df$has_hrd[df$hr_status=='HR_deficient'] <- TRUE
+      df$has_hrd[df$hr_status=='HR_proficient'] <- FALSE
+
+      df$has_smoked <- NA
+      df$has_smoked[df$smoking_history %in% c('Current','Former')] <- TRUE
+      df$has_smoked[df$smoking_history=='Never'] <- FALSE
+
+      df$treated_with_platinum <- as.logical(df$treatment_platinum)
+      df$treated_with_5FU <- as.logical(df$treatment_5FU)
+
+      ##
+      incorrectPredEnr <- function(df, colname, var.name=colname, sort.by.pvalue=TRUE){
+         #colname='treatment_5FU'
+
+         tab <- table(
+            actual_class=df$actual_class,
+            is_correct_pred=df$is_correct_pred,
+            var_true=df[[colname]]
+         )
+
+         ## Contingency tables
+         conting <- cbind(
+            tab[,,'TRUE'],
+            tab[,,'FALSE']
+         )
+         colnames(conting) <- c('var_true.incorrect','var_true.correct','var_false.incorrect','var_false.correct')
+         conting <- as.data.frame(conting)
+
+         ## Initialize output
+         out <- data.frame(
+            class=rownames(conting),
+            n_samples=as.integer(table(df$actual_class)),
+            n_samples.var_not_na=rowSums(conting),
+            conting,
+            row.names=NULL
+         )
+
+         ## Proportions
+         out$var_true.n_samples <- with(conting, var_true.incorrect+var_true.correct)
+         out$var_false.n_samples <- with(conting, var_false.incorrect+var_false.correct)
+
+         out$var_true.frac_incorrect <- with(out, var_true.incorrect/var_true.n_samples)
+         out$var_false.frac_incorrect <- with(out, var_false.incorrect/var_false.n_samples)
+
+         ## Fisher test
+         out$fisher_pvalue <- fisherTest(conting, alternative='greater')
+
+         if(!is.null(var.name)){
+            out <- cbind(var_name=var.name, out)
+         }
+
+         if(sort.by.pvalue){
+            out <- out[order(out$fisher_pvalue),]
+         }
+
+         return(out)
+      }
+
+
+
+      rbind(
+         incorrectPredEnr(df, 'has_msi'),
+         incorrectPredEnr(df, 'has_hrd'),
+
+         incorrectPredEnr(df, 'has_smoked'),
+
+         incorrectPredEnr(df, 'treated_with_platinum'),
+         incorrectPredEnr(df, 'treated_with_5FU')
+
+      )
+   })()
+
+   googlesheets4::sheet_write(
+      incorrect_pred_enr,
+      'https://docs.google.com/spreadsheets/d/1x18ONHLl8F3R3fEYCuJfxYAo6TN2QozEtWvgk26bks0/edit?usp=sharing',
+      sheet='raw'
+   )
+
+   # (function(){
+   #    df <- incorrect_pred_enr
+   #
+   #    df$class_string <- with(df, paste0(class,' (',n_samples_with_ddrd_status,'/',n_samples,')'))
+   #
+   #    df$value_string.var_true <- with(df, paste0(
+   #       round(var_true.frac_incorrect, 2),' (',var_true.incorrect,'/',var_true.n_samples ,')'
+   #    ))
+   #
+   #    df$value_string.var_false <- with(df, paste0(
+   #       round(var_false.frac_incorrect, 2),' (',var_false.incorrect,'/',var_false.n_samples ,')'
+   #    ))
+   #
+   #    fixed_cols <- c('ddrd_name','class_string')
+   #    df1 <- df[,c(fixed_cols,'var_true.frac_incorrect','value_string.var_true')]; df1$is_ddrd <- TRUE
+   #    df2 <- df[,c(fixed_cols,'var_false.frac_incorrect','value_string.var_false')]; df2$is_ddrd <- FALSE
+   #    c('frac_incorrect','value_string') -> colnames(df1)[3:4] -> colnames(df2)[3:4]
+   #
+   #    df_melt <- rbind(df1, df2)
+   #    df_melt$value_string[df_melt$frac_incorrect==0 || is.na(df_melt$frac_incorrect)] <- ''
+   #
+   #    ggplot(subset(df_melt, ddrd_name=='MSI'), aes(x=class_string, y=frac_incorrect, group=is_ddrd)) +
+   #       coord_flip() +
+   #       #facet_wrap(.~ddrd_name, scales='free_x') +
+   #       geom_bar(aes(fill=is_ddrd), stat='identity', position='dodge', color='black', size=0.3) +
+   #       geom_text(aes(label=value_string, y=0.001), position=position_dodge(width=1), size=2.5, hjust=0) +
+   #       scale_x_discrete(limits=rev) +
+   #       theme_bw() +
+   #       theme()
+   # })()
 }
 
 ## Prob of target class ================================
@@ -667,12 +864,12 @@ if(WRITE_OUTPUT){
 }
 
 ## Plot top-n accuracy ================================
-if(WRITE_OUTPUT){
-   pdf(paste0(out_dir,'/topn_acc.pdf'), 11, 8)
-   plot( with(pred_reports$CV, topnAcc(actual=class_actual, probs=prob_scaled)) + ggtitle('CV') )
-   plot( with(pred_reports$holdout, topnAcc(actual=class_actual, probs=prob_scaled)) + ggtitle('holdout') )
-   dev.off()
-}
+# if(WRITE_OUTPUT){
+#    pdf(paste0(out_dir,'/topn_acc.pdf'), 11, 8)
+#    plot( with(pred_reports$CV, topnAcc(actual=class_actual, probs=prob_scaled)) + ggtitle('CV') )
+#    plot( with(pred_reports$holdout, topnAcc(actual=class_actual, probs=prob_scaled)) + ggtitle('holdout') )
+#    dev.off()
+# }
 
 if(WRITE_OUTPUT){
    p_topn_acc <- (function(){
@@ -685,7 +882,7 @@ if(WRITE_OUTPUT){
       )
 
       df$label <- with(df,paste0(
-         round(frac,2),' (',count,'/',n_samples,')'
+         round(frac,2),' (',correct,'/',total,')'
       ))
 
       ggplot(df, aes(x=pred_type, y=frac, group=class_num)) +
@@ -697,7 +894,7 @@ if(WRITE_OUTPUT){
          ) +
          scale_fill_gradient(
             low='#4390BC', high='#EFF6B9', guide='legend', breaks=unique(df$class_num),
-            name='Top-n class'
+            name='Top-N class'
          ) +
 
          geom_text(
@@ -706,7 +903,7 @@ if(WRITE_OUTPUT){
             size=2.7, angle=90, hjust=0
          ) +
 
-         scale_y_continuous(name='Top-n recall', limits=c(0,1)) +
+         scale_y_continuous(name='Top-N accuracy', limits=c(0,1)) +
 
          theme_bw() +
          theme(
@@ -718,6 +915,119 @@ if(WRITE_OUTPUT){
 
    pdf(paste0(out_dir,'/topn_acc.pdf'), 11, 8)
    plot(p_topn_acc)
+   dev.off()
+}
+
+## Feature avg per cancer type ================================
+if(WRITE_OUTPUT){
+   p_feat_avg_per_ct <- (function(){
+      df <- model$feat_stats
+
+      ## Select top features
+      ranked_features <- colnames(model$imp)[ order(-matrixStats::colMaxs(model$imp)) ]
+      df <- df[df$feature %in% ranked_features[1:200],]
+
+      ## Fix rmd.Pancreas.1 order
+      insValueBefore <- function(x, value, before){
+         if(is.character(before)){
+            before <- match(before, x)
+         }
+
+         x_left <- x[1:(before-1)]
+         x_right <- x[before:length(x)]
+         c(x_left, value, x_right)
+      }
+      feature_names <- unique(df$feature)
+      feature_names <- insValueBefore(feature_names,'rmd.Pancreas.1','rmd.Pancreas_NET.1')
+      feature_names <- feature_names[ -head(which(feature_names=='rmd.Pancreas.1'),1) ]
+
+      feature_names <- insValueBefore(feature_names,'rmd.Sarcoma_Lipo.1','rmd.Sarcoma_Other.1')
+      feature_names <- feature_names[ -tail(which(feature_names=='rmd.Sarcoma_Lipo.1'),1) ]
+
+      df$feature <- factor(df$feature, feature_names)
+      df <- df[order(df$feature),]
+      df$feature <- factor(df$feature, unique(df$feature))
+
+      ## Parse feature names
+      df$feature_type <- sub('[.].+$','',df$feature)
+      df$feature_type <- factor(df$feature_type, unique(df$feature_type))
+      df$feature_subtype <- sub('^\\w+[.]','',df$feature)
+      df$feature_subtype <- factor(df$feature_subtype, unique(df$feature_subtype))
+
+      ## Log transform features with a wide range
+      df$is_wide_range <- with(df,{
+         max_all-min_all > 100 & avg_metric != 'prop'
+      })
+
+      df$avg_case.trans <- df$avg_case
+      df$min_all.trans <- df$min_all
+      df$max_all.trans <- df$max_all
+
+      df <- within(df,{
+         avg_case.trans[is_wide_range] <- log10(avg_case.trans[is_wide_range]+1)
+         min_all.trans[is_wide_range] <- log10(min_all.trans[is_wide_range]+1)
+         max_all.trans[is_wide_range] <- log10(max_all.trans[is_wide_range]+1)
+      })
+
+      ## Rescale features from 0 to 1 for heatmap plotting
+      scale0to1 <- function(x, x.min, x.max){
+         out <- (x-x.min)/(x.max-x.min)
+
+         ## Clip out of bounds feature values to (0,1)
+         out[out>1] <- 1
+         out[out<0] <- 0
+
+         return(out)
+      }
+      df$avg_case.scaled <- with(df, scale0to1(avg_case.trans, min_all.trans, max_all.trans))
+
+      ## Plotting
+      default_text_size <- 7
+      plotFeatureAvg <- function(df){
+         ggplot(df, aes(x=as.integer(class), y=feature_subtype)) +
+            facet_grid(feature_type~., scales='free_y', space='free_y') +
+
+            geom_tile(aes(fill=avg_case.scaled), color='grey70') +
+            scale_fill_distiller(
+               palette='Spectral', name='Min max scaled\navg. cohort value\n',
+               guide=guide_colorbar(
+                  frame.colour='black', ticks.colour='black', barheight=5, barwidth=1,
+                  label.theme=element_text(size=default_text_size),
+                  title.theme=element_text(size=default_text_size)
+               )
+            ) +
+            #scale_color_gradient2() +
+            scale_y_discrete(expand=c(0,0), limits=rev) +
+            scale_x_continuous(
+               expand=c(0,0), sec.axis=dup_axis(),
+               breaks=1:length(levels(df$class)),
+               labels=levels(df$class)
+            ) +
+
+            theme_bw() +
+            theme(
+               panel.grid=element_blank(),
+               panel.spacing = unit(3,'pt'),
+               strip.text.y=element_text(angle=0, size=default_text_size),
+               #strip.text.y.left=element_text(angle=0, size=default_text_size),
+               #strip.placement='outside',
+               axis.text.x.bottom=element_text(angle=90, vjust=0.5, hjust=1, size=default_text_size),
+               axis.text.x.top=element_text(angle=90, vjust=0.5, hjust=0, size=default_text_size),
+               axis.text.y=element_text(size=default_text_size),
+               axis.title=element_blank()
+            )
+      }
+
+      left_feature_types <- c('rmd','sigs')
+      plots <- list()
+      plots$left <- plotFeatureAvg( subset(df, feature_type %in% left_feature_types) ) + theme(legend.position='none')
+      plots$right <- plotFeatureAvg( subset(df, !(feature_type %in% left_feature_types)) )
+
+      cowplot::plot_grid(plotlist=plots, rel_widths=c(1, 1.2))
+   })()
+
+   pdf(paste0(out_dir,'/feat_avg_per_ct.pdf'), 10.5, 10.5)
+   plot(p_feat_avg_per_ct)
    dev.off()
 }
 

@@ -10,7 +10,7 @@ mkdir -p $wd/final/
 
 if [[ ! -f $wd/final/job.done ]]; then
 guixr load-profile ~/.guix-profile/ --<<EOF
-Rscript $wd/do_train.R $wd/features/features.rds '' $wd/final/model.rds 1 && touch $wd/final/job.done
+Rscript $wd/do_train.R $wd/features/features.rds '' $wd/final/model.rds 4 && touch $wd/final/job.done
 EOF
 else
 echo Skipping. Done file exists: $wd/final/job.done
