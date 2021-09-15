@@ -79,6 +79,7 @@ alternative <- structure(
 )
 alternative[grep('^rmd',names(alternative))] <- 'two.sided'
 alternative[grep('^mut_load',names(alternative))] <- 'two.sided'
+alternative[names(alternative)=='chrom_arm.genome_cn'] <- 'two.sided'
 alternative[names(alternative)=='sv.n_events'] <- 'two.sided'
 alternative[names(alternative)=='gender.gender'] <- 'two.sided'
 

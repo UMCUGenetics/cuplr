@@ -19,7 +19,8 @@ out_dir <- paste0(model_dir,'/features/'); dir.create(out_dir, recursive=T, show
 ## Load metadata ================================
 file.copy(
    paste0(base_dir,'/CUPs_classifier/processed/metadata/training_metadata.txt.gz'),
-   paste0(out_dir,'/training_metadata.txt.gz')
+   paste0(out_dir,'/training_metadata.txt.gz'),
+   overwrite=T
 )
 
 metadata <- read.delim(paste0(out_dir,'/training_metadata.txt.gz'))
