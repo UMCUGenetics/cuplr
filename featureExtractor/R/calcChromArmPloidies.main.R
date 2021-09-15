@@ -44,6 +44,14 @@ calcChromArmPloidies <- function(
    verbose=F
 ){
 
+   if(F){
+      cnv.file='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104-update3/somatics/150720_HMFregXXXXXXXX/purple/XXXXXXXX.purple.cnv.somatic.tsv'
+      sel.cols <- c(
+         chrom='chromosome',start='start',end='end',
+         total_cn='copyNumber',major_cn='majorAlleleCopyNumber',minor_cn='minorAlleleCopyNumber'
+      )
+   }
+   
    ## Load data --------------------------------
    if(!is.null(cnv.file)){
       cnv <- read.delim(cnv.file, check.names=F, stringsAsFactors=F)
@@ -88,23 +96,23 @@ calcChromArmPloidies <- function(
    cnv$chrom_arm <- factor(cnv$chrom_arm, unique(cnv$chrom_arm))
    cnv_split <- split(cnv, cnv$chrom_arm)
 
-   minor_cn_segment_support <- lapply(cnv_split, function(i){
-      #i=cnv_split$`Yp`
-      df <- aggregate(i$segment_size, by=list(i$minor_cn_int), FUN=sum)
-      colnames(df) <- c('minor_cn_int','cum_segment_size')
-      df <- as.data.frame(lapply(df, as.integer)) ## aggregate can return lists instead of vectors as output
-
-      df$cum_segment_size_rel <- df$cum_segment_size / sum(df$cum_segment_size)
-
-      #df[which.max(df$cum_segment_size_rel),]
-      if(nrow(df)!=0L){
-         df <- df[order(df$cum_segment_size_rel, decreasing=T),]
-         return(df)
-      } else {
-         df[1L,] <- NA
-         return(df)
-      }
-   })
+   # minor_cn_segment_support <- lapply(cnv_split, function(i){
+   #    #i=cnv_split$`Yp`
+   #    df <- aggregate(i$segment_size, by=list(i$minor_cn_int), FUN=sum)
+   #    colnames(df) <- c('minor_cn_int','cum_segment_size')
+   #    df <- as.data.frame(lapply(df, as.integer)) ## aggregate can return lists instead of vectors as output
+   # 
+   #    df$cum_segment_size_rel <- df$cum_segment_size / sum(df$cum_segment_size)
+   # 
+   #    #df[which.max(df$cum_segment_size_rel),]
+   #    if(nrow(df)!=0L){
+   #       df <- df[order(df$cum_segment_size_rel, decreasing=T),]
+   #       return(df)
+   #    } else {
+   #       df[1L,] <- NA
+   #       return(df)
+   #    }
+   # })
 
    ##----------------------------------------------------------------
    if(verbose){ message('Calculating copy number segment support...') }
