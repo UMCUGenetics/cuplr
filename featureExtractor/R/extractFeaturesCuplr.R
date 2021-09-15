@@ -28,7 +28,7 @@ extractFeaturesCuplr <- function(
    
    ## Debugging --------------------------------
    if(F){
-      in.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/doc/data/DO48977/'
+      in.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/doc/data/DO36021/'
       out.dir=paste0(in.dir,'/output/')
       dir.create(out.dir, showWarnings=F)
       
@@ -202,6 +202,7 @@ extractFeaturesCuplr <- function(
    )
    
    chrom_arm <- list(
+      genome_cn=arm_ploidy[['genome']],
       gain=calcChromArmCnChange(arm_ploidy, direction='gain'),
       loss=calcChromArmCnChange(arm_ploidy, direction='loss')
    )
