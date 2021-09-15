@@ -163,15 +163,6 @@ wilcoxTest.matrix <- function(
 }
 
 #' @rdname wilcoxTest
-#' @method wilcoxTest default
-#' @export
-wilcoxTest.default <- function(x, y, ...){
-   x <- matrix(x, ncol=1L)
-   y <- matrix(y, ncol=1L)
-   wilcoxTest.matrix(x,y, ...)
-}
-
-#' @rdname wilcoxTest
 #' @method wilcoxTest data.frame
 #' @export
 wilcoxTest.data.frame <- wilcoxTest.matrix
