@@ -398,13 +398,13 @@ confusionHeatmap <- function(
 ####################################################################################################
 #' @rdname confusionHeatmap
 confusionHeatmap2 <- function(
-   actual=NULL, probs=NULL, top.n=2, rel.heights=c(18,11,100), rel.values=T, plot.title=NULL
+   actual=NULL, probs=NULL, top.n=2, rel.heights=c(100,11,22), rel.values=T, plot.title=NULL
 ){
    if(F){
-      report=pred_reports$CV
+      report=pred_reports$organoids
       actual=report$class_actual
       probs=report$prob_scaled
-      rel.heights=c(100,11,18)
+      rel.heights=c(100,11,22)
       top.n=2
       rel.values=T
       plot.title='test'
@@ -427,8 +427,8 @@ confusionHeatmap2 <- function(
    rm(is_predicted_class)
 
    ##
-   actual <- factor(actual, classes)
-   predicted <- factor(predicted, classes)
+   actual <- factor(actual, predicted_classes)
+   predicted <- factor(predicted, predicted_classes)
 
    ## Large confusion matrix ----------------------------
    cm_raw <- table(predicted, actual)
@@ -447,12 +447,16 @@ confusionHeatmap2 <- function(
    }
 
    ## Add overall accuracy
-   cm <- cbind(All=NA,cm)
-   cm <- rbind(All=NA,cm)
+   cm <- cbind(All=NaN,cm)
+   cm <- rbind(All=NaN,cm)
    cm[1,1] <- overall_acc
 
    pd_cm <- reshape2::melt(cm)
    colnames(pd_cm) <- c('predicted','actual','value')
+
+   #pd_cm <- pd_cm[!is.na(pd_cm$value),]
+   #pd_cm$value <- as.numeric(pd_cm$value)
+   pd_cm <- subset(pd_cm, !is.na(value)  | actual=='All')
 
    ## top-N accuracy (aka top-N recall) ----------------------------
    topn_acc <- topnAcc(actual=actual, probs=probs, output='values', top.n=top.n)
@@ -527,7 +531,8 @@ confusionHeatmap2 <- function(
    plots$confusion <- plotHeatmap(
       pd_cm, x='actual', y='predicted',fill='value',label='value', axis.x.position='top',
       axis.y.title='Predicted class', axis.x.title='Actual class'
-   )
+   ) +
+      theme(panel.background=element_rect(fill='grey50'))
 
    if(!is.null(plot.title)){
       plots$confusion <- plots$confusion + ggtitle(plot.title)
