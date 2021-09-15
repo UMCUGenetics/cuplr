@@ -1,14 +1,21 @@
 #' Predict method for random forest ensemble
 #'
+#' @rdname predict.randomForestEnsemble
+#'
+#' @description `predict.randomForestEnsemble()` is used to predict on new samples given a dataframe
+#' of features. `fitToRmdProfiles()` is a helper function for fitting RMD bins within the feature
+#' dataframe to RMD signature profiles.
+#'
 #' @param object An object of class randomForestEnsemble
-#' @param newdata A data frame or matrix containing new data. (Note: If not given, the out-of-bag
-#' prediction in object is returned)
+#' @param newdata A dataframe containing the features for the new samples
 #' @param type 'class', 'prob' or 'votes', indicating the type of output: predicted values,
 #' matrix of class probabilities, or matrix of vote counts
 #' @param prob.cal.curves A dataframe containing the calibration curve coordinates for scaling the
 #' raw probabilities outputted by the classifier (with the column names: x, y, class). Scaled
 #' probabilities directly represent accuracy of prediction (i.e. probability of correct prediction)
 #' @param gender.feature.name The name of the feature specifying the gender of each sample
+#' @param filter.probs.by.gender If TRUE, male samples will have probabilities for `classes.female`
+#' set to zero, and female samples will have probabilities for `classes.male` set to zero.
 #' @param classes.female A character vector of female cancer type classes. For male samples (as
 #' determined by `gender.feature.name`), the probabilities outputted by the binary random forests
 #' corresponding to `classes.female` will be set to zero
@@ -28,10 +35,40 @@
 #'
 #' @export
 #'
+
+####################################################################################################
+#' @rdname predict.randomForestEnsemble
+fitToRmdProfiles <- function(newdata, rmd.profiles){
+   # if(F){
+   #    rmd.profiles=object$rmd_sig_profiles
+   # }
+
+   ## Least squares fitting
+   fit <- mutSigExtractor::fitToSignatures(
+      mut.context.counts=newdata[,rownames(rmd.profiles)], ## Select the columns corresponding to RMD bins
+      signature.profiles=rmd.profiles
+   )
+
+   ## Rescale contributions to sum to 1
+   fit <- fit / rowSums(fit)
+   fit[is.na(fit)] <- 0
+
+   ## Add feature tag to RMD signatures
+   colnames(fit) <- paste0('rmd.',colnames(fit))
+
+   ## Remove the RMD bins
+   cbind(
+      fit,
+      rmColumns( newdata, grep('^rmd',colnames(newdata), value=T) ) ## Remove RMD bin columns
+   )
+}
+
+####################################################################################################
+#' @rdname predict.randomForestEnsemble
 predict.randomForestEnsemble <- function(
    object, newdata, type='report',
    prob.cal.curves=NULL,
-   gender.feature.name='gender.gender',
+   filter.probs.by.gender=T, gender.feature.name='gender.gender',
    classes.female=c('Cervix','Ovary','Uterus'), classes.male='Prostate',
    calc.feat.contrib=T, top.n.pred.classes=NULL, top.n.features=5,
    verbose=F
@@ -63,22 +100,10 @@ predict.randomForestEnsemble <- function(
       }
    }
 
-   ## Prepare data --------------------------------
+   ## --------------------------------
    if(is.matrix(object$rmd_sig_profiles)){
       if(verbose){ message('Fitting RMD profiles...') }
-      newdata <- (function(){
-         fit <- mutSigExtractor::fitToSignatures(
-            mut.context.counts=newdata[,rownames(object$rmd_sig_profiles)], ## Select the columns corresponding to RMD bins
-            signature.profiles=object$rmd_sig_profiles
-         )
-         fit <- fit / rowSums(fit)
-         fit[is.na(fit)] <- 0
-         colnames(fit) <- paste0('rmd.',colnames(fit))
-         cbind(
-            fit,
-            rmColumns( newdata, grep('^rmd',colnames(newdata), value=T) ) ## Remove RMD bin columns
-         )
-      })()
+      newdata <- fitToRmdProfiles(newdata, object$rmd_sig_profiles)
    }
 
    ## --------------------------------
@@ -99,16 +124,14 @@ predict.randomForestEnsemble <- function(
    if(verbose){ message('Adjusting raw probabilities based on sample gender...') }
 
    ## Set probs for disallowed tissue classes to 0
-   samples_female <- newdata[,gender.feature.name]
-   samples_male <- !samples_female
-
    probs_adjusted <- probs_raw
-   probs_adjusted[samples_female, classes.male] <- 0
-   probs_adjusted[samples_male, classes.female] <- 0
+   if(filter.probs.by.gender){
+      samples_female <- newdata[,gender.feature.name]
+      probs_adjusted[samples_female, classes.male] <- 0
 
-   # ## Adjusted probs to sum to 1
-   # ## In theory not necessary but leads to better calibrated prob performance
-   # probs_adjusted <- probs_adjusted / rowSums(probs_adjusted)
+      samples_male <- !samples_female
+      probs_adjusted[samples_male, classes.female] <- 0
+   }
 
    if(is.null(prob.cal.curves)){
       probs <- probs_adjusted
