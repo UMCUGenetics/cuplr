@@ -13,7 +13,7 @@ from: (i) the somatic VCF file containing SBS, DBS and indel mutations,
 (ii)
 [PURPLE](https://github.com/hartwigmedical/hmftools/tree/master/purple)
 (v2.53) output, and (iii)
-[LINX](https://github.com/hartwigmedical/hmftools/tree/master/sv-linx)
+[LINX](https://github.com/hartwigmedical/hmftools/tree/master/linx)
 (v1.14) output. Below is a summary of the features.
 
 | Feature type | Source | Description                                                                                                   |
@@ -67,7 +67,7 @@ CUPLR is composed of the following R packages:
 -   `statsExtra`: statistics used for univariate feature selection for
     training CUPLR
 -   `nmf`: wrapper around the NNLM package for non-negative matrix
-    factorization for generating RMD signatures
+    factorization for generating RMD profiles.
 
 To download CUPLR, run the following commands in the terminal:
 
@@ -208,16 +208,16 @@ lapply(feature_groups, head)
     ## [5] "sv.foldbacks"               "sv.LINEs"                  
     ## 
     ## $chrom_arm
-    ## [1] "chrom_arm.gain.1p" "chrom_arm.gain.1q" "chrom_arm.gain.2p"
-    ## [4] "chrom_arm.gain.2q" "chrom_arm.gain.3p" "chrom_arm.gain.3q"
+    ## [1] "chrom_arm.genome_cn" "chrom_arm.gain.1p"   "chrom_arm.gain.1q"  
+    ## [4] "chrom_arm.gain.2p"   "chrom_arm.gain.2q"   "chrom_arm.gain.3p"  
     ## 
     ## $gene
     ## [1] "gene.ACVR1.amp"       "gene.ACVR1.deep_del"  "gene.ACVR1.biall"    
     ## [4] "gene.ACVR1.monoall"   "gene.ACVR2A.amp"      "gene.ACVR2A.deep_del"
     ## 
     ## $fusion
-    ## [1] "fusion.@IGL_MYC"   "fusion.*_ETV1/4/5" "fusion.*_RET"     
-    ## [4] "fusion.*_TFEB"     "fusion.CBFB_MYH11" "fusion.CLCN6_BRAF"
+    ## [1] "fusion.@IGH_*"     "fusion.@IGL_MYC"   "fusion.*_ETV1/4/5"
+    ## [4] "fusion.*_RET"      "fusion.*_TFE3"     "fusion.*_TFEB"    
     ## 
     ## $viral_ins
     ## [1] "viral_ins.AAV" "viral_ins.EBV" "viral_ins.HBV" "viral_ins.HCV"
@@ -267,34 +267,34 @@ pred_report
     ## 
     ## Calibrated probabilities:
     ## $prob_scaled
-    ##                 Biliary       Breast       Cervix CNS_Glioma CNS_Medullo
-    ## DO220848   0.0004069868 0.0005401555 0.000000e+00          0 0.000000000
-    ## DO36021    0.0002000029 0.0000000000 1.529864e-05          0 0.001636829
-    ## HMF002482A 0.0554071575 0.0012134401 6.708656e-01          0 0.000000000
-    ##            CNS_PiloAstro   Colorectum     Gastric Gastrointestinal_NET
-    ## DO220848               0 0.0004438136 0.006211163         0.0008078093
-    ## DO36021                1 0.0016150183 0.001790056         0.0000000000
-    ## HMF002482A             0 0.0048338283 0.000949194         0.0012483150
+    ##                Biliary       Breast    Cervix CNS_Glioma CNS_Medullo
+    ## DO220848   0.003126771 2.508363e-04 0.0000000          0           0
+    ## DO36021    0.000000000 2.627688e-05 0.0000000          0           0
+    ## HMF002482A 0.224806580 4.945729e-04 0.6666667          0           0
+    ##            CNS_PiloAstro   Colorectum      Gastric Gastrointestinal_NET
+    ## DO220848               0 0.0001676163 0.0009140741          0.002639600
+    ## DO36021                1 0.0004972881 0.0009749210          0.000000000
+    ## HMF002482A             0 0.0026302420 0.0009587708          0.002509213
     ##            HeadAndNeck_Other HeadAndNeck_SG Kidney_Chromophobe Kidney_ClearCell
-    ## DO220848          0.00000000    0.000000000       0.0000000000     1.020021e-04
-    ## DO36021           0.00000000    0.001967388       0.0002334511     1.847038e-05
-    ## HMF002482A        0.01031422    0.000000000       0.0002615927     6.207967e-05
-    ##            Kidney_Papillary        Liver     Lung_NSC      Lung_SC     Lymphoid
-    ## DO220848       0.0000000000 6.874361e-05 0.0016255476 0.0001640594 1.989993e-06
-    ## DO36021        0.0001270567 0.000000e+00 0.0049112305 0.0031890692 0.000000e+00
-    ## HMF002482A     0.0000000000 1.040689e-04 0.0003367265 0.0001241823 0.000000e+00
-    ##            Mesothelium      Myeloid        Ovary     Pancreas Pancreas_NET
-    ## DO220848             0 5.979865e-05 2.130522e-05 2.122062e-03 0.0008619073
-    ## DO36021              0 1.175459e-04 4.221730e-04 8.052972e-05 0.0000000000
-    ## HMF002482A           0 0.000000e+00 2.346171e-04 3.213921e-01 0.0000000000
-    ##            Prostate Sarcoma_GIST Sarcoma_Leiomyo Sarcoma_Lipo Sarcoma_Other
-    ## DO220848          0            0    0.0002133068            0   0.003969832
-    ## DO36021           0            0    0.0000000000            0   0.000000000
-    ## HMF002482A        0            0    0.0000000000            0   0.000000000
-    ##            Skin_Melanoma Skin_Other      Thyroid   Urothelial       Uterus
-    ## DO220848               1          0 9.898882e-05 0.0008961326 0.000000e+00
-    ## DO36021                0          0 0.000000e+00 0.0002340390 4.380428e-05
-    ## HMF002482A             0          0 0.000000e+00 0.0009033150 1.686783e-04
+    ## DO220848        0.0000000000   0.0000000000       8.866341e-05     1.023541e-04
+    ## DO36021         0.0003702365   0.0126414084       3.750517e-04     0.000000e+00
+    ## HMF002482A      0.0312711988   0.0002451235       0.000000e+00     4.102029e-05
+    ##            Kidney_Papillary Liver    Lung_NSC      Lung_SC Lymphoid Mesothelium
+    ## DO220848                  0     0 0.004637646 0.0000000000        0           0
+    ## DO36021                   0     0 0.001312964 0.0000000000        0           0
+    ## HMF002482A                0     0 0.001343920 0.0004455586        0           0
+    ##                 Myeloid Ovary     Pancreas Pancreas_NET Prostate Sarcoma_GIST
+    ## DO220848   8.868423e-05     0 1.023633e-04     0.001943        0 0.0016739107
+    ## DO36021    1.096294e-04     0 6.539323e-06     0.000000        0 0.0023161641
+    ## HMF002482A 0.000000e+00     0 1.452255e-01     0.000000        0 0.0003698344
+    ##            Sarcoma_Leiomyo Sarcoma_Lipo Sarcoma_Other Skin_Melanoma
+    ## DO220848                 0 2.827708e-05   0.008250491             1
+    ## DO36021                  0 0.000000e+00   0.000000000             0
+    ## HMF002482A               0 0.000000e+00   0.000000000             0
+    ##              Skin_Other      Thyroid  Urothelial Uterus
+    ## DO220848   0.0005096855 0.0000612031 0.001173325      0
+    ## DO36021    0.0000000000 0.0001815789 0.001147782      0
+    ## HMF002482A 0.0000000000 0.0000000000 0.002515283      0
 
 However, the above raw prediction output is not informative at a glance.
 We can use `summary()` to show the prediction in a neat table.
@@ -307,18 +307,14 @@ summary(
 )
 ```
 
-    ##       sample  pred_class.1 pred_class.2  pred_class.3 pred_prob.1 pred_prob.2
-    ## 1   DO220848 Skin_Melanoma      Gastric Sarcoma_Other       1.000       0.006
-    ## 2    DO36021 CNS_PiloAstro     Lung_NSC       Lung_SC       1.000       0.005
-    ## 3 HMF002482A        Cervix     Pancreas       Biliary       0.671       0.321
-    ##   pred_prob.3                    feat.1            feat.2
-    ## 1       0.004 rmd.Skin_Melanoma.1=0.354   sigs.SBS7=0.237
-    ## 2       0.003      mut_load.indel=0.194 mut_load.snv=0.19
-    ## 3       0.055       viral_ins.HPV=0.251 rmd.Cervix.1=0.12
-    ##                          feat.3
-    ## 1               sigs.SBS38=0.13
-    ## 2    fusion.KIAA1549_BRAF=0.189
-    ## 3 rmd.HeadAndNeck_Other.1=0.028
+    ##       sample  pred_class.1   pred_class.2 pred_class.3 pred_prob.1 pred_prob.2
+    ## 1   DO220848 Skin_Melanoma  Sarcoma_Other     Lung_NSC       1.000       0.008
+    ## 2    DO36021 CNS_PiloAstro HeadAndNeck_SG Sarcoma_GIST       1.000       0.013
+    ## 3 HMF002482A        Cervix        Biliary     Pancreas       0.667       0.225
+    ##   pred_prob.3          feat_contrib.1.1   feat_contrib.1.2     feat_contrib.1.3
+    ## 1       0.005 rmd.Skin_Melanoma.1=0.318    sigs.SBS7=0.238     sigs.SBS38=0.146
+    ## 2       0.002 fusion.KIAA1549_BRAF=0.28 mut_load.snv=0.199 mut_load.indel=0.164
+    ## 3       0.145       viral_ins.HPV=0.283 rmd.Cervix.1=0.226       sigs.SBS2=0.02
 
 ## Graphical patient report
 
@@ -354,9 +350,9 @@ patient_report <- patientReport(
 plot(patient_report)
 ```
 
-![](doc/supp/patient_report_example.png) The above sample is a cervical
-cancer samples and we can see in the first panel that this sample was
-correctly predicted as such.
+![](doc/supp/patient_report_example.png) In the first panel we can see
+that this sample was predicted as a cervical cancer sample (this sample
+was indeed labelled as a cervical cancer sample).
 
 In the middle panel, we can see that the prediction is primarily
 supported by this sample having human papillomavirus (HPV) DNA
@@ -373,9 +369,9 @@ cervical cancer prediction for this sample is also supported by this
 sample having fewer (0%) SBSs contributing to the RMD profile of head
 and neck cancer compared to in other cancer types (almost 0%).
 
-We can also see in the first panel that there are two high
-probabilities. In cases where the probabilities are more uncertain (like
-as shown here), more feature contribution panels corresponding to the
-top predicted classes will be shown. This should aid in determining the
-cancer type, since it’s possible that e.g. the 2nd predicted cancer type
-better matches with evidence from pathology.
+We can also see in the first panel that there are other cancer types
+with high probabilities. In cases where the probabilities are more
+uncertain (like as shown here), more feature contribution panels
+corresponding to the top predicted classes will be shown. This should
+aid in determining the cancer type, since it’s possible that e.g. the
+2nd predicted cancer type better matches with evidence from pathology.

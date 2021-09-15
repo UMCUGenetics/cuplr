@@ -243,7 +243,7 @@ patient_report <- patientReport(
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
 if(F){
-   png(paste0(cuplr_dir,'/doc/supp/patient_report_example.png'), 1500, 900, res=150)
+   png(paste0(cuplr_dir,'/doc/supp/patient_report_example.png'), 1500, 1200, res=150)
    plot(patient_report)
    dev.off()   
 }
@@ -268,11 +268,11 @@ the cervical cancer prediction for this sample is also supported by this sample 
 SBSs contributing to the RMD profile of head and neck cancer compared to in other cancer types 
 (almost 0%).
 
-We can also see in the first panel that there are two high probabilities. In cases where the 
-probabilities are more uncertain (like as shown here), more feature contribution panels 
-corresponding to the top predicted classes will be shown. This should aid in determining the cancer
-type, since it's possible that e.g. the 2nd predicted cancer type better matches with evidence from 
-pathology.
+We can also see in the first panel that there are other cancer types with high probabilities. In 
+cases where the probabilities are more uncertain (like as shown here), more feature contribution 
+panels corresponding to the top predicted classes will be shown. This should aid in determining the 
+cancer type, since it's possible that e.g. the 2nd predicted cancer type better matches with 
+evidence from pathology.
 
 
 
