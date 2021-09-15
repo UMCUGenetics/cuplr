@@ -121,7 +121,7 @@ topnAcc <- function(
       structure(out$x, names=as.character(out[,1]))
    })
 
-   df_agg$total <- as.integer( total[df_agg$actual] )
+   df_agg$total <- as.integer( total[as.character(df_agg$actual)] )
    df_agg$frac <- df_agg$correct / df_agg$total
 
    if(output=='values'){ return(df_agg) }
