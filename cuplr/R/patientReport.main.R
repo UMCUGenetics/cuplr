@@ -33,7 +33,7 @@
 patientReport <- function(
    probs=NULL, feat.contrib=NULL,
    sample.name=NULL, plot.title=sample.name,
-   top.n.class.probs=10,
+   top.n.class.probs=NULL,
    top.n.class.features=3, top.n.features=5,
    prob.thres.min=0.1, prob.thres.rel.diff=0.4,
    gender.feature.name='gender.gender',
@@ -52,7 +52,7 @@ patientReport <- function(
       plot.title=sample.name
 
       gender.feature.name='gender.gender';
-      top.n.class.probs=10;
+      top.n.class.probs=NULL;
       top.n.class.features=3; top.n.features=5;
       prob.thres.min=0.1; prob.thres.rel.diff=0.4;
       prob.label.size=3.5; feature.label.size=3.5;
@@ -124,8 +124,8 @@ patientReport <- function(
    pd_probs <- pd_probs[order(-pd_probs$prob),]
    pd_probs$class <- factor(pd_probs$class, pd_probs$class)
 
-   pd_probs$prob_round <- round(pd_probs$prob, 3)
-   pd_probs$label <- format(pd_probs$prob_round, nsmall=3)
+   pd_probs$prob_round <- round(pd_probs$prob, 2)
+   pd_probs$label <- format(pd_probs$prob_round, nsmall=2)
    pd_probs$label[pd_probs$prob_round==0] <- '0'
 
    ## Colors --------------------------------
@@ -149,7 +149,14 @@ patientReport <- function(
    label_fill[pd_probs$prob_round==0] <- 'lightgrey'
 
    ## Main --------------------------------
-   top_n_class_probs <- min(ncol(probs), top.n.class.probs)
+   if(is.null(top.n.class.probs)){
+      ## Show 10 probabilities per class with features shown
+      ## More class features shown = more probabilities shown
+      top_n_class_probs <- length(probs_top)*10
+   } else {
+      top_n_class_probs <- top.n.class.probs
+   }
+   top_n_class_probs <- min(length(probs), top_n_class_probs) ## Prevent `top_n_class_probs` from exceeding the total number of predicted classes
 
    p_probs <- ggplot(pd_probs[1:top_n_class_probs,], aes(x=class, y=prob)) +
 
