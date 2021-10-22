@@ -8,7 +8,7 @@ classifiers which each predict the probability of one cancer type. The
 final predicted cancer type is the one with the highest probability.
 
 The features used by CUPLR are extracted from the output of the [HMF
-pipeline](https://github.com/hartwigmedical/pipeline5), specifically
+pipeline 5](https://github.com/hartwigmedical/pipeline5), specifically
 from: (i) the somatic VCF file containing SBS, DBS and indel mutations,
 (ii)
 [PURPLE](https://github.com/hartwigmedical/hmftools/tree/master/purple)
@@ -19,14 +19,14 @@ from: (i) the somatic VCF file containing SBS, DBS and indel mutations,
 | Feature type | Source | Description                                                                                                   |
 |--------------|--------|---------------------------------------------------------------------------------------------------------------|
 | sigs         | VCF    | Relative contribution of SBS, DBS and indel [mutational signatures](https://cancer.sanger.ac.uk/signatures/)  |
-| mut\_load    | VCF    | Total number of SBSs, DBSs and indels                                                                         |
+| mut_load     | VCF    | Total number of SBSs, DBSs and indels                                                                         |
 | rmd          | VCF    | [Regional mutational density (RMD)](https://www.nature.com/articles/nature14221) profiles as extracted by NMF |
-| chrom\_arm   | PURPLE | Chromosome arm gains/losses compared to the overall genome ploidy                                             |
+| chrom_arm    | PURPLE | Chromosome arm gains/losses compared to the overall genome ploidy                                             |
 | gender       | PURPLE | Gender as derived from copy number data                                                                       |
 | gene         | LINX   | Deep deletions, amplifications, biallelic losses and mutations of cancer associated genes                     |
 | sv           | LINX   | Simple and complex structural variants                                                                        |
 | fusion       | LINX   | Presence of gene fusions                                                                                      |
-| viral\_ins   | LINX   | Presence of viral sequence insertions                                                                         |
+| viral_ins    | LINX   | Presence of viral sequence insertions                                                                         |
 
 CUPLR was trained with tumor samples from 6139 patients from the Hartwig
 Medical Foundation (HMF) and the Pan-Cancer Analysis of Whole Genomes
@@ -45,7 +45,7 @@ CUPLR depends on several R packages for basic functionality. These can
 be installed as follows:
 
 ``` r
-install.packages(c('randomForest','reshape2'))
+install.packages(c('randomForest','reshape2','ggplot2','ggrepel'))
 
 ## For calculating random forest feature contributions:
 install.packages('rfFC', repos='http://R-Forge.R-project.org')
@@ -55,8 +55,8 @@ install.packages('devtools')
 devtools::install_github('https://github.com/UMCUGenetics/mutSigExtractor/')
 ```
 
-Certain functions require other R packages (e.g. ggplot2 for plotting).
-For details on optional dependencies, please see the DESCRIPTION files.
+Certain functions require other R packages. For details on optional
+dependencies, please see the DESCRIPTION files.
 
 ## Loading CUPLR
 
@@ -80,8 +80,8 @@ needed for training CUPLR.
 
 ``` r
 cuplr_dir <- '/path/to/cuplr/'
-devtools::load_all(paste0(cuplr_dir,'/featureExtractor/')
-devtools::load_all(paste0(cuplr_dir,'/cuplr/')
+devtools::load_all(paste0(cuplr_dir,'/featureExtractor/'))
+devtools::load_all(paste0(cuplr_dir,'/cuplr/'))
 ```
 
 # Using CUPLR
@@ -94,7 +94,8 @@ analyzed with the HMF pipeline.
 ## Extracting features
 
 Extraction of features per sample is performed using
-`extractFeaturesCuplr()`.
+`extractFeaturesCuplr()`. This typically takes about 15-30 seconds per
+sample.
 
 ### Method 1
 
