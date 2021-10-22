@@ -24,6 +24,8 @@
 #' @param min.features Minimum number of features to keep. Prevents outputting no features
 #' @param show.conting Show contingency matrix for each feature?
 #' @param show.avg Show case and control group averages per feature?
+#' @param avg.numeric.func Can be 'iqm' (interquartile mean), 'mean', or 'median'
+#' @param show.sample.size Show the sample size of case and control groups?
 #' @param whitelist A character vector of feature names in x to keep, regardless of statistical
 #' enrichment
 #' @param order.by.pvalue If FALSE, rows of the output dataframe will be ordered by the same
@@ -61,8 +63,10 @@ univarFeatSel.default <- function(
    x, y,
    alternative=NULL,
    max.pvalue=0.01, min.cliff.delta=0.1, min.cramer.v=0.1, sel.top.n.features=NULL, min.features=2,
-   show.conting=FALSE, show.avg=TRUE, whitelist=NULL, order.by.pvalue=TRUE,
-   verbose=F
+   show.conting=FALSE,
+   show.avg=TRUE, avg.numeric.func='iqm',
+   show.sample.size=FALSE, whitelist=NULL, order.by.pvalue=TRUE,
+   verbose=FALSE
 ){
    # if(F){
    #    x=features[,-1]
@@ -87,6 +91,7 @@ univarFeatSel.default <- function(
    if(!is.logical(y)){ stop('y must be a logical vector') }
    if(any(sapply(x, is.character))){ stop('characters must be converted to factors') }
    if(is.null(colnames(x))){ stop('x must have colnames') }
+   if(!(avg.numeric.func %in% c('iqm','mean','median'))){ stop('avg.numeric.func must be iqm, mean, or median') }
 
    ## Init --------------------------------
    ## Alternative vector
@@ -194,10 +199,17 @@ univarFeatSel.default <- function(
    ## Add case/ctrl cohort stats  --------------------------------
    if(verbose){ message("Calculating summary stats...") }
    if(show.avg){
+
       calcAvg <- function(x.numeric, x.logical){
          avg_numeric <- numeric()
          if(ncol(x.numeric)!=0){
-            avg_numeric <- colMeansTrimmed(x.numeric, trim=0.25, na.rm=T)
+            if(avg.numeric.func=='iqm'){
+               avg_numeric <- colMeansTrimmed(x.numeric, trim=0.25, na.rm=T)
+            } else if(avg.numeric.func=='mean'){
+               avg_numeric <- colMeans(x.numeric, na.rm=T)
+            } else {
+               avg_numeric <- matrixStats::colMedians(x.numeric, na.rm=T)
+            }
          }
 
          avg_logical <- numeric()
@@ -210,7 +222,7 @@ univarFeatSel.default <- function(
 
       tests$avg_case <- calcAvg(x_numeric[y,,drop=F], x_logical[y,,drop=F])
       tests$avg_ctrl <- calcAvg(x_numeric[!y,,drop=F], x_logical[!y,,drop=F])
-      tests$avg_metric <- 'iqm'
+      tests$avg_metric <- avg.numeric.func
       tests$avg_metric[which_not_numeric] <- 'prop'
    }
 
@@ -224,9 +236,15 @@ univarFeatSel.default <- function(
       )
    }
 
-   tests <- tests[order(tests$pvalue),]
+   ## Show sample size --------------------------------
+   if(show.sample.size){
+      tests$n_case <- sum(y)
+      tests$n_ctrl <- sum(!y)
+   }
 
    ## Post-processing --------------------------------
+   tests <- tests[order(tests$pvalue),]
+
    ## Select features
    is_pass_feature <- structure(
       rep(FALSE, nrow(tests)),
