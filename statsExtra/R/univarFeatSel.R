@@ -238,8 +238,8 @@ univarFeatSel.default <- function(
 
    ## Show sample size --------------------------------
    if(show.sample.size){
-      tests$n_case <- sum(y)
-      tests$n_ctrl <- sum(!y)
+      tests$n_case <- sum(y, na.rm=T)
+      tests$n_ctrl <- sum(!y, na.rm=T)
    }
 
    ## Post-processing --------------------------------
