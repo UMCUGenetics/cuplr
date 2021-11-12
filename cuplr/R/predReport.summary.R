@@ -28,10 +28,11 @@ summary.predReport <- function(
 
    if(F){
       report=pred_reports$CUP
+      report=pred_report
       top.n.classes=3
       show.class.probs=T
       simplify.pred.values=T
-      prob.type='prob'
+      prob.type=NULL
       top.n.feat.classes=1
       top.n.feat=3
       show.feat.contribs=T
@@ -56,6 +57,9 @@ summary.predReport <- function(
    }
    report$prob <- report[[prob.type]]
 
+   if(length(rownames(report$prob))==0){
+      rownames(report$prob) <- 1:nrow(report$prob)
+   }
    df <- data.frame(sample=rownames(report$prob), row.names=NULL)
 
    ## Top predicted class --------------------------------
