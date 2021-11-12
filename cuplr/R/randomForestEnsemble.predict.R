@@ -77,7 +77,7 @@ predict.randomForestEnsemble <- function(
       object=model
       newdata=features
       type='report'
-      prob.cal.curves=cal_curves
+      prob.cal.curves=prob_cal_curves
       gender.feature.name='gender.gender'
       classes.female=c('Cervix','Ovary','Uterus')
       classes.male='Prostate'
@@ -119,6 +119,7 @@ predict.randomForestEnsemble <- function(
       }
       randomForest:::predict.randomForest(model, newdata, type='prob')[,1]
    }))
+   rownames(probs_raw) <- rownames(features)
 
    ## --------------------------------
    if(verbose){ message('Adjusting raw probabilities based on sample gender...') }
