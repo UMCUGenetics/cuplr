@@ -289,6 +289,10 @@ trainRandomForest <- function(
    }
 
    ##----------------------------------------------------------------------
+   ## Default
+   class_weights <- NULL
+
+   ## Simple up/down sampling of samples
    if(balance.classes=='resample'){
       if(verbose>=1){ message(msg_prefix,'[',format(Sys.time(), "%X"),'] > Balancing classes...') }
       resampling_grid <- resamplingGrid(
@@ -371,6 +375,7 @@ trainRandomForest <- function(
       out$resampling_grid <- resampling_grid
    }
 
+   ## Using weighted sample selection during random forest bootstrap
    if(balance.classes=='class_weights'){
       #y=c(rep(T,10), rep(F,50))
       class_counts <- if(is.logical(y)){
@@ -380,8 +385,6 @@ trainRandomForest <- function(
       }
       class_counts <- unclass(class_counts)
       class_weights <- 1/class_counts
-   } else {
-      class_weights <- NULL
    }
 
    ##----------------------------------------------------------------------
