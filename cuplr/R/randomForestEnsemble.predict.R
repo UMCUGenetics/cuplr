@@ -119,7 +119,7 @@ predict.randomForestEnsemble <- function(
       }
       randomForest:::predict.randomForest(model, newdata, type='prob')[,1]
    }))
-   rownames(probs_raw) <- rownames(features)
+   rownames(probs_raw) <- rownames(newdata)
 
    ## --------------------------------
    if(verbose){ message('Adjusting raw probabilities based on sample gender...') }
