@@ -46,7 +46,7 @@ fitToRmdProfiles <- function(newdata, rmd.profiles){
    ## Least squares fitting
    fit <- mutSigExtractor::fitToSignatures(
       mut.context.counts=newdata[,rownames(rmd.profiles)], ## Select the columns corresponding to RMD bins
-      signature.profiles=rmd.profiles
+      signature.profiles=rmd.profiles, scale.contrib=T
    )
 
    ## Rescale contributions to sum to 1
@@ -69,7 +69,7 @@ predict.randomForestEnsemble <- function(
    object, newdata, type='report',
    prob.cal.curves=NULL,
    filter.probs.by.gender=T, gender.feature.name='gender.gender',
-   classes.female=c('Cervix','Ovary','Uterus'), classes.male='Prostate',
+   classes.female=c('Cervix','Ovarian','Uterus'), classes.male='Prostate',
    calc.feat.contrib=T, top.n.pred.classes=NULL, top.n.features=5,
    verbose=F
 ){
@@ -79,7 +79,7 @@ predict.randomForestEnsemble <- function(
       type='report'
       prob.cal.curves=prob_cal_curves
       gender.feature.name='gender.gender'
-      classes.female=c('Cervix','Ovary','Uterus')
+      classes.female=c('Cervix','Ovarian','Uterus')
       classes.male='Prostate'
       top.n.pred.classes=NULL
       top.n.features=5
