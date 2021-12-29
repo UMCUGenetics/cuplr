@@ -401,7 +401,7 @@ confusionHeatmap2 <- function(
    actual=NULL, probs=NULL, top.n=2, rel.heights=c(100,11,22), rel.values=T, plot.title=NULL
 ){
    if(F){
-      report=pred_reports$organoids
+      report=pred_reports$CV
       actual=report$class_actual
       probs=report$prob_scaled
       rel.heights=c(100,11,22)
@@ -454,18 +454,11 @@ confusionHeatmap2 <- function(
    pd_cm <- reshape2::melt(cm)
    colnames(pd_cm) <- c('predicted','actual','value')
 
-   #pd_cm <- pd_cm[!is.na(pd_cm$value),]
-   #pd_cm$value <- as.numeric(pd_cm$value)
-   pd_cm <- subset(pd_cm, !is.na(value)  | actual=='All')
-
    ## top-N accuracy (aka top-N recall) ----------------------------
    topn_acc <- topnAcc(actual=actual, probs=probs, output='values', top.n=top.n)
    topn_acc$fill_value <- topn_acc$frac
 
    topn_acc <- topn_acc[order(topn_acc$class_num),]
-   #topn_acc$group <- paste0('Top-',topn_acc$class_num,' recall')
-   #topn_acc$label <- round(topn_acc$frac, 2)
-
    topn_acc$group <- paste0('Top-',topn_acc$class_num,' correct')
 
    ##
@@ -505,13 +498,25 @@ confusionHeatmap2 <- function(
    require(ggplot2)
    plotHeatmap <- function(
       df, x='actual', y='predicted', fill='value', label='value',
-      label.fontface='plain', label.size=2.5,
+      label.fontface='plain', label.size=2.5, label.light.quantile=NULL, label.light.color='grey50', label.dark.color='black',
       palette='YlGnBu', palette.direction=-1, na.value='grey50', fill.limits=c(NA,NA),
       axis.y.title=waiver(), axis.x.title=waiver(), axis.x.position='bottom'
    ){
+      #df <- pd_cm
+
+      if(!is.null(label.light.quantile)){
+         label_light_thres <- label.light.quantile * (max(df$value, na.rm=T) - min(df$value, na.rm=T))
+         df$quantile_group <- ifelse(df$value>label_light_thres, 'high', 'low')
+      } else {
+         df$quantile_group <- 'high'
+         label.light.color <- label.dark.color
+      }
+
       ggplot(df, aes_string(x=x, y=y, fill=fill, label=label)) +
          geom_tile(color='grey') +
-         geom_text(size=label.size, fontface=label.fontface) +
+         geom_text(aes(color=quantile_group), size=label.size, fontface=label.fontface) +
+         scale_color_manual(values=c(high=label.dark.color, low=label.light.color)) +
+
          scale_fill_distiller(palette=palette, direction=palette.direction, na.value=na.value, limits=fill.limits) +
          scale_x_discrete(name=axis.x.title, expand=c(0,0), position=axis.x.position) +
          scale_y_discrete(name=axis.y.title, expand=c(0,0), limits=rev) +
@@ -531,8 +536,7 @@ confusionHeatmap2 <- function(
    plots$confusion <- plotHeatmap(
       pd_cm, x='actual', y='predicted',fill='value',label='value', axis.x.position='top',
       axis.y.title='Predicted class', axis.x.title='Actual class'
-   ) +
-      theme(panel.background=element_rect(fill='grey50'))
+   )
 
    if(!is.null(plot.title)){
       plots$confusion <- plots$confusion + ggtitle(plot.title)
