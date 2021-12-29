@@ -42,8 +42,8 @@ getGeneFusions <- function(linx.fusions, whitelist.path=GENE_FUSION_WHITELIST){
       names=gene_fusion_whitelist
    )
    
-   ## Select confident fusions
-   fusions <- subset(fusions, likelihood %in% c('LOW','HIGH'))
+   ## Select fusions reported in literaturem
+   fusions <- subset(fusions, reported=='true')
    
    if(nrow(fusions)==0){ return(fusion_exists) }
    
