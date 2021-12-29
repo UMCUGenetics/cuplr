@@ -1,3 +1,0 @@
-snv	2008
-indel	117
-dbs	9
