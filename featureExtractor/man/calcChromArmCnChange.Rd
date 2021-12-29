@@ -9,16 +9,16 @@
 \usage{
 calcChromArmCnChange(x, ...)
 
-\method{calcChromArmCnChange}{numeric}(x, direction)
+\method{calcChromArmCnChange}{numeric}(x, direction = "both")
 
-\method{calcChromArmCnChange}{matrix}(m, direction)
+\method{calcChromArmCnChange}{matrix}(x, direction = "both")
 
-\method{calcChromArmCnChange}{data.frame}(m, direction)
+\method{calcChromArmCnChange}{data.frame}(x, direction = "both")
 }
 \arguments{
 \item{x}{Output from calcChromArmPloidies() as a matrix or vector}
 
-\item{direction}{Can be'gain' or 'loss'}
+\item{direction}{Can be'gain', 'loss' or 'both'}
 }
 \value{
 A matrix or vector
