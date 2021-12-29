@@ -193,8 +193,12 @@ trainRandomForest <- function(
 
    ## class balancing
    balance.classes=c('none','resample','class_weights'), k.inner=5,
-   n.resamples.true=4, n.resamples.false=4, midpoint.type='geometric',
-   min.size.diff=NULL, max.upsample.ratio=10,
+   n.resamples.true=5, n.resamples.false=5, midpoint.type='geometric',
+   min.size.diff=15,
+   max.upsample.ratio=5, max.upsample.size=300,
+   min.downsample.ratio=NULL, min.downsample.size=1000,
+   max.imbalance.ratio=15,
+   max.pairs=10,
 
    ntree=500, get.local.increments=T,
    feat.tmp.path=NULL,
@@ -298,10 +302,16 @@ trainRandomForest <- function(
       resampling_grid <- resamplingGrid(
          a=sum(y==TRUE), b=sum(y==FALSE),
          breaks.a=n.resamples.true, breaks.b=n.resamples.false,
-         min.size.diff=min.size.diff, midpoint.type=midpoint.type, max.upsample.ratio=max.upsample.ratio
+         min.size.diff=min.size.diff,
+         max.upsample.ratio=max.upsample.ratio, max.upsample.size=max.upsample.size,
+         min.downsample.ratio=min.downsample.ratio, min.downsample.size=min.downsample.size,
+         max.imbalance.ratio=max.imbalance.ratio,
+         max.pairs=max.pairs
       )
+      #resampling_grid <- resamplingGrid(15, 6000, breaks.a=5, breaks.b=5, max.upsample.ratio=10, max.upsample.size=1000,min.downsample.ratio=NULL, min.downsample.size=1000, max.pairs=12)
 
       train_new <- structure(cbind(y, x), names=c(colname.response, colnames(x)))
+      #train_new <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.21a_DR104-update5_pcawgSoftFilt2/features/training_labels.txt')
 
       perfs_inner_cv <- lapply(1:nrow(resampling_grid), function(i){
          #i=1
@@ -738,6 +748,3 @@ print.randomForestEnsemble <- function(object){
    cat('\nOther objects in list:\n')
    cat( paste0('$',names(object)[3:length(object)]) )
 }
-
-
-
