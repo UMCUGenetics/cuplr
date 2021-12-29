@@ -21,7 +21,7 @@ reliabilityPlot(
   probs = NULL,
   report = NULL,
   stats = NULL,
-  min.samples.per.bin = 4,
+  min.samples.per.bin = 5,
   show.labels = T,
   facet.nrow = NULL,
   facet.ncol = NULL,
