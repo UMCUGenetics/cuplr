@@ -6,11 +6,12 @@
 #'
 #' @param x Input x values
 #' @param y Input y values
+#' @param na.rm Remove pairs of x and y values that have NA
 #'
 #' @return A dataframe containing the x,y values of the curve
 #' @export
 #'
-isoReg <- function(x,y){
+isoReg <- function(x, y, na.rm=F){
 
    # if(F){
    #    report=pred_reports$CV
@@ -19,10 +20,19 @@ isoReg <- function(x,y){
    #    y=report$class_actual==sel_class
    # }
 
+   ## Check for NA
    coords <- data.frame(x,y)
-   coords <- coords[order(coords$x),]
+   nrows_with_na <- sum(is.na(coords$x) | is.na(coords$y))
+   if(nrows_with_na>0){
+      if(!na.rm){
+         stop(nrows_with_na,' `x` and `y` pairs contain NA. Use `na.rm=T` to remove these')
+      }
+      coords <- coords[!is.na(coords$x) & !is.na(coords$y),]
+      warning('Removed ',nrows_with_na,' `x` and `y` pairs containing NA')
+   }
 
    ## Fit isotonic regression
+   coords <- coords[order(coords$x),]
    fit <- isoreg(coords$x, coords$y)
    fit$x <- sort(fit$x)
    fit$y <- sort(fit$y)
@@ -153,11 +163,15 @@ probCalCurves <- function(
    output=c('curve','plot','plotdata'), method=c('isotonic','logistic'), prob.prescale=T,
    facet.ncol=NULL
 ){
-   # if(F){
-   #    report=pred_reports$CV
-   #    actual=report$class_actual
-   #    probs=report$prob
-   # }
+   if(F){
+      report=pred_reports$CV
+      actual=report$class_actual
+      probs=report$prob
+      output='plot'
+      method='isotonic'
+      prob.prescale=T
+      facet.ncol=NULL
+   }
 
    ## Init --------------------------------
    if(!is.null(report)){
@@ -236,12 +250,14 @@ probCalCurves <- function(
 
       ## Original data
       geom_point(data=orig_data, shape=21, color='red') +
+      #geom_rug(data=subset(orig_data, y==1), mapping=aes(y=1), sides='t', color='red', alpha=0.5) +
+      #geom_rug(data=subset(orig_data, y==0), mapping=aes(y=0), sides='b', color='red', alpha=0.5) +
 
       ## Curve from fit
       geom_line() +
 
-      scale_y_continuous(name='Calibrated prob.\n(red dot: one sample)') +
-      scale_x_continuous(name='Raw prob. (from classifier)') +
+      scale_y_continuous(name='Calibrated probabilities\n(red dots: sample labels)') +
+      scale_x_continuous(name='Raw probabilities') +
       theme_bw() +
       theme(
          panel.grid.minor=element_blank()
