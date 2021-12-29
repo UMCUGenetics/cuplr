@@ -71,6 +71,17 @@ nmfPerClass <- function(
 
    names(l_nmf_out) <- names(A_split)
 
+   if(F){
+      tmp.dir <- '/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.18a_newLabels/final/tmp/nmf/'
+      tmp_out_paths <- list.files(tmp.dir,full.names=T)
+      l_nmf_out <- lapply(tmp_out_paths, readRDS)
+      names(l_nmf_out) <- sub(
+         '^nmf_','',
+         sub('[.]rds','',basename(tmp_out_paths))
+      )
+   }
+
+
    ## --------------------------------
    if(verbose){ message('Removing redundant signatures...') }
    ## Name signatures like so: {cancer_type}.{denovo_sig_number}
@@ -87,7 +98,8 @@ nmfPerClass <- function(
 
    ## Clustering based on pearson correlation
    cor_profiles <- cor(t(profiles))
-   hc <- hclust(as.dist(1-cor_profiles))
+   distances <- as.dist(1-cor_profiles)
+   hc <- hclust(distances)
    # plot(hc)
    # abline(h=0)
    # df <- reshape2::melt(cor_profiles)
@@ -114,6 +126,24 @@ nmfPerClass <- function(
    profile_whitelist <- unlist(profile_whitelist, use.names=F)
 
    profiles <- profiles[profile_whitelist,]
+
+   # if(F){
+   #    #n_clust_range <- 2:min(nrow(cor_profiles),100)
+   #    n_clust_range <- 2:46
+   #    avg_sil_width <- sapply(n_clust_range, function(i){
+   #       #i=3
+   #       clusters <- cutree(hc, k=i)
+   #       sil <- cluster::silhouette(clusters, distances)
+   #       mean(sil[,3])
+   #    })
+   #
+   #    require(ggplot2)
+   #    pd <- data.frame(k=n_clust_range, avg_sil_width)
+   #    ggplot(pd, aes(x=k, y=avg_sil_width)) +
+   #       geom_point() +
+   #       geom_line() +
+   #       theme_bw()
+   # }
 
    ## --------------------------------
    if(verbose){ message('Summarizing rank search performance...') }
