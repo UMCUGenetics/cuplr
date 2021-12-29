@@ -182,7 +182,7 @@ reliabilityPlot <- function(
    actual=NULL, probs=NULL, report=NULL, stats=NULL,
 
    ## Plotting args
-   min.samples.per.bin=4, show.labels=T, facet.nrow=NULL, facet.ncol=NULL,
+   min.samples.per.bin=5, show.labels=T, facet.nrow=NULL, facet.ncol=NULL,
    ...
 ){
 
