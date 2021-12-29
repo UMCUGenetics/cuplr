@@ -28,6 +28,7 @@ extractFeaturesCuplr <- function(
    
    ## Debugging --------------------------------
    if(F){
+      devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor')
       in.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/doc/data/DO36021/'
       out.dir=paste0(in.dir,'/output/')
       dir.create(out.dir, showWarnings=F)
@@ -179,6 +180,7 @@ extractFeaturesCuplr <- function(
       'raw/rmd_bin_counts.txt'
    )
    
+   #features$rmd <- rmd_bin_counts
    features$rmd <- saveAndReadVector(
       normalizeVector(rmd_bin_counts),
       'features/rmd.txt'
@@ -195,17 +197,16 @@ extractFeaturesCuplr <- function(
    
    ## --------------------------------
    if(verbose){ message('> Chrom arm ploidies') }
-   arm_ploidy <- calcChromArmPloidies(
-      cnv.file=input.paths[['purple.cnv']],
-      sel.cols=c(chrom='chromosome',start='start',end='end',total_cn='copyNumber',major_cn='majorAlleleCopyNumber',minor_cn='minorAlleleCopyNumber'),
-      verbose=verbose>=2
+   arm_ploidy <- saveAndReadVector(
+      calcChromArmPloidies(
+         cnv.file=input.paths[['purple.cnv']],
+         sel.cols=c(chrom='chromosome',start='start',end='end',total_cn='copyNumber',major_cn='majorAlleleCopyNumber',minor_cn='minorAlleleCopyNumber'),
+         verbose=verbose>=2
+      ),
+      'raw/arm_ploidy.txt'
    )
-   
-   chrom_arm <- list(
-      genome_cn=arm_ploidy[['genome']],
-      gain=calcChromArmCnChange(arm_ploidy, direction='gain'),
-      loss=calcChromArmCnChange(arm_ploidy, direction='loss')
-   )
+      
+   chrom_arm <- calcChromArmCnChange(arm_ploidy, direction='both')
    
    features$chrom_arm <- saveAndReadVector(
       unlist(chrom_arm),
@@ -240,20 +241,17 @@ extractFeaturesCuplr <- function(
    
    ## --------------------------------
    if(verbose){ message('> PURPLE purity') }
-   purple <- getPurplePurityData(input.paths[['purple.purity']])
-   features$gender <- saveAndReadVector(
-      purple['gender'],
-      'features/gender.txt'
+   purple <- saveAndReadVector(
+      getPurplePurityData(input.paths[['purple.purity']]),
+      'features/purple.txt'
    )
-   if(verbose>=2){ message() }
    
-   # ## --------------------------------
-   # if(verbose){ message('> Kataegis') }
-   # features$kataegis <- saveAndReadVector(
-   #    detectKataegis(df=vcf_smnv, output.type='count', verbose=verbose>=2),
-   #    'features/kataegis.txt'
-   # )
-   # if(verbose>=2){ message() }
+   features$genome <- purple[c('genome_ploidy','diploid_proportion','has_wgd')]
+   names(features$genome)[names(features$genome)=='genome_ploidy'] <- 'ploidy'
+   
+   features$gender <- purple['gender']
+   
+   if(verbose>=2){ message() }
    
    ## Output ================================
    features <- lapply(features, function(i){
@@ -267,6 +265,10 @@ extractFeaturesCuplr <- function(
       unlist(features, recursive=F), 
       check.names=F
    )
+   
+   ## Fix bool features that were coerced to numeric due to being in a vector
+   features$gender.gender <- as.logical(features$gender.gender)
+   features$genome.has_wgd <- as.logical(features$genome.has_wgd)
    
    if(!is.null(out.dir)){
       if(verbose){ message('> Features saved to: ',out.dir,'/all_features.txt.gz') }
