@@ -7,11 +7,17 @@
 resamplingGrid(
   a,
   b,
-  breaks.a = 4,
-  breaks.b = 4,
+  breaks.a = 5,
+  breaks.b = 5,
   midpoint.type = "geometric",
-  min.size.diff = 30,
-  max.upsample.ratio = 10
+  min.size.diff = 15,
+  max.upsample.ratio = 5,
+  max.upsample.size = 300,
+  min.downsample.ratio = NULL,
+  min.downsample.size = 1000,
+  max.imbalance.ratio = 15,
+  max.pairs = 10,
+  bypass.filter = F
 )
 }
 \arguments{
@@ -27,10 +33,13 @@ resamplingGrid(
 from a->midpoint and b->midpoint? If 'none', resampling values will be calculated from a->b and
 b->a.}
 
-\item{min.size.diff}{Default=30. Minimum difference between resampling values (integer).}
+\item{min.size.diff}{Default=15. Minimum difference between resampling values (integer).}
 
-\item{max.upsample.ratio}{Default=10. Remove pairs where a or b are upsampled more than this
+\item{max.upsample.ratio}{Default=8 Remove pairs where a or b are upsampled more than this
 value}
+
+\item{max.upsample.size}{Default=1000. Remove pairs where upsampling results in a higher sample
+size than this}
 }
 \value{
 A dataframe of target sample sizes and resampling ratios for a and b

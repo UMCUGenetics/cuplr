@@ -4,12 +4,14 @@
 \alias{isoReg}
 \title{Isotonic regression}
 \usage{
-isoReg(x, y)
+isoReg(x, y, na.rm = F)
 }
 \arguments{
 \item{x}{Input x values}
 
 \item{y}{Input y values}
+
+\item{na.rm}{Remove pairs of x and y values that have NA}
 }
 \value{
 A dataframe containing the x,y values of the curve

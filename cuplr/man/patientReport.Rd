@@ -9,7 +9,7 @@ patientReport(
   feat.contrib = NULL,
   sample.name = NULL,
   plot.title = sample.name,
-  top.n.class.probs = 10,
+  top.n.class.probs = NULL,
   top.n.class.features = 3,
   top.n.features = 5,
   prob.thres.min = 0.1,

@@ -25,7 +25,7 @@ confusionHeatmap2(
   actual = NULL,
   probs = NULL,
   top.n = 2,
-  rel.heights = c(18, 11, 100),
+  rel.heights = c(100, 11, 22),
   rel.values = T,
   plot.title = NULL
 )

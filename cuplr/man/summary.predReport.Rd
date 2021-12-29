@@ -11,8 +11,8 @@
   simplify.pred.values = F,
   prob.type = NULL,
   top.n.feat = NULL,
-  show.feat.contribs = T,
-  object.names = NULL
+  top.n.feat.classes = 1,
+  show.feat.contribs = T
 )
 }
 \arguments{
@@ -32,13 +32,11 @@ string in the form {class}={prob}}
 \item{top.n.feat}{An integer specifying the top features contributing to the top predicted
 class to show}
 
+\item{top.n.feat.classes}{An integer specifying the number of top classes for which to show the
+top contributing features}
+
 \item{show.feat.contribs}{When `top.n.feat`==TRUE, also show the feature
 contributions?}
-
-\item{object.names}{Specify custom object names within `report` with a named character vector in
-the form: `c(prob='prob',class_actual='class_actual',feat_contrib='feat_contrib')`.
-The vector values are the custom object names, and the vector names correspond to the names used
-internally in the function. `object.names` can be NULL, or one or more named values}
 }
 \value{
 A dataframe
