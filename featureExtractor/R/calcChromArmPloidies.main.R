@@ -96,24 +96,6 @@ calcChromArmPloidies <- function(
    cnv$chrom_arm <- factor(cnv$chrom_arm, unique(cnv$chrom_arm))
    cnv_split <- split(cnv, cnv$chrom_arm)
 
-   # minor_cn_segment_support <- lapply(cnv_split, function(i){
-   #    #i=cnv_split$`Yp`
-   #    df <- aggregate(i$segment_size, by=list(i$minor_cn_int), FUN=sum)
-   #    colnames(df) <- c('minor_cn_int','cum_segment_size')
-   #    df <- as.data.frame(lapply(df, as.integer)) ## aggregate can return lists instead of vectors as output
-   # 
-   #    df$cum_segment_size_rel <- df$cum_segment_size / sum(df$cum_segment_size)
-   # 
-   #    #df[which.max(df$cum_segment_size_rel),]
-   #    if(nrow(df)!=0L){
-   #       df <- df[order(df$cum_segment_size_rel, decreasing=T),]
-   #       return(df)
-   #    } else {
-   #       df[1L,] <- NA
-   #       return(df)
-   #    }
-   # })
-
    ##----------------------------------------------------------------
    if(verbose){ message('Calculating copy number segment support...') }
    calcSegmentSupport <- function(colname){
@@ -208,7 +190,6 @@ calcChromArmPloidies <- function(
          sep='\t', quote=F, row.names=F,
       )
    }
-
 }
 
 ################################################################################
@@ -217,7 +198,7 @@ calcChromArmPloidies <- function(
 #' @rdname calcChromArmCnChange
 #'
 #' @param x Output from calcChromArmPloidies() as a matrix or vector
-#' @param direction Can be'gain' or 'loss'
+#' @param direction Can be'gain', 'loss' or 'both'
 #'
 #' @return A matrix or vector
 #' @export
@@ -229,47 +210,76 @@ calcChromArmCnChange <- function (x, ...) {
 #' @rdname calcChromArmCnChange
 #' @method calcChromArmCnChange numeric
 #' @export
-calcChromArmCnChange.numeric <- function(x, direction){
-   #x <- unlist(features$ploidy[1,])
-
+calcChromArmCnChange.numeric <- function(x, direction='both'){
+   #x <- unlist(arm_ploidy[1,])
+   
+   ##
+   if(!(direction %in% c('gain','loss','both'))){ 
+      stop("`direction` must be 'gain','loss', or 'both'") 
+   }
+   
+   ## Calc fold change
    genome_index <- which(names(x)=='genome')
    arm <- x[-genome_index]
    genome <- x[genome_index]
-
-   x_diff <- arm - genome
-   if(direction=='gain'){
-      x_diff[x_diff < 0] <- 0
-   } else if(direction=='loss') {
-      x_diff[x_diff > 0] <- 0
-   } else {
-      stop("`direction` must be 'gain' or 'loss'")
+   
+   fold_change <- arm/genome
+   
+   if(direction %in% c('gain','both')){
+      fold_change.gain <- fold_change
+      fold_change.gain[fold_change.gain<1] <- 1
    }
-   x_diff <- abs(x_diff)
-
-   return(x_diff)
+   
+   if(direction %in% c('loss','both')){
+      fold_change.loss <- fold_change
+      fold_change.loss[fold_change.loss<1] <- 1
+   }
+   
+   ## Output
+   if(direction=='gain'){ return(fold_change.gain) } 
+   if(direction=='loss'){ return(fold_change.loss) } 
+   
+   names(fold_change.loss) <- paste0('loss.',names(fold_change.loss))
+   names(fold_change.gain) <- paste0('gain.',names(fold_change.gain))
+   c(fold_change.gain, fold_change.loss)
 }
 
 #' @rdname calcChromArmCnChange
 #' @method calcChromArmCnChange matrix
 #' @export
-calcChromArmCnChange.matrix <- function(m, direction){
-   #m=features$ploidy
-
-   genome_index <- which(colnames(m)=='genome')
-   arm <- m[,-ncol(m)]
-   genome <- m[,ncol(m)]
-
-   x_diff <- arm - genome
-   if(direction=='gain'){
-      x_diff[x_diff < 0] <- 0
-   } else if(direction=='loss') {
-      x_diff[x_diff > 0] <- 0
-   } else {
-      stop("`direction` must be 'gain' or 'loss'")
+##
+calcChromArmCnChange.matrix <- function(x, direction='both'){
+   #x <- arm_ploidy
+   
+   ##
+   if(!(direction %in% c('gain','loss','both'))){ 
+      stop("`direction` must be 'gain','loss', or 'both'") 
    }
-   x_diff <- abs(x_diff)
-
-   return(x_diff)
+   
+   ## Calc fold change
+   genome_index <- which(colnames(x)=='genome')
+   arm <- x[,-genome_index]
+   genome <- x[,genome_index]
+   
+   fold_change <- arm/genome
+   
+   if(direction %in% c('gain','both')){
+      fold_change.gain <- fold_change
+      fold_change.gain[fold_change.gain<1] <- 1
+   }
+   
+   if(direction %in% c('loss','both')){
+      fold_change.loss <- fold_change
+      fold_change.loss[fold_change.loss<1] <- 1
+   }
+   
+   ## Output
+   if(direction=='gain'){ return(fold_change.gain) } 
+   if(direction=='loss'){ return(fold_change.loss) } 
+   
+   colnames(fold_change.loss) <- paste0('loss.',colnames(fold_change.loss))
+   colnames(fold_change.gain) <- paste0('gain.',colnames(fold_change.gain))
+   cbind(fold_change.gain, fold_change.loss)
 }
 
 #' @rdname calcChromArmCnChange
