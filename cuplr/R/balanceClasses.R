@@ -8,30 +8,43 @@
 #' @param midpoint.type Can be 'geometric', 'arithmetic', or 'none'. Calculate the resampling values
 #' from a->midpoint and b->midpoint? If 'none', resampling values will be calculated from a->b and
 #' b->a.
-#' @param min.size.diff Default=30. Minimum difference between resampling values (integer).
-#' @param max.upsample.ratio Default=10. Remove pairs where a or b are upsampled more than this
+#' @param min.size.diff Default=15. Minimum difference between resampling values (integer).
+#' @param max.upsample.ratio Default=8 Remove pairs where a or b are upsampled more than this
 #' value
+#' @param max.upsample.size Default=1000. Remove pairs where upsampling results in a higher sample
+#' size than this
 #'
 #' @return A dataframe of target sample sizes and resampling ratios for a and b
 #' @export
 #'
 resamplingGrid <- function(
    a, b,
-   breaks.a=4, breaks.b=4,
+   breaks.a=5, breaks.b=5,
    midpoint.type='geometric',
-   min.size.diff=30, max.upsample.ratio=10
+   min.size.diff=15,
+   max.upsample.ratio=5, max.upsample.size=300,
+   min.downsample.ratio=NULL, min.downsample.size=1000,
+   max.imbalance.ratio=15,
+   max.pairs=10, bypass.filter=F
 ){
-   # if(F){
-   #    a=25
-   #    b=3500
-   #    breaks.a=5
-   #    breaks.b=5
-   #    midpoint.type='geometric'
-   #    min.size.diff=30
-   #
-   # }
+   if(F){
+      a=50
+      b=6000
+      breaks.a=5
+      breaks.b=5
+      midpoint.type='geometric'
+      max.upsample.ratio=5
+      max.upsample.size=300
+      min.downsample.ratio=NULL
+      min.downsample.size=1000
+      max.imbalance.ratio=15
+      max.pairs=10
+   }
 
-   ## Calculate midpoint between a and b
+   if(a>b){ stop('b must be greater than a') }
+   #if(a==b){ }
+
+   ## Calculate midpoint between a and b --------------------------------
    if(midpoint.type=='geometric'){
       midpoint <- round(sqrt(a*b)) ## logarithmic (geometric) mean Same as exp((log(a)+log(b))/2)
    } else if(midpoint.type=='arithmetic') {
@@ -52,7 +65,7 @@ resamplingGrid <- function(
       }
    }
 
-   ## Main
+   ## Main --------------------------------
    calcTargetSampleSize <- function(start, end, breaks){
       #start=500
       #end=midpoint
@@ -95,26 +108,97 @@ resamplingGrid <- function(
       )
    }
 
-   ## Return output
+   ## Filtering --------------------------------
    out <- structure(
       expand.grid(size_a, size_b),
       names=c('size_a','size_b')
    )
+
+   ##
+   out$size_b[ out$size_b < min.downsample.size ] <- min.downsample.size
+   out <- unique(out)
+
+   ##
    out$ratio_a <- out$size_a / a
    out$ratio_b <- out$size_b / b
 
-   if(!is.null(max.upsample.ratio)){
-      out <- out[
-         out$ratio_a < max.upsample.ratio &
-         out$ratio_b < max.upsample.ratio
-      ,]
+   out$imbalance_ratio <- pmax(
+      out$size_a/out$size_b,
+      out$size_b/out$size_a
+   )
 
+   ## Calculate resampling intensity score
+   ## Use ratio_a as exponent to penalize more upsampling
+   ## Add 1 to 1/ratio_b to prevent 1^n (i.e. penalty still applies when no downsampling is performed)
+   out$resampling_intensity <- (1/out$ratio_b + 1) ^ out$ratio_a
+
+   ##
+   out$pass.min.downsample.size <- TRUE
+   if(!is.null(min.downsample.size)){
+      ## Never allow too much down sampling
+      out$pass.min.downsample.size[out$ratio_b<1 & out$size_b<min.downsample.size] <- FALSE
    }
 
+   out$pass.min.downsample.ratio <- TRUE
+   if(!is.null(min.downsample.ratio)){
+      out$pass.min.downsample.ratio[out$ratio_b < min.downsample.ratio] <- FALSE
+   }
+
+   ##
+   out$pass.max.upsample.size <- TRUE
+   if(!is.null(max.upsample.size)){
+      ## When original sample size is already high, no need to upsample
+      out$pass.max.upsample.size[a>max.upsample.size & out$ratio_a>1 & out$size_a>max.upsample.size] <- FALSE
+   }
+
+   out$pass.max.upsample.ratio <- TRUE
+   if(!is.null(max.upsample.ratio)){
+      out$pass.max.upsample.ratio[out$ratio_a > max.upsample.ratio] <- FALSE
+   }
+
+   ##
+   out$pass.max.imbalance.ratio <- TRUE
+   if(!is.null(max.imbalance.ratio)){
+      out$pass.max.imbalance.ratio[ out$imbalance_ratio>max.imbalance.ratio ] <- FALSE
+   }
+
+   ## Prioritize pairs
+   out <- out[
+      with(out, order(
+         -(out$ratio_a==1 & out$ratio_b<1), ## prioritize downsampling and no upsampling
+         -pass.min.downsample.size,
+         -pass.min.downsample.ratio,
+         -pass.max.upsample.size,
+         -pass.max.upsample.ratio,
+         -pass.max.imbalance.ratio, ## prioritize pairs resulting in acceptably low imbalances
+         #imbalance_ratio,
+         resampling_intensity,
+         size_a,
+         -size_b
+      ))
+   ,]
+
+   if(!bypass.filter){
+      out <- out[out$pass.max.upsample.size,] ## When original sample size is already high, no need to upsample
+      out <- out[out$pass.min.downsample.size,] ## Never allow too much down sampling
+      out <- out[1:min(max.pairs,nrow(out)),] ## Select maximum number of pairs
+      out <- out[,!grepl('^pass',colnames(out))]
+   }
+
+   rownames(out) <- NULL
    return(out)
 }
 
-#resamplingGrid(460, 3500, breaks.a=4, breaks.b=4, min.size.diff=NULL)
+if(F){
+   resamplingGrid(
+      30, 6000, breaks.a=5, breaks.b=5, min.size.diff=15,
+      max.upsample.ratio=5, max.upsample.size=300,
+      min.downsample.ratio=NULL, min.downsample.size=1000,
+      max.imbalance.ratio=15,
+      max.pairs=10, bypass.filter=F
+   )
+}
+
 
 ################################################################################
 #' Resolve class imbalances by simple resampling
@@ -135,12 +219,31 @@ resampleClasses <- function(
    resample.ratios=NULL, target.sample.sizes=NULL,
    return.data=T
 ){
-   #df=train[,1:10]
-   #resample.ratios=c('TRUE'=1.5,'FALSE'=1)
+   # if(F){
+   #    #df=train[,1:10]
+   #    #resample.ratios=c('TRUE'=1.5,'FALSE'=1)
+   #    df_raw <- read.delim('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/cuplr/models/0.21a_DR104-update5_pcawgSoftFilt2/features/training_labels.txt')
+   #    df_raw <- subset(df, in_training_set)
+   #
+   #    ##
+   #    df <- df_raw
+   #    rownames(df) <- df$sample
+   #    df$response <- df$response=='CNS_Glioma'
+   #    colname.response='response'
+   #    resample.ratios=c('TRUE'=1.5,'FALSE'=0.5)
+   #    target.sample.sizes=NULL
+   #
+   #    class_weights <- 1 / table(df_raw$response)
+   #    class_weights <- class_weights/sum(class_weights)
+   #    sample.weights <- class_weights[as.character(df_raw$response)]
+   #    names(sample.weights) <- df_raw$sample
+   # }
 
    y <- df[,colname.response]
    indexes <- split(1:nrow(df), y)
 
+   ## Checks --------------------------------
+   ##
    if(!is.null(resample.ratios)){
       if(is.null(names(resample.ratios))){
          stop('`resample.ratios` must be a numeric vector with names (of the sample classes)')
@@ -154,6 +257,7 @@ resampleClasses <- function(
       })
    }
 
+   ##
    if(is.null(names(target.sample.sizes))){
       stop('`target.sample.sizes` must be an integer vector with names (of the sample classes)')
    }
@@ -161,6 +265,19 @@ resampleClasses <- function(
       stop('Not all class names are present in the names of `target.sample.sizes`')
    }
 
+   ##
+   # sample_weights <- NULL
+   # if(!is.null(sample.weights)){
+   #    if(length(names(sample.weights))==0){
+   #       stop('`sample.weights` must be a numeric vector with names (of each sample)')
+   #    }
+   #    sample_weights <- sample.weights[rownames(df)]
+   #    if(anyNA(sample_weights)){
+   #       stop('`sample.weights` is missing values for certain samples')
+   #    }
+   # }
+
+   ## Main --------------------------------
    indexes_new <- lapply(names(target.sample.sizes), function(i){
       v <- indexes[[i]]
       target_sample_size <- target.sample.sizes[[i]]
@@ -170,6 +287,7 @@ resampleClasses <- function(
       sample(
          v,
          size=target_sample_size,
+         #prob=sample_weights,
          replace=if(target_sample_size > length(v)){ TRUE } else { FALSE }
       )
    })
