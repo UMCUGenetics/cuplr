@@ -1,2 +1,0 @@
-purity	normFactor	score	diploidProportion	ploidy	gender	status	polyclonalProportion	minPurity	maxPurity	minPloidy	maxPloidy	minDiploidProportion	maxDiploidProportion	version	somaticPenalty	wholeGenomeDuplication	msIndelsPerMb	msStatus	tml	tmlStatus	tmbPerMb	tmbStatus	svTumorMutationalBurden
-0.6300	0.8574	0.2898	0.1990	2.5000	FEMALE	NORMAL	0.0008	0.6200	0.6400	2.4600	2.5200	0.1988	0.2002	2.49	0.0000	true	0.32458901713885974	MSS	69	LOW	3.0821965722280518	LOW	146
