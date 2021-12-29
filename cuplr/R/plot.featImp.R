@@ -4,11 +4,11 @@ FEATURE_TYPE_COLORS <- c(
    mut_load="#DAB986", ## Misc Brown
    gene="#FCCDE5", ## Set3:8 Pink
    chrom_arm="#80B1D3", ## Set3:5 Blue
+   genome="lightblue1",
    gender="#FB8072", ## Set3:4 Red
    sv="#FFFFB3", ## Set3:2 Pale yellow
    fusion="#FDB462", ## Set3:6 Light orange
    viral_ins="#B3DE69" ## Set3:7 Lime
-   #kataegis="#FFFFB3" ## Set3:2 Pale yellow
 )
 
 ####################################################################################################
