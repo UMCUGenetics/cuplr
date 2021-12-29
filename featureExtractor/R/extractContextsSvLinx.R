@@ -10,6 +10,8 @@ extractContextsSvLinx <- function(vis.sv.data=NULL){
    #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor/DO1003-from-jar/linx14/DO1003T.linx.vis_sv_data.tsv"
    #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104-update3//somatics/161205_HMFregXXXXXXXX/linx14/XXXXXXXX.linx.vis_sv_data.tsv"
    #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104-update3/somatics/160601_HMFreg0056_FR10302053_FR10302054_XXXXXXXX/linx14/XXXXXXXX.linx.vis_sv_data.tsv"
+   #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data//DR-104-update5/somatics/XXXXXXXX/linx/XXXXXXXX.linx.vis_sv_data.tsv"
+   #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor/DO222275-from-jar//linxsoft1.17/DO222275T.linx.vis_sv_data.tsv"
    # }
    
    ## Load inputs --------------------------------
@@ -22,57 +24,40 @@ extractContextsSvLinx <- function(vis.sv.data=NULL){
       stop('`vis.sv.data` must be a path or a dataframe')
    }
    
-   #linx_svs$IsSynthetic <- as.logical(linx_svs$IsSynthetic)
-   linx_svs$InDoubleMinute <- as.logical(linx_svs$InDoubleMinute)
-   linx_svs$HasFoldback <- with(linx_svs, InfoStart=='FOLDBACK' | InfoEnd=='FOLDBACK' | ResolvedType=='RESOLVED_FOLDBACK' )
+   ## Main --------------------------------
+   ## DEL, DUP and COMPLEX SVs stratified by length
+   DEL_DUP <- countDelDupByLen(linx_svs)[1,]
+   COMPLEX <- countComplexByLen(linx_svs)[1,]
    
-   ## Punctuated structural events (use raw counts) --------------------------------
-   foldbacks <- length(unique(
-      subset(linx_svs, HasFoldback, ClusterId, drop=T)
-   ))
-   
-   double_minutes <- length(unique(
-      subset(linx_svs, InDoubleMinute, ClusterId, drop=T)
-   ))
-   
-   svs_complex <- subset(linx_svs, ResolvedType=='COMPLEX')
-   if(nrow(svs_complex)!=0){
-      complex_lengths <- with(subset(linx_svs, ResolvedType=='COMPLEX'),{
-         agg <- aggregate(
-            ClusterId,
-            list(ClusterId=ClusterId),
-            function(x){ length(x) }
-         )
-         colnames(agg)[ncol(agg)] <- 'length'
-         return(agg)
-      })
-      
-      complex.n_events <- length(complex_lengths$ClusterId)
-      complex.largest_cluster <- max(complex_lengths$length)
-   } else {
-      complex.n_events <- 0
-      complex.largest_cluster <- 0
-   }
-   
-   ## Ongoing structural events --------------------------------
-   ## For ongoing structural events, use relative counts; i.e. divide by the total number of events
-   sv_load <- length(unique(linx_svs$ClusterId))
-   
+   ## Number of LINEs
    LINEs <- length(unique(
       subset(linx_svs, ResolvedType=='LINE', ClusterId, drop=T)
    ))
    
-   simple_events <- countSimpleSvEvents(linx_svs)
+   ## Number of double minutes
+   double_minutes <- length(unique(
+      subset(linx_svs, ResolvedType=='DOUBLE_MINUTE', ClusterId, drop=T)
+   ))
+   
+   ## Total SV load
+   sv_load <- length(unique(linx_svs$ClusterId))
+   
+   ## 
+   COMPLEX.largest_cluster <- (function(){
+      df <- subset(linx_svs, ResolvedType=='COMPLEX')
+      if(nrow(df)==0){ return(0) }
+      cluster_sizes <- table(df$ClusterId)
+      max(cluster_sizes)
+   })()
    
    ## Output --------------------------------
    out <- c(
-      n_events=sv_load,
-      complex.n_events=complex.n_events,
-      complex.largest_cluster=complex.largest_cluster,
-      double_minutes=double_minutes,
-      foldbacks=foldbacks,
-      LINEs=LINEs/sv_load,
-      simple_events/sv_load
+      sv_load=sv_load,
+      LINEs=LINEs,
+      DEL_DUP,
+      COMPLEX.largest_cluster=COMPLEX.largest_cluster,
+      COMPLEX,
+      double_minutes=double_minutes
    )
    out[is.na(out)] <- 0
    return(out)
@@ -83,48 +68,95 @@ extractContextsSvLinx <- function(vis.sv.data=NULL){
 #'
 #' @param linx.svs A dataframe of a *linx.vis_sv_data.tsv file
 #' @param bin.breaks An integer vector specifying the length bin breaks
+#' @param sample.id.colname A string specifying the column name used by indicating the sample name. 
+#' If unspecified, all SVs are assumed to be from the same sample.
+#' @param output 'contexts' returns a matrix of the counts of each context. 'raw' returns a 
+#' dataframe with annotations for each SV (i.e. row).
 #'
 #' @return An integer vector
 #' @export
 #'
-countSimpleSvEvents <- function(linx.svs, bin.breaks=c(10^(3:7),Inf)){
+countDelDupByLen <- function(
+   linx.svs, bin.breaks=c(0,300,10^(3:7),Inf), 
+   sample.id.colname=NULL, output='contexts'
+){
    
-   bin_intervals <- levels(cut(0, bin.breaks, right=FALSE, include.lowest=FALSE))
-   context_names <- c(
-      paste0('DEL_',bin_intervals),
-      paste0('DUP_',bin_intervals)
+   if(!(output %in% c('contexts','raw'))){
+      stop("`output` must be 'contexts' or 'raw'")
+   }
+   
+   ## Template context output --------------------------------
+   bin_names <- levels( cut(0L, bin.breaks, right=FALSE, include.lowest=FALSE) )
+   context_names <-  c(
+      paste0('DEL_', bin_names),
+      paste0('DUP_', bin_names)
    )
-   
-   context_counts <- structure(
-      rep(0,length(context_names)),
+   context_counts_template <- structure(
+      rep(0, length(context_names)), 
       names=context_names
    )
+   context_counts_template <- t(context_counts_template)
    
-   df <- subset(
-      linx.svs, 
-      ResolvedType %in% c('DEL','DUP'), 
-      c(ClusterId, ResolvedType, ChrStart, ChrEnd, PosStart, PosEnd)
-   )
+   ## Prep data --------------------------------
+   df <- linx.svs
+
+   ##
+   if(nrow(df)==0){ return(context_counts_template) }
+   if(nrow(df)==0 & output=='raw'){ stop('`linx.svs` cannot have no rows when output="raw"') }
    
-   if(nrow(df)==0){ return(context_counts) }
+   ## Get or make sample column
+   if(is.null(sample.id.colname)){
+      df$sample <- 'sample1'
+   } else {
+      df$sample <- df[[sample.id.colname]]
+      #df[[sample.id.colname]] <- NULL
+   }
+   df$sample <- as.factor(df$sample)
    
+   ## Subset for relevant rows and cols
+   df <- df[
+      df$ResolvedType %in% c('DEL','DUP'),
+      c('sample', 'ClusterId', 'ResolvedType', 'ChrStart', 'ChrEnd', 'PosStart', 'PosEnd')
+   ]
+   
+   if(nrow(df)==0){ return(context_counts_template) }
+   
+   ## Use sample specific cluster ids
+   df$ClusterId <- paste0( as.integer(df$sample),'_',df$ClusterId )
+   
+   ## Main --------------------------------
    ## Select intrachromosomal SVs
    df$is_same_chrom <- df$ChrStart==df$ChrEnd
-   cluster_in_same_chrom <- aggregate(df$is_same_chrom, list(ClusterId=df$ClusterId), all) ## All events in cluster are on the same chromosome?
    
-   df <- df[
-      df$ClusterId %in% cluster_in_same_chrom$ClusterId[ cluster_in_same_chrom$x ]
-   ,]
+   ## All events in cluster are on the same chromosome?
+   is_intrachrom_cluster <- sapply(split(df$is_same_chrom, df$ClusterId), all)
+   df$is_intrachrom_cluster <- is_intrachrom_cluster[ df$ClusterId ]
+   df <- df[df$is_intrachrom_cluster,]
+   if(nrow(df)==0){ return(context_counts_template) }
    
-   NULL -> df$ChrStart -> df$ChrEnd -> df$is_same_chrom -> cluster_in_same_chrom
+   # intrachrom_clusters <- aggregate(
+   #    df$is_same_chrom, 
+   #    list(ClusterId=df$ClusterId), 
+   #    all
+   # ) ## All events in cluster are on the same chromosome?
+   # 
+   # df <- df[
+   #    df$ClusterId %in% intrachrom_clusters$ClusterId[ is_intrachrom_cluster ]
+   # ,]
    
-   ## Flatten clusters of SVs into one row. 
-   pos_min <- aggregate(df$PosStart, list(ClusterId=df$ClusterId), min)
-   pos_max <- aggregate(df$PosEnd, list(ClusterId=df$ClusterId), max)
+   NULL -> df$ChrStart -> df$ChrEnd -> df$is_same_chrom -> df$is_intrachrom_cluster
    
-   df_flat <- unique( df[,c('ClusterId', 'ResolvedType')] )
-   df_flat$start <- pos_min$x[ match(df_flat$ClusterId, pos_min$ClusterId) ]
-   df_flat$end <- pos_max$x[ match(df_flat$ClusterId, pos_max$ClusterId) ]
+   ## Flatten clusters of SVs into one row
+   df$is_start_fragment <- !duplicated(df$ClusterId, fromLast=F)
+   df$is_end_fragment <- !duplicated(df$ClusterId, fromLast=T)
+   
+   df_flat <- data.frame(
+      sample=df$sample[df$is_start_fragment],
+      ClusterId=df$ClusterId[df$is_start_fragment],
+      ResolvedType=df$ResolvedType[df$is_start_fragment],
+      start=df$PosStart[df$is_start_fragment],
+      end=df$PosEnd[df$is_end_fragment]
+   )
    
    ## Calculate SV lengths
    # ## start coords are 1-based
@@ -137,15 +169,93 @@ countSimpleSvEvents <- function(linx.svs, bin.breaks=c(10^(3:7),Inf)){
    
    ## Remove SVs not falling into the bins specified in bin.breaks
    df_flat <- df_flat[!is.na(df_flat$length_bin),]
-   if(nrow(df_flat)==0){ return(context_counts) }
+   if(nrow(df_flat)==0){ return(context_counts_template) }
    
    ## Make SV type/length contexts
    df_flat$context <- paste0(df_flat$ResolvedType, '_', df_flat$length_bin)
+   df_flat <- df_flat[order(df_flat$ResolvedType, df_flat$length_bin),]
+   df_flat$context <- factor(df_flat$context, context_names)
    
-   ## Make context vector
-   tab <- table(df_flat$context)
-   context_counts[names(tab)] <- tab
-   return(context_counts)
+   if(output=='raw'){ return(df_flat) }
+   
+   ## Make context matrix -------------------------------
+   m <- table(df_flat$sample, df_flat$context)
+   m <- unclass(m)
+   
+   return(m)
+}
+
+####################################################################################################
+#' Count COMPLEX SVs stratified by length
+#'
+#' @param linx.svs A dataframe of a *linx.vis_sv_data.tsv file
+#' @param bin.breaks An integer vector specifying the length bin breaks.
+#' @param sample.id.colname A string specifying the column name used by indicating the sample name. 
+#' If unspecified, all SVs are assumed to be from the same sample.
+#' @param output 'contexts' returns a matrix of the counts of each context. 'raw' returns a 
+#' dataframe with annotations for each cluster.
+#'
+#' @return An integer vector
+#' @export
+#'
+countComplexByLen <- function(
+   linx.svs, bin.breaks=c(0,25,50,100,200,400,800,Inf), 
+   sample.id.colname=NULL, output='contexts'
+){
+   
+   if(!(output %in% c('contexts','raw'))){
+      stop("`output` must be 'contexts' or 'raw'")
+   }
+   
+   ## Template context output --------------------------------
+   bin_names <- levels( cut(0L, bin.breaks, right=FALSE, include.lowest=FALSE) )
+   context_names <-  paste0('COMPLEX_', bin_names)
+   context_counts_template <- structure(
+      rep(0, length(context_names)), 
+      names=context_names
+   )
+   context_counts_template <- t(context_counts_template)
+   
+   ## Prep data --------------------------------
+   df <- linx.svs
+   
+   ##
+   if(nrow(df)==0){ return(context_counts_template) }
+   if(nrow(df)==0 & output=='raw'){ stop('`linx.svs` cannot have no rows when output="raw"') }
+   
+   ## Get or make sample column
+   if(is.null(sample.id.colname)){
+      df$sample <- 'sample1'
+   } else {
+      df$sample <- df[[sample.id.colname]]
+   }
+   df$sample <- as.factor(df$sample)
+   
+   ## Subset for COMPLEX SVs
+   df <- subset(df, ResolvedType=='COMPLEX', c(sample, ClusterId, SvId))
+   
+   if(nrow(df)==0){ return(context_counts_template) }
+   
+   ## Bin complex clusters by length --------------------------------
+   complex_len <- with(df,{
+      out <- aggregate(
+         ClusterId,
+         list(sample=sample, ClusterId=ClusterId),
+         function(x){ length(x) }
+      )
+      colnames(out)[length(out)] <- 'len'
+      return(out)
+   })
+   
+   complex_len$len_bin <- cut(complex_len$len, bin.breaks, right=FALSE, include.lowest=FALSE)
+
+   if(output=='raw'){ return(complex_len) }
+   
+   ## Make context matrix -------------------------------
+   m <- table(complex_len$sample, complex_len$len_bin)
+   m <- unclass(m)
+   colnames(m) <- paste0('COMPLEX_',colnames(m))
+   return(m)
 }
 
 
