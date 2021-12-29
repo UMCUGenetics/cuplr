@@ -387,8 +387,10 @@ patientReport <- function(
 
       feature_units[grepl('^rmd[.]',feature.name)] <- 'Prop. of SBSs'
       feature_units[grepl('^mut_load[.]',feature.name)] <- '# of mutations'
-      feature_units[grepl('^chrom_arm[.]',feature.name)] <- 'CN diff vs genome CN'
+      feature_units[grepl('^chrom_arm[.]',feature.name)] <- 'Arm CN/genome CN ratio'
       feature_units[feature.name==gender.feature.name] <- 'Prop. female'
+      feature_units[feature.name==genome.diploid_proportion] <- 'Prop. of genome'
+      feature_units[feature.name==genome.ploidy] <- 'Genome ploidy'
 
       ##
       feature_units[grepl('^sigs[.]SBS',feature.name)] <- 'Prop. of SBSs'
