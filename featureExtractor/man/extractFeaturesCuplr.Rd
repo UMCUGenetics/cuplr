@@ -8,6 +8,7 @@ extractFeaturesCuplr(
   in.dir = NULL,
   input.paths = NULL,
   out.dir = NULL,
+  clonal.variants.only = F,
   verbose = F
 )
 }
@@ -28,6 +29,9 @@ the following regular expressions:
 
 \item{out.dir}{(Optional) A directory to write intermediate and final output files. If
 unspecified, a dataframe of the features will be returned}
+
+\item{clonal.variants.only}{If TRUE, only clonal variants will be used for the mutational
+signature and RMD signature features}
 
 \item{verbose}{Show progress messages? 0: No messages. 1: Messages from \code{extractFeaturesCuplr()}.
 2: Messages from internal functions called by \code{extractFeaturesCuplr()}}
