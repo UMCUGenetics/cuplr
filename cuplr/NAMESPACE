@@ -2,6 +2,7 @@
 
 S3method(predict,isoReg)
 S3method(predict,logReg)
+S3method(predict,randomForestEnsemble)
 S3method(print,predReport)
 S3method(print,randomForestEnsemble)
 S3method(summary,predReport)
