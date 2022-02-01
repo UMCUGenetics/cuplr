@@ -11,7 +11,7 @@ cancer type is the one with the highest probability.
 The features used by CUPLR are extracted from the output of the [HMF pipeline 5](https://github.com/hartwigmedical/pipeline5),
 specifically from: (i) the somatic VCF file containing SBS, DBS and indel mutations, 
 (ii) [PURPLE](https://github.com/hartwigmedical/hmftools/tree/master/purple) (v2.53) output, and 
-(iii) [LINX](https://github.com/hartwigmedical/hmftools/tree/master/linx) (v1.14) output. Below 
+(iii) [LINX](https://github.com/hartwigmedical/hmftools/tree/master/linx) (v1.16) output. Below 
 is a summary of the features.
 
 Feature type  | Source | Description
@@ -27,9 +27,9 @@ fusion        | LINX   | Presence of gene fusions
 viral_ins     | LINX   | Presence of viral sequence insertions
 
 
-CUPLR was trained with tumor samples from 6139 patients from the Hartwig Medical Foundation (HMF)
+CUPLR was trained with tumor samples from 6756 patients from the Hartwig Medical Foundation (HMF)
 and the Pan-Cancer Analysis of Whole Genomes (PCAWG) consortium. The model can predict the primary 
-tumor location with an accuracy of 0.91 based on cross-validation and 0.88 based on predictions on
+tumor location with an accuracy of 0.90 based on cross-validation and 0.89 based on predictions on
 a held out test set.
 
 For details on performance, the top features used by CUPLR, and other details, please see the plots 
@@ -96,16 +96,16 @@ Make sure that this vector has the names shown below. The below code will return
 with the values for each feature.
 
 ```{r, message=FALSE, warning=FALSE}
-sample_dir <- paste0(cuplr_dir,'/doc/data/DO36021/')
+sample_dir <- paste0(cuplr_dir,'/doc/data/DO35886/')
 features <- extractFeaturesCuplr(
    input.paths=c(
-      purple.smnv=        paste0(sample_dir,'/DO36021T.purple.somatic.vcf.gz'),   ## *.purple.somatic.vcf.gz
-      purple.cnv=         paste0(sample_dir,'/DO36021T.purple.cnv.somatic.tsv'),  ## *.purple.cnv.somatic.tsv
-      purple.purity=      paste0(sample_dir,'/DO36021T.purple.purity.tsv'),       ## *.purple.purity.tsv
-      linx.drivers=       paste0(sample_dir,'/DO36021T.linx.driver.catalog.tsv'), ## *.linx.driver.catalog.tsv
-      linx.fusions=       paste0(sample_dir,'/DO36021T.linx.fusion.tsv'),         ## *.linx.fusion.tsv
-      linx.viral.inserts= paste0(sample_dir,'/DO36021T.linx.viral_inserts.tsv'),  ## *.linx.viral_inserts.tsv
-      linx.vis.sv.data=   paste0(sample_dir,'/DO36021T.linx.vis_sv_data.tsv')     ## *.linx.vis_sv_data.tsv
+      purple.smnv=        paste0(sample_dir,'/DO35886T.purple.somatic.vcf.gz'),   ## *.purple.somatic.vcf.gz
+      purple.cnv=         paste0(sample_dir,'/DO35886T.purple.cnv.somatic.tsv'),  ## *.purple.cnv.somatic.tsv
+      purple.purity=      paste0(sample_dir,'/DO35886T.purple.purity.tsv'),       ## *.purple.purity.tsv
+      linx.drivers=       paste0(sample_dir,'/DO35886T.linx.driver.catalog.tsv'), ## *.linx.driver.catalog.tsv
+      linx.fusions=       paste0(sample_dir,'/DO35886T.linx.fusion.tsv'),         ## *.linx.fusion.tsv
+      linx.viral.inserts= paste0(sample_dir,'/DO35886T.linx.viral_inserts.tsv'),  ## *.linx.viral_inserts.tsv
+      linx.vis.sv.data=   paste0(sample_dir,'/DO35886T.linx.vis_sv_data.tsv')     ## *.linx.vis_sv_data.tsv
    )
 )
 features[,1:5]
@@ -176,10 +176,9 @@ as well as the probability calibration curves.
 
 The scores outputted by a random forest need to be calibrated to yield true probabilities. This 
 means that a probability of 0.9 should mean that for example: amongst 100 hypothetical samples 
-predicted as breast cancer, 90 of them are actually breast cancer. In other words, true 
-probabilities map directly to the accuracy of the prediction. For more info, see 
-the [scikit-learn documentation](https://scikit-learn.org/stable/modules/calibration.html) about 
-this topic.
+predicted as breast cancer, 90 of them are actually breast cancer. For more info, see the 
+[scikit-learn documentation](https://scikit-learn.org/stable/modules/calibration.html) about this 
+topic.
 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
 model <- readRDS(MODEL_PATH)
@@ -232,10 +231,7 @@ absence/presence respectively.
 patient_report <- patientReport(
    probs=pred_report$prob_scaled, 
    feat.contrib=pred_report$feat_contrib, 
-   sample.name='HMF002482A',
-   
-   ## Adjusts the relative width of the plot panels
-   rel.widths=c(1.4, 1, 1),
+   sample.name='HMF000185A',
    
    ## Shows all 3 panels. Set to 2 to show only the first 2, or 1 to show only the first
    level.of.detail=3 
@@ -244,7 +240,7 @@ patient_report <- patientReport(
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
 if(F){
-   png(paste0(cuplr_dir,'/doc/supp/patient_report_example.png'), 1500, 1200, res=150)
+   png(paste0(cuplr_dir,'/doc/supp/patient_report_example.png'), 1500, 1000, res=150)
    plot(patient_report)
    dev.off()   
 }
@@ -253,25 +249,23 @@ if(F){
 plot(patient_report)
 ```
 ![](doc/supp/patient_report_example.png)
-In the first panel we can see that this sample was predicted as a cervical cancer sample (this 
-sample was indeed labelled as a cervical cancer sample). 
+In the first panel we can see that this sample was predicted as a liposarcoma (this 
+sample was indeed labelled as a liposarcoma). 
 
 In the middle panel, we can see that the prediction is primarily supported by 
-this sample having human papillomavirus (HPV) DNA integration, as well as having the RMD profile of 
-cervical cancer.
+this sample having a FUS-DDIT3 fusion (fusion.FUS_DDIT3), as well as having the RMD profile of 
+liposarcoma (rmd.Sarcoma_Lipo.2).
 
-The third panel shows the feature values compared to the average feature values in cervical cancer
-(blue) and in other cancer types (red). The arrow indicates whether the feature value in the sample
-is higher or lower than the average in other cancer types. We can see that HPV DNA integrations 
-occur in 87.7% of cervical cancer samples, but in almost 0% of other cancer type samples. The sample
-value is 1 (100% occurrence) indicating that this feature is present in this sample. Conversely,
-the cervical cancer prediction for this sample is also supported by this sample having fewer (0%) 
-SBSs contributing to the RMD profile of head and neck cancer compared to in other cancer types 
-(almost 0%).
+The third panel shows the feature values compared to the average feature values in liposarcoma
+(pink) and in other cancer types (red). We can see that the liposarcoma prediction for this sample
+was supported by this sample having a higher proportion of SBSs contributing (33.5% of SBSs) to the 
+RMD profile of liposarcoma compared to in other cancer types (0%). We can also see that FUS-DDIT3 
+fusions occur in 18.4% of liposarcomas, but in 0% of other cancer types. The sample value is 1 
+(100% occurrence) indicating that this feature is present in this sample. 
 
-We can also see in the first panel that there are other cancer types with high probabilities. In 
-cases where the probabilities are more uncertain (like as shown here), more feature contribution 
-panels corresponding to the top predicted classes will be shown. This should aid in determining the 
+We can also see in the first panel that Sarcoma_Other also has a high probability. In cases where 
+the probabilities are more uncertain (like as shown here), more feature contribution panels 
+corresponding to the top predicted classes will be shown. This should aid in determining the 
 cancer type, since it's possible that e.g. the 2nd predicted cancer type better matches with 
 evidence from pathology.
 

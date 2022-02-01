@@ -14,7 +14,7 @@ from: (i) the somatic VCF file containing SBS, DBS and indel mutations,
 [PURPLE](https://github.com/hartwigmedical/hmftools/tree/master/purple)
 (v2.53) output, and (iii)
 [LINX](https://github.com/hartwigmedical/hmftools/tree/master/linx)
-(v1.14) output. Below is a summary of the features.
+(v1.16) output. Below is a summary of the features.
 
 | Feature type | Source | Description                                                                                                   |
 |--------------|--------|---------------------------------------------------------------------------------------------------------------|
@@ -28,10 +28,10 @@ from: (i) the somatic VCF file containing SBS, DBS and indel mutations,
 | fusion       | LINX   | Presence of gene fusions                                                                                      |
 | viral_ins    | LINX   | Presence of viral sequence insertions                                                                         |
 
-CUPLR was trained with tumor samples from 6139 patients from the Hartwig
+CUPLR was trained with tumor samples from 6756 patients from the Hartwig
 Medical Foundation (HMF) and the Pan-Cancer Analysis of Whole Genomes
 (PCAWG) consortium. The model can predict the primary tumor location
-with an accuracy of 0.91 based on cross-validation and 0.88 based on
+with an accuracy of 0.90 based on cross-validation and 0.89 based on
 predictions on a held out test set.
 
 For details on performance, the top features used by CUPLR, and other
@@ -105,23 +105,23 @@ below. The below code will return a 1-row dataframe with the values for
 each feature.
 
 ``` r
-sample_dir <- paste0(cuplr_dir,'/doc/data/DO36021/')
+sample_dir <- paste0(cuplr_dir,'/doc/data/DO35886/')
 features <- extractFeaturesCuplr(
    input.paths=c(
-      purple.smnv=        paste0(sample_dir,'/DO36021T.purple.somatic.vcf.gz'),   ## *.purple.somatic.vcf.gz
-      purple.cnv=         paste0(sample_dir,'/DO36021T.purple.cnv.somatic.tsv'),  ## *.purple.cnv.somatic.tsv
-      purple.purity=      paste0(sample_dir,'/DO36021T.purple.purity.tsv'),       ## *.purple.purity.tsv
-      linx.drivers=       paste0(sample_dir,'/DO36021T.linx.driver.catalog.tsv'), ## *.linx.driver.catalog.tsv
-      linx.fusions=       paste0(sample_dir,'/DO36021T.linx.fusion.tsv'),         ## *.linx.fusion.tsv
-      linx.viral.inserts= paste0(sample_dir,'/DO36021T.linx.viral_inserts.tsv'),  ## *.linx.viral_inserts.tsv
-      linx.vis.sv.data=   paste0(sample_dir,'/DO36021T.linx.vis_sv_data.tsv')     ## *.linx.vis_sv_data.tsv
+      purple.smnv=        paste0(sample_dir,'/DO35886T.purple.somatic.vcf.gz'),   ## *.purple.somatic.vcf.gz
+      purple.cnv=         paste0(sample_dir,'/DO35886T.purple.cnv.somatic.tsv'),  ## *.purple.cnv.somatic.tsv
+      purple.purity=      paste0(sample_dir,'/DO35886T.purple.purity.tsv'),       ## *.purple.purity.tsv
+      linx.drivers=       paste0(sample_dir,'/DO35886T.linx.driver.catalog.tsv'), ## *.linx.driver.catalog.tsv
+      linx.fusions=       paste0(sample_dir,'/DO35886T.linx.fusion.tsv'),         ## *.linx.fusion.tsv
+      linx.viral.inserts= paste0(sample_dir,'/DO35886T.linx.viral_inserts.tsv'),  ## *.linx.viral_inserts.tsv
+      linx.vis.sv.data=   paste0(sample_dir,'/DO35886T.linx.vis_sv_data.tsv')     ## *.linx.vis_sv_data.tsv
    )
 )
 features[,1:5]
 ```
 
-    ##   sigs.SBS1 sigs.SBS2 sigs.SBS3 sigs.SBS4 sigs.SBS5
-    ## 1 0.3408009         0         0         0         0
+    ##    sigs.SBS1  sigs.SBS2  sigs.SBS3 sigs.SBS4 sigs.SBS5
+    ## 1 0.04819147 0.01070571 0.01383367         0         0
 
 ### Method 2
 
@@ -178,10 +178,10 @@ rownames(features) <- sample_names
 features[,1:5]
 ```
 
-    ##             sigs.SBS1  sigs.SBS2 sigs.SBS3 sigs.SBS4  sigs.SBS5
-    ## DO220848   0.06581352 0.04094434         0         0 0.02507864
-    ## DO36021    0.34080088 0.00000000         0         0 0.00000000
-    ## HMF002482A 0.26643158 0.12604782         0         0 0.00000000
+    ##             sigs.SBS1  sigs.SBS2   sigs.SBS3 sigs.SBS4  sigs.SBS5
+    ## DO220844   0.07132016 0.02757172 0.000000000         0 0.06116417
+    ## DO35886    0.04792343 0.01030294 0.009803203         0 0.00000000
+    ## HMF000185A 0.11327875 0.00000000 0.000000000         0 0.27081490
 
 ### Summary of feature names
 
@@ -204,13 +204,12 @@ lapply(feature_groups, head)
     ## [1] "rmd.1p_1" "rmd.1p_2" "rmd.1p_3" "rmd.1p_4" "rmd.1p_5" "rmd.1p_6"
     ## 
     ## $sv
-    ## [1] "sv.n_events"                "sv.complex.n_events"       
-    ## [3] "sv.complex.largest_cluster" "sv.double_minutes"         
-    ## [5] "sv.foldbacks"               "sv.LINEs"                  
+    ## [1] "sv.sv_load"           "sv.LINEs"             "sv.DEL_[0,300)"      
+    ## [4] "sv.DEL_[300,1e+03)"   "sv.DEL_[1e+03,1e+04)" "sv.DEL_[1e+04,1e+05)"
     ## 
     ## $chrom_arm
-    ## [1] "chrom_arm.genome_cn" "chrom_arm.gain.1p"   "chrom_arm.gain.1q"  
-    ## [4] "chrom_arm.gain.2p"   "chrom_arm.gain.2q"   "chrom_arm.gain.3p"  
+    ## [1] "chrom_arm.gain.1p" "chrom_arm.gain.1q" "chrom_arm.gain.2p"
+    ## [4] "chrom_arm.gain.2q" "chrom_arm.gain.3p" "chrom_arm.gain.3q"
     ## 
     ## $gene
     ## [1] "gene.ACVR1.amp"       "gene.ACVR1.deep_del"  "gene.ACVR1.biall"    
@@ -224,6 +223,10 @@ lapply(feature_groups, head)
     ## [1] "viral_ins.AAV" "viral_ins.EBV" "viral_ins.HBV" "viral_ins.HCV"
     ## [5] "viral_ins.HIV" "viral_ins.HPV"
     ## 
+    ## $genome
+    ## [1] "genome.ploidy"             "genome.diploid_proportion"
+    ## [3] "genome.has_wgd"           
+    ## 
     ## $gender
     ## [1] "gender.gender"
 
@@ -235,9 +238,8 @@ need to load CUPLR itself as well as the probability calibration curves.
 The scores outputted by a random forest need to be calibrated to yield
 true probabilities. This means that a probability of 0.9 should mean
 that for example: amongst 100 hypothetical samples predicted as breast
-cancer, 90 of them are actually breast cancer. In other words, true
-probabilities map directly to the accuracy of the prediction. For more
-info, see the [scikit-learn
+cancer, 90 of them are actually breast cancer. For more info, see the
+[scikit-learn
 documentation](https://scikit-learn.org/stable/modules/calibration.html)
 about this topic.
 
@@ -268,34 +270,38 @@ pred_report
     ## 
     ## Calibrated probabilities:
     ## $prob_scaled
-    ##                Biliary       Breast    Cervix CNS_Glioma CNS_Medullo
-    ## DO220848   0.003126771 2.508363e-04 0.0000000          0           0
-    ## DO36021    0.000000000 2.627688e-05 0.0000000          0           0
-    ## HMF002482A 0.224806580 4.945729e-04 0.6666667          0           0
-    ##            CNS_PiloAstro   Colorectum      Gastric Gastrointestinal_NET
-    ## DO220848               0 0.0001676163 0.0009140741          0.002639600
-    ## DO36021                1 0.0004972881 0.0009749210          0.000000000
-    ## HMF002482A             0 0.0026302420 0.0009587708          0.002509213
-    ##            HeadAndNeck_Other HeadAndNeck_SG Kidney_Chromophobe Kidney_ClearCell
-    ## DO220848        0.0000000000   0.0000000000       8.866341e-05     1.023541e-04
-    ## DO36021         0.0003702365   0.0126414084       3.750517e-04     0.000000e+00
-    ## HMF002482A      0.0312711988   0.0002451235       0.000000e+00     4.102029e-05
-    ##            Kidney_Papillary Liver    Lung_NSC      Lung_SC Lymphoid Mesothelium
-    ## DO220848                  0     0 0.004637646 0.0000000000        0           0
-    ## DO36021                   0     0 0.001312964 0.0000000000        0           0
-    ## HMF002482A                0     0 0.001343920 0.0004455586        0           0
-    ##                 Myeloid Ovary     Pancreas Pancreas_NET Prostate Sarcoma_GIST
-    ## DO220848   8.868423e-05     0 1.023633e-04     0.001943        0 0.0016739107
-    ## DO36021    1.096294e-04     0 6.539323e-06     0.000000        0 0.0023161641
-    ## HMF002482A 0.000000e+00     0 1.452255e-01     0.000000        0 0.0003698344
-    ##            Sarcoma_Leiomyo Sarcoma_Lipo Sarcoma_Other Skin_Melanoma
-    ## DO220848                 0 2.827708e-05   0.008250491             1
-    ## DO36021                  0 0.000000e+00   0.000000000             0
-    ## HMF002482A               0 0.000000e+00   0.000000000             0
-    ##              Skin_Other      Thyroid  Urothelial Uterus
-    ## DO220848   0.0005096855 0.0000612031 0.001173325      0
-    ## DO36021    0.0000000000 0.0001815789 0.001147782      0
-    ## HMF002482A 0.0000000000 0.0000000000 0.002515283      0
+    ##                 Biliary   Breast Cervix  CNS_Glioma CNS_Medullo CNS_PiloAstro
+    ## DO220844   0.0005773561 0.213022      0 0.000000000 0.000000000     0.0000000
+    ## DO35886    0.0000000000 0.000000      0 0.001242909 0.005507125     0.9135719
+    ## HMF000185A 0.0000000000 0.000000      0 0.000000000 0.000000000     0.0000000
+    ##              Colorectal Gastroesophageal HeadAndNeck_Other
+    ## DO220844   0.0003462293     0.0002115484       0.001378098
+    ## DO35886    0.0004806873     0.0016663170       0.000000000
+    ## HMF000185A 0.0000000000     0.0000000000       0.000000000
+    ##            HeadAndNeck_SalivaryGland Kidney_Chromophobe Kidney_ClearCell
+    ## DO220844                0.0000000000       0.0000000000     0.0000000000
+    ## DO35886                 0.0000000000       0.0007175474     0.0001646324
+    ## HMF000185A              0.0004121185       0.0000000000     0.0001097549
+    ##            Kidney_Papillary       Liver Lung_NonSmallCell Lung_SmallCell
+    ## DO220844       0.000000e+00 0.000000000       0.003274019              0
+    ## DO35886        0.000000e+00 0.001093323       0.004961213              0
+    ## HMF000185A     9.299103e-05 0.000000000       0.001241159              0
+    ##            Lymphoid Mesothelium      Myeloid NET_Gastrointestinal     NET_Lung
+    ## DO220844          0           0 0.0000000000         1.507647e-04 0.000000e+00
+    ## DO35886           0           0 0.0004481103         4.186282e-05 0.000000e+00
+    ## HMF000185A        0           0 0.0000000000         1.116342e-04 6.116457e-05
+    ##            NET_Pancreas      Ovarian     Pancreas Prostate Sarcoma_GIST
+    ## DO220844   0.0004615711 0.0015382461 0.0011009668        0            0
+    ## DO35886    0.0383353453 0.0001209926 0.0002253971        0            0
+    ## HMF000185A 0.0392612195 0.0000000000 0.0004507942        0            0
+    ##            Sarcoma_Leiomyo Sarcoma_Lipo Sarcoma_Osteo Sarcoma_Other
+    ## DO220844      0.0003592354    0.0000000  0.0022210274  0.0004005747
+    ## DO35886       0.0007545717    0.0000000  0.0031881031  0.0010086661
+    ## HMF000185A    0.0023550295    0.5667544  0.0006195843  0.4688011203
+    ##            Skin_Carcinoma Skin_Melanoma      Thyroid   Urothelial Uterus
+    ## DO220844      0.000000000     0.8560547 0.0000000000 0.0003200161      0
+    ## DO35886       0.000000000     0.0000000 0.0037040469 0.0004442942      0
+    ## HMF000185A    0.003430203     0.0000000 0.0003721351 0.0007926048      0
 
 However, the above raw prediction output is not informative at a glance.
 We can use `summary()` to show the prediction in a neat table.
@@ -308,14 +314,18 @@ summary(
 )
 ```
 
-    ##       sample  pred_class.1   pred_class.2 pred_class.3 pred_prob.1 pred_prob.2
-    ## 1   DO220848 Skin_Melanoma  Sarcoma_Other     Lung_NSC       1.000       0.008
-    ## 2    DO36021 CNS_PiloAstro HeadAndNeck_SG Sarcoma_GIST       1.000       0.013
-    ## 3 HMF002482A        Cervix        Biliary     Pancreas       0.667       0.225
-    ##   pred_prob.3          feat_contrib.1.1   feat_contrib.1.2     feat_contrib.1.3
-    ## 1       0.005 rmd.Skin_Melanoma.1=0.318    sigs.SBS7=0.238     sigs.SBS38=0.146
-    ## 2       0.002 fusion.KIAA1549_BRAF=0.28 mut_load.snv=0.199 mut_load.indel=0.164
-    ## 3       0.145       viral_ins.HPV=0.283 rmd.Cervix.1=0.226       sigs.SBS2=0.02
+    ##       sample  pred_class.1  pred_class.2      pred_class.3 pred_prob.1
+    ## 1   DO220844 Skin_Melanoma        Breast Lung_NonSmallCell       0.856
+    ## 2    DO35886 CNS_PiloAstro  NET_Pancreas       CNS_Medullo       0.914
+    ## 3 HMF000185A  Sarcoma_Lipo Sarcoma_Other      NET_Pancreas       0.567
+    ##   pred_prob.2 pred_prob.3           feat_contrib.1.1         feat_contrib.1.2
+    ## 1       0.213       0.003  rmd.Skin_Melanoma.1=0.512         sigs.SBS38=0.267
+    ## 2       0.038       0.006 fusion.KIAA1549_BRAF=0.214     mut_load.indel=0.165
+    ## 3       0.469       0.039     fusion.FUS_DDIT3=0.325 rmd.Sarcoma_Lipo.2=0.319
+    ##                   feat_contrib.1.3
+    ## 1 sv.COMPLEX.largest_cluster=0.021
+    ## 2                  sigs.ID12=0.082
+    ## 3                  sigs.SBS8=0.017
 
 ## Graphical patient report
 
@@ -337,10 +347,7 @@ absence/presence respectively.
 patient_report <- patientReport(
    probs=pred_report$prob_scaled, 
    feat.contrib=pred_report$feat_contrib, 
-   sample.name='HMF002482A',
-   
-   ## Adjusts the relative width of the plot panels
-   rel.widths=c(1.4, 1, 1),
+   sample.name='HMF000185A',
    
    ## Shows all 3 panels. Set to 2 to show only the first 2, or 1 to show only the first
    level.of.detail=3 
@@ -352,27 +359,26 @@ plot(patient_report)
 ```
 
 ![](doc/supp/patient_report_example.png) In the first panel we can see
-that this sample was predicted as a cervical cancer sample (this sample
-was indeed labelled as a cervical cancer sample).
+that this sample was predicted as a liposarcoma (this sample was indeed
+labelled as a liposarcoma).
 
 In the middle panel, we can see that the prediction is primarily
-supported by this sample having human papillomavirus (HPV) DNA
-integration, as well as having the RMD profile of cervical cancer.
+supported by this sample having a FUS-DDIT3 fusion (fusion.FUS_DDIT3),
+as well as having the RMD profile of liposarcoma (rmd.Sarcoma_Lipo.2).
 
 The third panel shows the feature values compared to the average feature
-values in cervical cancer (blue) and in other cancer types (red). The
-arrow indicates whether the feature value in the sample is higher or
-lower than the average in other cancer types. We can see that HPV DNA
-integrations occur in 87.7% of cervical cancer samples, but in almost 0%
-of other cancer type samples. The sample value is 1 (100% occurrence)
-indicating that this feature is present in this sample. Conversely, the
-cervical cancer prediction for this sample is also supported by this
-sample having fewer (0%) SBSs contributing to the RMD profile of head
-and neck cancer compared to in other cancer types (almost 0%).
+values in liposarcoma (pink) and in other cancer types (red). We can see
+that the liposarcoma prediction for this sample was supported by this
+sample having a higher proportion of SBSs contributing (33.5% of SBSs)
+to the RMD profile of liposarcoma compared to in other cancer types
+(0%). We can also see that FUS-DDIT3 fusions occur in 18.4% of
+liposarcomas, but in 0% of other cancer types. The sample value is 1
+(100% occurrence) indicating that this feature is present in this
+sample.
 
-We can also see in the first panel that there are other cancer types
-with high probabilities. In cases where the probabilities are more
-uncertain (like as shown here), more feature contribution panels
-corresponding to the top predicted classes will be shown. This should
-aid in determining the cancer type, since it’s possible that e.g. the
-2nd predicted cancer type better matches with evidence from pathology.
+We can also see in the first panel that Sarcoma_Other also has a high
+probability. In cases where the probabilities are more uncertain (like
+as shown here), more feature contribution panels corresponding to the
+top predicted classes will be shown. This should aid in determining the
+cancer type, since it’s possible that e.g. the 2nd predicted cancer type
+better matches with evidence from pathology.
