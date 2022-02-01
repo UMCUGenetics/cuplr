@@ -20,8 +20,6 @@
 #' classes, as long as the relative difference between the 1st and 2nd classes, 2nd and 3rd classes,
 #' etc, are higher than this threshold. Note that `prob.thres.min` overrides this threshold
 #' @param gender.feature.name The name of the feature specifying the gender of each sample
-#' @param prob.label.size A numeric value specifying the size of the probability labels
-#' @param feature.label.size A numeric value specifying the size of the feature labels
 #' @param level.of.detail An integer specifying which subplots to show. 1: Probabilities, 2:
 #' Feature contributions, 3: Feature values. Specifying e.g. 3 will result in plots 1 and 2 also
 #' being shown
@@ -33,19 +31,17 @@
 patientReport <- function(
    probs=NULL, feat.contrib=NULL,
    sample.name=NULL, plot.title=sample.name,
-   top.n.class.probs=NULL,
-   top.n.class.features=3, top.n.features=5,
+   top.n.class.probs=NULL, top.n.class.features=3, top.n.features=5,
    prob.thres.min=0.1, prob.thres.rel.diff=0.4,
    gender.feature.name='gender.gender',
-   prob.label.size=3.5, feature.label.size=3.5,
    drop.feature.type.levels=TRUE,
-   level.of.detail=3, rel.widths=c(1.3, 1, 1)
+   level.of.detail=3, rel.widths=c(1.05, 1, 1)
 ){
 
    if(F){
       ##
       sample.name='XXXXXXXX' ## 2 top classes
-      sample.name='DO35949'
+      #sample.name='DO36039'
 
       probs=pred_reports$holdout$prob_scaled
       feat.contrib=pred_reports$holdout$feat_contrib
@@ -57,7 +53,7 @@ patientReport <- function(
       prob.thres.min=0.1; prob.thres.rel.diff=0.4;
       prob.label.size=3.5; feature.label.size=3.5;
       drop.feature.type.levels=FALSE
-      level.of.detail=3; rel.widths=c(1.3, 1, 1)
+      level.of.detail=3; rel.widths=c(1.05, 1, 1)
    }
 
    ## Init ================================
@@ -90,6 +86,7 @@ patientReport <- function(
       stop('`probs` must be a named numeric vector')
    }
 
+   ## Select classes --------------------------------
    ## Select classes --------------------------------
    probs_top <- probs[order(-probs)][1:top.n.class.features]
 
@@ -140,7 +137,7 @@ patientReport <- function(
       colors_dark[color_indexes],
       names=as.character(pd_probs$class)
    )
-   line_color[pd_probs$prob_round==0] <- 'lightgrey'
+   line_color[pd_probs$prob_round==0] <- 'grey50'
 
    label_fill <- structure(
       colors_light[color_indexes],
@@ -152,33 +149,64 @@ patientReport <- function(
    if(is.null(top.n.class.probs)){
       ## Show 10 probabilities per class with features shown
       ## More class features shown = more probabilities shown
-      top_n_class_probs <- length(probs_top)*10
+      top_n_class_probs <- length(probs_top)*5
    } else {
       top_n_class_probs <- top.n.class.probs
    }
    top_n_class_probs <- min(length(probs), top_n_class_probs) ## Prevent `top_n_class_probs` from exceeding the total number of predicted classes
 
-   p_probs <- ggplot(pd_probs[1:top_n_class_probs,], aes(x=class, y=prob)) +
+   ##
+   pd_probs <- pd_probs[1:top_n_class_probs,]
 
-      geom_segment(aes(x=class, xend=class, y=0, yend=prob, color=class), size=2, show.legend=F) +
-      scale_color_manual(values=line_color) +
+   #row_spacing <- 2.5
+   pd_probs$index <- nrow(pd_probs):1
+   pd_probs$index <- pd_probs$index #* row_spacing
+   text_offset <- 0.5
+   bar_offset <- 0
 
-      geom_label(
-         aes(fill=class, label=label, hjust=prob),
-         size=prob.label.size, show.legend=F, label.padding=unit(0.15,'lines')
+   p_probs <-
+      ggplot(pd_probs, aes(x=index, y=prob)) +
+
+      ## Min/max line
+      geom_segment(
+         aes(x=index+bar_offset, xend=index+bar_offset, y=0, yend=1),
+         size=0.5, color='grey'
       ) +
+
+      ## Lollipop
+      geom_segment(
+         aes(x=index+bar_offset, xend=index+bar_offset, y=0, yend=prob, color=class),
+         size=2.5, show.legend=F
+      ) +
+      geom_label(
+         aes(fill=class, label=label, hjust=prob, x=index+bar_offset),
+         size=3.5, show.legend=F, label.padding=unit(0.15,'lines')
+      ) +
+
+      ## Cancer type labels
+      geom_text(aes(label=class, y=0, x=index+text_offset, color=class), hjust=0, vjust=1, show.legend=F) +
+
+      ## Colors
+      scale_color_manual(values=line_color) +
       scale_fill_manual(values=label_fill) +
 
-      scale_y_continuous(name='Cancer type probability', limits=c(0, 1), breaks=seq(0,1,0.2), expand=c(0.05, 0.05)) +
-      scale_x_discrete(name='Cancer type', limits=rev) +
-
+      ## Axes
+      scale_y_continuous(
+         name='Cancer type probability',
+         breaks=seq(0, 1, 0.2), limits=c(0, 1), expand=c(0.04, 0.04)
+      ) +
+      scale_x_continuous(
+         name='Prediction rank',
+         breaks=seq(1, max(pd_probs$index), 1),
+         limits=c(min(pd_probs$index)-0.6, max(pd_probs$index)+0.4+text_offset),
+         expand=c(0,0),
+         labels=function(x){ max(x, na.rm=T)-x+1 }
+      ) +
       coord_flip() +
+
       theme_bw() +
       theme(
-         panel.grid.minor.x=element_blank(),
-         panel.grid.major.y=element_blank(),
-         axis.title.y=element_blank(),
-         axis.text.y=element_text(size=10),
+         panel.grid=element_blank(),
          axis.text.x=element_text(size=10)
       )
 
@@ -275,7 +303,7 @@ patientReport <- function(
       ## Feature labels
       geom_text(
          aes(label=label), y=max(pd_feat$contrib)*0.01,
-         size=feature.label.size, angle=0, hjust=0
+         angle=0, hjust=0
       ) +
       ylab('Feature contribution\n\nIn brackets: Feature value\ncompared to other cancer types') +
 
@@ -389,8 +417,9 @@ patientReport <- function(
       feature_units[grepl('^mut_load[.]',feature.name)] <- '# of mutations'
       feature_units[grepl('^chrom_arm[.]',feature.name)] <- 'Arm CN/genome CN ratio'
       feature_units[feature.name==gender.feature.name] <- 'Prop. female'
-      feature_units[feature.name==genome.diploid_proportion] <- 'Prop. of genome'
-      feature_units[feature.name==genome.ploidy] <- 'Genome ploidy'
+      feature_units[feature.name=='genome.diploid_proportion'] <- 'Prop. of genome'
+      feature_units[feature.name=='genome.ploidy'] <- 'Genome ploidy'
+      feature_units[feature.name=='sv.COMPLEX.largest_cluster'] <- '# of breakpoints in largest cluster'
 
       ##
       feature_units[grepl('^sigs[.]SBS',feature.name)] <- 'Prop. of SBSs'
@@ -400,7 +429,7 @@ patientReport <- function(
       ##
       feature_units[
          grepl('^sv[.]LINEs$',feature.name) |
-         grepl('^sv[.](DEL|DUP)_',feature.name)
+            grepl('^sv[.](DEL|DUP)_',feature.name)
       ] <- 'Prop. of SVs'
 
       feature_units[
@@ -418,13 +447,6 @@ patientReport <- function(
       value.units[is_wide_range] <- paste0(value.units[is_wide_range],' (log scale)')
    })
 
-   ## Segment between case and ctrl averages
-   pd_featval.direction <- reshape2::dcast(
-      data=subset(pd_featval, value_type %in% c('avg_ctrl','sample_value')),
-      formula=binary_rf+feature_tag~value_type,
-      value.var='value.scaled'
-   )
-
    ## Range
    pd_featval.range <- subset(
       pd_featval,
@@ -440,10 +462,6 @@ patientReport <- function(
    pd_featval.main$value_type <- factor(pd_featval.main$value_type, sel_value_types)
 
    ## Plot --------------------------------
-   color.avg_ctrl <- 'grey50'
-   color.avg_case <- 'midnightblue'
-   color.sample_value <- 'red2'
-
    p_featval <-
       ggplot(
          #subset(pd_featval, value_type %in% c('avg_ctrl','sample_value','min_all','max_all')),
@@ -474,17 +492,11 @@ patientReport <- function(
       ) +
 
       ## Main values
-      geom_segment( ## Arrow between ctrl average and sample value
-         data=pd_featval.direction,
-         mapping=aes(x=feature_tag, xend=feature_tag, y=avg_ctrl, yend=sample_value),
-         arrow=arrow(length=unit(0.15,'cm'), ends='last', type='closed'),
-         color=color.sample_value, size=0.5
-      ) +
       ggrepel::geom_text_repel( ## Values
          data=pd_featval.main,
          mapping=aes(label=value_label, color=value_type),
-         direction='x', nudge_x=0.3,
-         min.segment.length=0, segment.size=0.25, size=2.7, fontface='bold',
+         direction='x', nudge_x=0.25,
+         min.segment.length=0, segment.size=0.4, size=2.7, fontface='bold',
          show.legend=F
       ) +
       geom_point( ## Plot dummy points to force legend keys to be points
@@ -493,8 +505,8 @@ patientReport <- function(
          alpha=0
       ) +
       scale_color_manual(
-         values=c(color.sample_value, color.avg_case, color.avg_ctrl),
-         labels=c('Value in sample','Avg. in target cancer type','Avg. in other cancer types')
+         values=c(sample_value='red3', avg_case='lightcoral', avg_ctrl='dodgerblue4'),
+         labels=c(sample_value='Value in sample', avg_case='Avg. in target cancer type', avg_ctrl='Avg. in all other samples')
       ) +
       guides(color=guide_legend(override.aes=list(alpha=1, shape=15, size=5))) +
 
@@ -523,411 +535,3 @@ patientReport <- function(
       nrow=1, align='h', axis='bt', rel_widths=rel.widths
    )
 }
-
-####################################################################################################
-# ## Feat values ================================
-# pd_featval <- pd_feat
-#
-# ## Calculate min/max feature value for each feature
-# feat_value_types <- c('min_all','avg_ctrl','avg_case','sample_value','max_all')
-# #feat_value_types <- c('avg_ctrl','sample_value')
-# pd_featval$stat_min <- apply( pd_featval[,feat_value_types], 1, min )
-# pd_featval$stat_max <- apply( pd_featval[,feat_value_types], 1 ,max )
-#
-# ## Convert to long form dataframe
-# pd_featval <- do.call(rbind, lapply(feat_value_types, function(i){
-#    cbind(
-#       pd_featval[,c('binary_rf','feature','feature_label','feature_rank','stat_min','stat_max','avg_metric')], ## Fixed columns
-#       value_type=i,
-#       value=pd_featval[,i] ## Variable (value) columns
-#    )
-# }))
-#
-# ## Force order of plotting points
-# pd_featval$value_type <- factor(pd_featval$value_type, feat_value_types)
-#
-# ## Log transform features with a wide range  --------------------------------
-# pd_featval$is_wide_range <- with(pd_featval,{
-#    stat_max-stat_min > 100 & avg_metric != 'prop'
-# })
-# pd_featval$value.trans <- pd_featval$value
-# pd_featval$stat_min.trans <- pd_featval$stat_min
-# pd_featval$stat_max.trans <- pd_featval$stat_max
-#
-# pd_featval <- within(pd_featval,{
-#    value.trans[is_wide_range] <- log10(value.trans[is_wide_range]+1)
-#    stat_min.trans[is_wide_range] <- log10(stat_min.trans[is_wide_range]+1)
-#    stat_max.trans[is_wide_range] <- log10(stat_max.trans[is_wide_range]+1)
-# })
-#
-# ## Scale feature values to arbitrary units ranging from 0 to 1  --------------------------------
-# scale0to1 <- function(x, x.min, x.max){
-#    out <- (x-x.min)/(x.max-x.min)
-#
-#    ## Clip out of bounds feature values to (0,1)
-#    out[out>1] <- 1
-#    out[out<0] <- 0
-#
-#    return(out)
-# }
-# pd_featval$value.scaled <- with( pd_featval, scale0to1(value.trans, stat_min.trans, stat_max.trans) )
-#
-# ## Add plotting values to data --------------------------------
-# ## Make values human readable
-# # formatLabels <- function(x, avg.metric, sig.digits=3){
-# #    x <- signif(x, sig.digits)
-# #    out <- sapply(x, function(i){
-# #       if(i<1e3){ return(i) }
-# #       if(i<1e6){ return(paste0(i/1e3,'K')) }
-# #       if(i<1e9){ return(paste0(i/1e6,'M')) }
-# #       if(i<1e12){ return(paste0(i/1e9,'T')) }
-# #       return(i)
-# #    })
-# #
-# #    out[avg.metric=='prop'] <- paste0( x[avg.metric=='prop']*100, '%' )
-# #
-# #    return(out)
-# # }
-#
-# formatLabels <- function(x, avg.metric, sig.digits=2){
-#    #x <- pd_featval$value
-#    #out <- x
-#    out <- formatC(pd_featval$value, format="e", digits=2)
-#    out[x==0] <- 0
-#    out[x>=1 & x<1e4] <- round(x[x>=1 & x<1e4],0)
-#    out[x>1e-2 & x<1] <- signif(x[x>1e-2 & x<1], 2)
-#
-#    return(out)
-# }
-#
-# pd_featval$value_label <- with(pd_featval, formatLabels(value, avg_metric, sig.digits=2))
-#
-# ## Dummy data frame for min/max segment --------------------------------
-# pd_featval.min_max <- subset(pd_featval, value_type=='min_all', select=c(feature_label, binary_rf))
-#
-# ## Segment between case and ctrl averages --------------------------------
-# pd_featval.direction <- reshape2::dcast(
-#    data=subset(pd_featval, value_type %in% c('avg_ctrl','sample_value')),
-#    formula=binary_rf+feature_label~value_type,
-#    value.var='value.scaled'
-# )
-#
-# ## Main values --------------------------------
-# pd_featval <- subset(pd_featval, value_type %in% c('avg_ctrl','sample_value'))
-#
-# pd_featval$value_label.hjust <- as.integer(
-#    subset(pd_featval, value_type=='sample_value', value, drop=T) <=
-#       subset(pd_featval, value_type=='avg_ctrl', value, drop=T)
-# )
-#
-# pd_featval <- within(
-#    pd_featval,
-#    value_label.hjust[value_type=='avg_ctrl'] <- 1 - value_label.hjust[value_type=='avg_ctrl']
-# )
-#
-# ## Plot --------------------------------
-# p_featval <- ggplot(pd_featval,aes(x=feature_label, y=value.scaled)) +
-#
-#    coord_flip() +
-#    facet_wrap(binary_rf~., scales='free_y', ncol=1, strip.position='left') +
-#
-#    ## Min/max segment
-#    geom_segment(
-#       data=pd_featval.min_max,
-#       mapping=aes(x=feature_label, xend=feature_label, y=0, yend=1),
-#       color='lightgrey', size=0.5
-#    ) +
-#
-#    ## Main points
-#    geom_label(aes(label=value_label, color=value_type, hjust=value_label.hjust), size=3, show.legend=F) +
-#    scale_color_manual(values=c(avg_ctrl='black',sample_value='indianred')) +
-#
-#    ## Segment between ctrl average and sample value
-#    geom_segment(
-#       data=pd_featval.direction,
-#       mapping=aes(x=feature_label, xend=feature_label, y=avg_ctrl, yend=sample_value),
-#       arrow = arrow(length=unit(0.2,"cm"), ends="last", type="closed"),
-#       color='indianred'
-#    ) +
-#
-#    scale_y_continuous(expand=c(0.1,0.1)) +
-#
-#    theme_bw() +
-#    theme(
-#       panel.grid=element_blank(),
-#       axis.text.y=element_blank(),
-#       axis.title.y=element_blank(),
-#       axis.ticks.y=element_blank(),
-#       strip.background=element_blank(),
-#       strip.text=element_blank()
-#    )
-#
-# cowplot::plot_grid(
-#    p_probs, p_contrib, p_featval,
-#    nrow=1, align='h', axis='bt', rel_widths=c(1.5, 1, 1)
-# )
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-# ## Prep data --------------------------------
-# feat_value_types <- data.frame(
-#    matrix(c(
-#       'min_all',      'black',     108, 3,   1,
-#       'avg_ctrl',     'black',     108, 5,   1,
-#       'avg_case',     'indianred', 16,  3,   1,
-#       'sample_value', 'indianred', 21,  2.5, 0,
-#       'max_all',      'black',     108, 3,   1
-#    ),
-#    dimnames=list(NULL, c('type','color','shape','size','alpha')),
-#    ncol=5, byrow=T)
-# )
-#
-# constructAesValues <- function(colname){
-#    values <- feat_value_types[,colname]
-#    if(grepl('^\\d',values[1])){
-#       values <- as.numeric(values)
-#    }
-#    structure(
-#       values,
-#       names=feat_value_types$type
-#    )
-# }
-#
-# ## Calculate min/max feature value for each feature
-# pd_feat$stat_min <- apply(pd_feat[,feat_value_types$type],1,min)
-# pd_feat$stat_max <- apply(pd_feat[,feat_value_types$type],1,max)
-#
-# ## Conver to long form dataframe
-# pd_feat_values <- lapply(feat_value_types$type, function(i){
-#    cbind(
-#       pd_feat[,c('binary_rf','feature','feature_label','feature_rank','stat_min','stat_max','avg_metric')], ## Fixed columns
-#       value_type=i,
-#       value=pd_feat[,i] ## Variable (value) columns
-#    )
-# })
-# pd_feat_values <- do.call(rbind, pd_feat_values)
-#
-# ## Force order of plotting points
-# pd_feat_values$value_type <- factor(pd_feat_values$value_type, feat_value_types$type)
-#
-# ## Log transform features with a wide range
-# pd_feat_values$is_wide_range <- with(pd_feat_values,{
-#    stat_max-stat_min > 100 & avg_metric != 'prop'
-# })
-# pd_feat_values$value.trans <- pd_feat_values$value
-# pd_feat_values$stat_min.trans <- pd_feat_values$stat_min
-# pd_feat_values$stat_max.trans <- pd_feat_values$stat_max
-#
-# pd_feat_values <- within(pd_feat_values,{
-#    value.trans[is_wide_range] <- log10(value.trans[is_wide_range]+1)
-#    stat_min.trans[is_wide_range] <- log10(stat_min.trans[is_wide_range]+1)
-#    stat_max.trans[is_wide_range] <- log10(stat_max.trans[is_wide_range]+1)
-# })
-#
-# ## Scale feature values to arbitrary units ranging from 0 to 1
-# scale0to1 <- function(x, x.min, x.max){
-#    out <- (x-x.min)/(x.max-x.min)
-#
-#    ## Clip out of bounds feature values to (0,1)
-#    out[out>1] <- 1
-#    out[out<0] <- 0
-#
-#    return(out)
-# }
-# pd_feat_values$value.scaled <- with( pd_feat_values, scale0to1(value.trans, stat_min.trans, stat_max.trans) )
-#
-# # ## Top to bottom feature order. 2 line spacing betwen features
-# # pd_feat_values$feature_rank <- -pd_feat_values$feature_rank * 2
-#
-# pd_feat_values$feature_rank <- -pd_feat_values$feature_rank
-#
-# ## Add plotting values to data --------------------------------
-# ## Make values human readable
-# formatNumHuman <- function(x, avg.metric, sig.digits=3){
-#    x <- signif(x, sig.digits)
-#    out <- sapply(x, function(i){
-#       if(i<1e3){ return(i) }
-#       if(i<1e6){ return(paste0(i/1e3,'K')) }
-#       if(i<1e9){ return(paste0(i/1e6,'M')) }
-#       if(i<1e12){ return(paste0(i/1e9,'T')) }
-#       return(i)
-#    })
-#
-#    out[avg.metric=='prop'] <- paste0( x[avg.metric=='prop']*100, '%' )
-#
-#    return(out)
-# }
-# pd_feat_values$value_label <- with(pd_feat_values, formatNumHuman(value, avg_metric, sig.digits=2))
-#
-# ## Add hjust to ensure label doesnt go past min/max
-# pd_feat_values$hjust <- 0.5
-# pd_feat_values$hjust[pd_feat_values$value.scaled>=0.95] <- 1
-# pd_feat_values$hjust[pd_feat_values$value.scaled<=0.05] <- 0
-#
-#
-# # ggplot(pd_feat_values, aes(x=value_type, y=feature_label)) +
-# #    facet_wrap(~binary_rf, scales='free_y', ncol=1) +
-# #    geom_tile(aes(fill=value.scaled), color='black', alpha=0.8) +
-# #    geom_text(aes(label=value_label)) +
-# #    scale_fill_distiller(palette='Spectral') +
-# #    theme_bw() +
-# #    theme(
-# #       panel.grid=element_blank()
-# #    )
-#
-# ## Min/max value labels --------------------------------
-# ## Get original min/max values
-# pd_feat_values.range <- reshape2::dcast(
-#    data=subset(pd_feat_values, value_type %in% c('min_all','max_all')),
-#    formula=binary_rf+feature_rank+feature+is_wide_range+avg_metric~value_type,
-#    value.var='value'
-# )
-# pd_feat_values.range <- reshape2::melt(
-#    data=pd_feat_values.range,
-#    measure.vars=c('min_all','max_all')
-# )
-#
-# pd_feat_values.range$value_label <- formatNumHuman(
-#    pd_feat_values.range$value,
-#    pd_feat_values.range$avg_metric
-# )
-#
-# ## Assign justification and offsets
-# pd_feat_values.range$value.scaled <- -0.02
-# pd_feat_values.range$hjust <- 0
-# pd_feat_values.range <- within(pd_feat_values.range,{
-#    value.scaled[variable=='max_all'] <- 1.02
-#    hjust[variable=='min_all'] <- 1
-# })
-#
-# ## Segment between case and ctrl averages --------------------------------
-# pd_feat_values.direction <- reshape2::dcast(
-#    data=subset(pd_feat_values, value_type %in% c('avg_case','avg_ctrl')),
-#    formula=binary_rf+feature_rank~value_type,
-#    value.var='value.scaled'
-# )
-# pd_feat_values.direction <- within(pd_feat_values.direction,{
-#    min <- pmin(avg_case, avg_ctrl)
-#    max <- pmax(avg_case, avg_ctrl)
-# })
-#
-# ## Plot --------------------------------
-# legend_labels <- c('Avg. in other cancer types','Avg. in target cancer type','Value in patient')
-#
-# p_feat_values <- ggplot(pd_feat_values, aes(x=feature_rank, y=value.scaled)) +
-#    coord_flip() +
-#    facet_wrap(binary_rf~., scales='free_y', ncol=1, strip.position='left') +
-#
-#    ## Min/max segment
-#    geom_segment(
-#       data=pd_feat_values.range,
-#       mapping=aes(x=feature_rank, xend=feature_rank, y=0, yend=1),
-#       color='grey', size=0.2
-#    ) +
-#
-#    # ## Min/max labels
-#    # geom_text(
-#    #    data=pd_feat_values.range,
-#    #    mapping=aes(x=feature_rank, y=value.scaled, label=value_label, hjust=hjust),
-#    #    vjust=0.4, size=3.5, color='grey60', fontface='bold'
-#    # ) +
-#
-#    # ## Feature label
-#    # geom_text(
-#    #    data=pd_feat_values.range,
-# #    mapping=aes(x=feature_rank+0.8, y=0, label=feature),
-# #    hjust=0, size=3, color='grey35'
-# # ) +
-#
-# ## Segment between case and ctrl averages
-# geom_segment(
-#    data=pd_feat_values.direction,
-#    mapping=aes(x=feature_rank, xend=feature_rank, y=min, yend=max),
-#    color='indianred'
-# ) +
-#
-#    ## Feature stats points. Show value for patient.
-#    geom_point(
-#       data=subset(pd_feat_values, value_type %in% c('avg_ctrl','avg_case','sample_value')),
-#       aes(color=value_type, shape=value_type, size=value_type, alpha=value_type),
-#       fill='white'
-#    ) +
-#    geom_label(
-#       data=subset(pd_feat_values, value_type %in% c('sample_value')),
-#       aes(color=value_type, label=value_label, hjust=hjust),
-#       size=3.5, label.padding=unit(0.15,'lines'), show.legend=F
-#    ) +
-#    scale_color_manual(values=constructAesValues('color'), labels=legend_labels, guide=guide_legend(reverse=TRUE)) +
-#    scale_shape_manual(values=constructAesValues('shape'), labels=legend_labels, guide=guide_legend(reverse=TRUE)) +
-#    scale_size_manual (values=constructAesValues('size'), labels=legend_labels, guide=guide_legend(reverse=TRUE)) +
-#    scale_alpha_manual(values=constructAesValues('alpha'), labels=legend_labels, guide=guide_legend(reverse=TRUE, override.aes=list(alpha=NA))) + ## alpha=NA: so that point on legend is drawn but point on plot not drawn
-#
-#    ##
-#    scale_x_discrete() +
-#    scale_y_continuous(
-#       name='Feature value (variable units)',
-#       breaks=c(0, 1),
-#       labels=c('Min','Max')
-#    ) +
-#
-#    theme_bw() +
-#    theme(
-#       #panel.grid.major.x=element_blank(),
-#       panel.grid.minor.x=element_blank(),
-#       axis.title.y=element_blank(),
-#       axis.text.y=element_blank(),
-#       axis.ticks.y=element_blank(),
-#       legend.position='bottom',
-#       legend.direction='vertical',
-#       legend.margin=margin(0,0,0,0),
-#       legend.box.margin=margin(-10,-10, 0,-10),
-#       legend.key.height=unit(10,'pt'),
-#       legend.title=element_blank(),
-#       strip.background=element_blank(),
-#       strip.text=element_blank()
-#    )
-#
-# # cowplot::plot_grid(
-# #    p_probs, p_contrib, p_feat_values,
-# #    nrow=1, align='h', axis='bt', rel_widths=c(1.5, 1, 0.9)
-# # )
-#
-# ## Add blank title to make sure plots are aligned
-# if(!is.null(plot.title)){
-#    p_feat_values <- p_feat_values + ggtitle(' ') ## Add blank title to make sure plots are aligned
-# }
-#
-# ## Add strip colors
-# p_feat_values <- colorizeFacetStrips(p_feat_values, strip_colors)
-#
-#
-# ## Combine plots ================================
-# #which.plots=c('probs','feat.contribs','feat.values')
-#
-# l_plots <- list()
-# if('probs' %in% which.plots){
-#    l_plots$probs <- p_probs
-# }
-# if('feat.contribs' %in% which.plots){
-#    l_plots$feat.contribs <- p_contrib
-# }
-# if('feat.values' %in% which.plots){
-#    l_plots$feat.values <- p_feat_values
-# }
-# l_plots <- l_plots[which.plots]
-#
-# cowplot::plot_grid(
-#    plotlist=l_plots, nrow=1, align='h', axis='b',
-#    rel_widths=rel.widths
-# )
