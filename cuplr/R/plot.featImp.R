@@ -92,12 +92,13 @@ topFeatures <- function(
    df$label <- as.character(df$feature)
    df$label[df$value<=0] <- ''
 
-   label_ypos <- with(df,{
-      class_maxes <- aggregate(value, list(class), max)
-      class_maxes <- structure(class_maxes$x, names=as.character(class_maxes$Group.1))
-      class_maxes * 0.05
-   })
-   df$label_ypos <- label_ypos[ as.character(df$class) ]
+   # label_ypos <- with(df,{
+   #    class_maxes <- aggregate(value, list(class), max)
+   #    class_maxes <- structure(class_maxes$x, names=as.character(class_maxes$Group.1))
+   #    class_maxes * 0.05
+   # })
+   # df$label_ypos <- label_ypos[ as.character(df$class) ]
+   label_ypos <- max(df$value) * 0.02
 
    ## Bar colors
    if(is.null(feature.type.colors)){
