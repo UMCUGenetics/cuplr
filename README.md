@@ -14,7 +14,7 @@ from: (i) the somatic VCF file containing SBS, DBS and indel mutations,
 [PURPLE](https://github.com/hartwigmedical/hmftools/tree/master/purple)
 (v2.53) output, and (iii)
 [LINX](https://github.com/hartwigmedical/hmftools/tree/master/linx)
-(v1.16) output. Below is a summary of the features.
+(v1.17) output. Below is a summary of the features.
 
 | Feature type | Source | Description                                                                                                   |
 |--------------|--------|---------------------------------------------------------------------------------------------------------------|
