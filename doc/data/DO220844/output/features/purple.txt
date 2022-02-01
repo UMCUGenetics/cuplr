@@ -1,0 +1,4 @@
+gender	1
+genome_ploidy	1.78
+diploid_proportion	0.4434
+has_wgd	0

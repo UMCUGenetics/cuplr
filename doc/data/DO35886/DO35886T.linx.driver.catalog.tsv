@@ -1,0 +1,2 @@
+chromosome	chromosomeBand	gene	driver	category	likelihoodMethod	driverLikelihood	NA	missense	nonsense	splice	inframe	frameshift	biallelic	minCopyNumber	maxCopyNumber
+12	q13.13	HOXC13	MUTATION	TSG	DNDS	0.9981	0	1	0	0	0	0	true	2.9434	2.9434

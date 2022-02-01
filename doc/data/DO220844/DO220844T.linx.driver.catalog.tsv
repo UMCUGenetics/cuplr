@@ -1,0 +1,8 @@
+chromosome	chromosomeBand	gene	driver	category	likelihoodMethod	driverLikelihood	NA	missense	nonsense	splice	inframe	frameshift	biallelic	minCopyNumber	maxCopyNumber
+12	q12	ARID2	MUTATION	TSG	DNDS	0.9369	0	0	1	0	0	0	false	2.0828	2.0828
+9	p21.3	CDKN2A	DEL	TSG	DEL	1.0000	0	0	0	0	0	0	true	0.0275	0.0275
+8	q24.11	RAD21	AMP	ONCO	AMP	1.0000	0	0	0	0	0	0	false	5.8854	5.8854
+8	q24.22	TG	AMP	ONCO	AMP	1.0000	0	0	0	0	0	0	false	6.0322	6.0322
+11	q13.3	CCND1	AMP	ONCO	AMP	1.0000	0	0	0	0	0	0	false	13.2047	13.2047
+11	q13.3	FGF3	AMP	ONCO	AMP	1.0000	0	0	0	0	0	0	false	15.5626	15.5626
+11	q14.1	RSF1	AMP	ONCO	AMP	1.0000	0	0	0	0	0	0	false	9.2456	10.3124
