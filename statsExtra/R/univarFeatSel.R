@@ -89,6 +89,7 @@ univarFeatSel.default <- function(
    ## Checks --------------------------------
    if(!is.data.frame(x)){ stop('x must be a dataframe') }
    if(!is.logical(y)){ stop('y must be a logical vector') }
+   if(length(y)!=nrow(x)){ stop('length(y) does not equal nrow(x)') }
    if(any(sapply(x, is.character))){ stop('characters must be converted to factors') }
    if(is.null(colnames(x))){ stop('x must have colnames') }
    if(!(avg.numeric.func %in% c('iqm','mean','median'))){ stop('avg.numeric.func must be iqm, mean, or median') }
