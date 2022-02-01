@@ -15,11 +15,9 @@ patientReport(
   prob.thres.min = 0.1,
   prob.thres.rel.diff = 0.4,
   gender.feature.name = "gender.gender",
-  prob.label.size = 3.5,
-  feature.label.size = 3.5,
   drop.feature.type.levels = TRUE,
   level.of.detail = 3,
-  rel.widths = c(1.3, 1, 1)
+  rel.widths = c(1.05, 1, 1)
 )
 }
 \arguments{
@@ -49,10 +47,6 @@ classes, as long as the relative difference between the 1st and 2nd classes, 2nd
 etc, are higher than this threshold. Note that `prob.thres.min` overrides this threshold}
 
 \item{gender.feature.name}{The name of the feature specifying the gender of each sample}
-
-\item{prob.label.size}{A numeric value specifying the size of the probability labels}
-
-\item{feature.label.size}{A numeric value specifying the size of the feature labels}
 
 \item{level.of.detail}{An integer specifying which subplots to show. 1: Probabilities, 2:
 Feature contributions, 3: Feature values. Specifying e.g. 3 will result in plots 1 and 2 also
