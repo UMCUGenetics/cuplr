@@ -1,0 +1,3 @@
+snv	5014
+indel	503
+dbs	36

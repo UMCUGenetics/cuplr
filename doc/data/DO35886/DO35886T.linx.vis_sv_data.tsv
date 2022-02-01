@@ -1,0 +1,6 @@
+SampleId	ClusterId	ChainId	SvId	Type	ResolvedType	IsSynthetic	ChrStart	ChrEnd	PosStart	PosEnd	OrientStart	OrientEnd	InfoStart	InfoEnd	JunctionCopyNumber	InDoubleMinute
+DO35886T	1	1	2	DUP	DUP	false	7	7	138527017	140484395	-1	1	NORMAL	NORMAL	1.3878	false
+DO35886T	2	0	3	SGL	SGL_PAIR_INS	false	9	-1	3039373	0	-1	0	NORMAL		3.4188	false
+DO35886T	2	0	4	INF	SGL_PAIR_INS	false	9	-1	3039373	0	1	0	NORMAL		2.6100	false
+DO35886T	0	0	5	SGL	SGL_PAIR_INS	false	11	-1	60372662	0	1	0	NORMAL		6.0114	false
+DO35886T	0	0	6	INF	SGL_PAIR_INS	false	11	-1	60372662	0	-1	0	NORMAL		4.6700	false

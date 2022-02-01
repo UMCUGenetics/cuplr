@@ -1,0 +1,3 @@
+snv	2307
+indel	184
+dbs	13
