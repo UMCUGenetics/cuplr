@@ -1,3 +1,0 @@
-snv	44
-indel	1
-dbs	0

@@ -1,2 +1,0 @@
-fivePrimeBreakendId	threePrimeBreakendId	name	reported	reportedType	phased	likelihood	chainLength	chainLinks	chainTerminated	domainsKept	domainsLost	skippedExonsUp	skippedExonsDown	fusedExonUp	fusedExonDown	geneStart	geneContextStart	transcriptStart	geneEnd	geneContextEnd	transcriptEnd	junctionCopyNumber
-15	16	KIAA1549_BRAF	true	KNOWN_PAIR	INFRAME	HIGH	0	0	false	Protein kinase domain	Raf-like Ras-binding;Protein kinase C-like	0	0	15	9	KIAA1549	Exon 15	ENST00000422774	BRAF	Exon 9	ENST00000288602	0.9231
