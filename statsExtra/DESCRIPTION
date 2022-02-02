@@ -11,4 +11,4 @@ LinkingTo: Rcpp
 Imports:
 	matrixStats,
 	Rcpp
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
