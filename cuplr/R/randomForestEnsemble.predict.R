@@ -6,12 +6,12 @@
 #'
 #' @param object An object of class randomForestEnsemble
 #' @param newdata A dataframe containing the features for the new samples
+#' @param rmd.profiles A matrix where rows are RMD bins and columns are RMD sig profiles
 #' @param type 'class', 'prob' or 'votes', indicating the type of output: predicted values,
 #' matrix of class probabilities, or matrix of vote counts
 #' @param prob.cal.curves A dataframe containing the calibration curve coordinates for scaling the
 #' raw probabilities outputted by the classifier (with the column names: x, y, class). Scaled
 #' probabilities directly represent accuracy of prediction (i.e. probability of correct prediction)
-#' @param rmd.profiles A matrix where rows are RMD bins and columns are RMD sig profiles
 #' @param gender.feature.name The name of the feature specifying the gender of each sample
 #' @param filter.probs.by.gender If TRUE, male samples will have probabilities for `classes.female`
 #' set to zero, and female samples will have probabilities for `classes.male` set to zero.
@@ -37,23 +37,23 @@
 predict.randomForestEnsemble <- function(
    object, newdata, type='report',
    prob.cal.curves=NULL,
-   filter.probs.by.gender=T, gender.feature.name='gender.gender',
+   gender.feature.name='gender.gender', filter.probs.by.gender=T,
    classes.female=c('Cervix','Ovarian','Uterus'), classes.male='Prostate',
    calc.feat.contrib=T, top.n.pred.classes=NULL, top.n.features=5,
    verbose=F
 ){
-   if(F){
-      object=model
-      newdata=features
-      type='report'
-      prob.cal.curves=prob_cal_curves
-      gender.feature.name='gender.gender'
-      classes.female=c('Cervix','Ovarian','Uterus')
-      classes.male='Prostate'
-      top.n.pred.classes=NULL
-      top.n.features=5
-      verbose=T
-   }
+   # if(F){
+   #    object=model
+   #    newdata=features
+   #    type='report'
+   #    prob.cal.curves=prob_cal_curves
+   #    gender.feature.name='gender.gender'
+   #    classes.female=c('Cervix','Ovarian','Uterus')
+   #    classes.male='Prostate'
+   #    top.n.pred.classes=NULL
+   #    top.n.features=5
+   #    verbose=T
+   # }
 
    ## Checks --------------------------------
    if(!is.data.frame(newdata)){ stop('`newdata` must be a dataframe') }
@@ -281,91 +281,3 @@ fitToRmdProfiles <- function(newdata, rmd.profiles){
       rmColumns( newdata, grep('^rmd',colnames(newdata), value=T) ) ## Remove RMD bin columns
    )
 }
-
-####################################################################################################
-# cohortStats <- function(x, y, rmd.sig.profiles=NULL, verbose=T){
-#    if(F){
-#       sel_samples <- subset(metadata, is_training_sample, sample_id, drop=T)
-#       df=features[sel_samples,]
-#       x=df[colnames(df)!='response']
-#       y=df$response
-#       rmd.sig.profiles=model$rmd_sig_profiles
-#       verbose=T
-#    }
-#
-#    ## Init --------------------------------
-#    ## Checks
-#    if(!is.data.frame(x)){ stop('x must be a dataframe') }
-#    if(!is.logical(y)){ stop('y must be a logical vector') }
-#    if(length(y)!=nrow(x)){ stop('length(y) does not equal nrow(x)') }
-#    if(any(sapply(x, is.character))){ stop('characters must be converted to factors') }
-#    if(is.null(colnames(x))){ stop('x must have colnames') }
-#
-#    ## Libraries
-#    require(matrixStats)
-#
-#    ## Convert RMD bins to sigs
-#    if(!is.null(rmd.sig.profiles)){
-#       if(verbose){ message('Fitting RMD profiles...') }
-#       x <- fitToRmdProfiles(x, rmd.sig.profiles)
-#    } else {
-#       warning('`rmd.sig.profiles` not provided')
-#    }
-#
-#    ## Helper functions --------------------------------
-#    interquartileMean <- function(m){
-#       m <- apply(m,2,sort)
-#
-#       n <- nrow(m)
-#       lo <- floor(n * 0.25) + 1
-#       hi <- n + 1 - lo
-#
-#       m <- m[lo:hi,,drop=F]
-#       colMeans(m, na.rm=T)
-#    }
-#
-#    colSummary <- function(m){
-#       data.frame(
-#          feature=colnames(m),
-#          min=colMins(m),
-#          max=colMaxs(m),
-#          mean=colMeans(m),
-#          median=colMedians(m),
-#          iqm=interquartileMean(m),
-#          row.names=NULL
-#       )
-#    }
-#
-#    ## Main --------------------------------
-#    uniq_classes <- sort(unique(y))
-#
-#    ##
-#    if(verbose){ message('Calculating stats for each class...') }
-#    summ_y <- do.call(rbind, lapply(uniq_classes, function(i){
-#       #i='Breast'
-#       m <- as.matrix(x[y==i,])
-#       cbind(class=i, colSummary(m))
-#    }))
-#    summ_y$summ_type <- 'is_class'
-#
-#    ##
-#    if(verbose){ message('Calculating stats for samples not in each class...') }
-#    summ_not_y <- do.call(rbind, lapply(uniq_classes, function(i){
-#       #i='Breast'
-#       m <- as.matrix(x[y!=i,])
-#       cbind(class=i, colSummary(m))
-#    }))
-#    summ_not_y$summ_type <- 'is_not_class'
-#
-#    ##
-#    if(verbose){ message('Calculating stats across all samples...') }
-#    summ_all <- cbind(class='All',colSummary(m), summ_type='all_samples')
-#
-#    ## Output --------------------------------
-#    summ <- rbind(summ_y, summ_not_y, summ_all)
-#    is_logical <- sapply(x,is.logical)
-#    summ$is_bool_feature <- unname(is_logical[ summ$feature ])
-#    summ <- summ[,c('summ_type','class','feature','is_bool_feature','min','max','mean','median','iqm')]
-#
-#    return(summ)
-# }
