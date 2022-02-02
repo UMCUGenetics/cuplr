@@ -17,3 +17,4 @@ Suggests:
 	doParallel,
 	reshape2,
 	ggplot2
+RoxygenNote: 7.1.2
