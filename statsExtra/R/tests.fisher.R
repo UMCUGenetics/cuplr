@@ -6,6 +6,8 @@
 #' @param case.false Case group (treated) non responders
 #' @param ctrl.true Control group (untreated) responders
 #' @param ctrl.false Control group (untreated) non responders
+#' @param alternative Indicates the alternative hypothesis and must be one of "two.sided", "greater"
+#' or "less"
 #' @param m A matrix containing the 4 columns corresponding to a contingency matrix:
 #'
 #' @param verbose Show progress?
