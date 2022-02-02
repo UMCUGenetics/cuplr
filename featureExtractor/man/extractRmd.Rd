@@ -21,6 +21,9 @@ extractRmd(
 \arguments{
 \item{vcf.file}{Path to the vcf file}
 
+\item{df}{A dataframe containing the columns: chrom, pos, ref, alt. Alternative input option to
+vcf.file}
+
 \item{sample.name}{If a character is provided, the header for the output
 matrix will be named to this. If none is provided, the basename of the vcf
 file will be used.}
@@ -38,6 +41,10 @@ corresponding to the values in the vcf FILTER column}
 
 \item{clonal.variants.only}{If TRUE, only variants with subclonal likelihood (from GRIDSS) < 0.8
 will be selected}
+
+\item{mut.types}{A character vector containing one or more of the following values: 'snv', 'dbs',
+'indel', or 'other'. Default is 'snv'. Only these mut types will be taken into account when
+calculating the number of mutations per RMD bin}
 
 \item{verbose}{Print progress messages?}
 
