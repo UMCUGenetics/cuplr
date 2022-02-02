@@ -12,14 +12,14 @@ getGeneDriverEvents(
 )
 }
 \arguments{
+\item{linx.drivers}{Path to the LINX driver catalog txt file, or a dataframe of the file}
+
 \item{whitelist.path}{Path to the gene whitelist txt file}
 
 \item{min.dnds.likelihood}{Min DNDS likelihood for to consider a monoallelic hit as impactful}
 
-\item{na.output}{If TRUE, and if \code{linx.fusions} is NA, then a vector of FALSE values will be
+\item{na.output}{If TRUE, and if \code{linx.drivers} is NA, then a vector of FALSE values will be
 returned}
-
-\item{linx.fusions}{Path to the LINX driver catalog txt file, or a dataframe of the file}
 }
 \value{
 A named logical vector indicating which gene driver events are present in a sample
