@@ -154,9 +154,17 @@ crossValidate <- function(
 #' @param feat.sel.min.cliff.delta Cliff delta (effect size) threshold for keeping continous features
 #' @param feat.sel.min.cramer.v Cramer's V (effect size) threshold for keeping categorical features
 #' @param feat.sel.top.n.features Only keep the top number of features
+#' @param feat.sel.whitelist A character vector of feature names in x to keep (i.e. ignore feature
+#' selection for these features)
 #' @param balance.classes If 'resample', up and downsampling will be performed. Resampling ratios
 #' are determined by an inner cross-validation. If 'class_weights', class weights equal to
 #' 1/n_samples_in_class will be used. If 'none', no class balancing will be performed.
+#' @param max.upsample.ratio See documentation for `resamplingGrid()`
+#' @param max.upsample.size See documentation for `resamplingGrid()`
+#' @param min.downsample.ratio See documentation for `resamplingGrid()`
+#' @param min.downsample.size See documentation for `resamplingGrid()`
+#' @param max.imbalance.ratio See documentation for `resamplingGrid()`
+#' @param max.pairs See documentation for `resamplingGrid()`
 #' @param k.inner Number of inner cross-validation folds to use to determine resampling ratios
 #' @param n.resamples.true Number of resampling values to generate for the TRUE class
 #' @param n.resamples.false Number of resampling values to generate for the FALSE class
@@ -164,8 +172,6 @@ crossValidate <- function(
 #' @param midpoint.type Can be 'geometric', 'arithmetic', or 'none'. Calculate the resampling values
 #' from a->midpoint and b->midpoint? If 'none', resampling values will be calculated from a->b and
 #' b->a.
-#' @param max.upsample.ratio Default=10. Remove pairs where a or b are upsampled more than this
-#' value
 #' @param ntree Number of decision trees in the random forest
 #' @param get.local.increments If TRUE, get local increments to calculate feature contributions
 #' @param feat.tmp.path Tmp path for feature selection output
@@ -173,8 +179,6 @@ crossValidate <- function(
 #' @param seed Random seed as an integer
 #' @param msg.prefix Add prefix to progress messages. If not specified, no prefix will be displayed.
 #' @param verbose Show progress? Can be 0, 1, 2 (increasing verbosity)
-#' @param feat.sel.whitelist A character vector of feature names in x to keep (i.e. ignore feature
-#' selection for these features)
 #'
 #' @return A list containing the training output
 #' @export
