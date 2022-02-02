@@ -3,6 +3,7 @@
 #' @param m A numeric matrix
 #' @param trim The fraction (0 to 0.5) of observations to be trimmed from each end of `m` before the
 #' mean is computed. Values of trim outside that range are taken as the nearest endpoint
+#' @param na.rm Should missing values (including NaN) be omitted from the calculations?
 #'
 #' @return A numeric vector
 #' @export
