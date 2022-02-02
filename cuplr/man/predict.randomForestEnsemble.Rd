@@ -10,8 +10,8 @@
   newdata,
   type = "report",
   prob.cal.curves = NULL,
-  filter.probs.by.gender = T,
   gender.feature.name = "gender.gender",
+  filter.probs.by.gender = T,
   classes.female = c("Cervix", "Ovarian", "Uterus"),
   classes.male = "Prostate",
   calc.feat.contrib = T,
@@ -34,10 +34,10 @@ matrix of class probabilities, or matrix of vote counts}
 raw probabilities outputted by the classifier (with the column names: x, y, class). Scaled
 probabilities directly represent accuracy of prediction (i.e. probability of correct prediction)}
 
+\item{gender.feature.name}{The name of the feature specifying the gender of each sample}
+
 \item{filter.probs.by.gender}{If TRUE, male samples will have probabilities for `classes.female`
 set to zero, and female samples will have probabilities for `classes.male` set to zero.}
-
-\item{gender.feature.name}{The name of the feature specifying the gender of each sample}
 
 \item{classes.female}{A character vector of female cancer type classes. For male samples (as
 determined by `gender.feature.name`), the probabilities outputted by the binary random forests

@@ -11,19 +11,19 @@ resamplingGrid(
   breaks.b = 5,
   midpoint.type = "geometric",
   min.size.diff = 15,
-  max.upsample.ratio = 5,
-  max.upsample.size = 300,
-  min.downsample.ratio = NULL,
   min.downsample.size = 1000,
+  min.downsample.ratio = NULL,
+  max.upsample.size = 300,
+  max.upsample.ratio = 5,
   max.imbalance.ratio = 15,
   max.pairs = 10,
   bypass.filter = F
 )
 }
 \arguments{
-\item{a}{The sample size of cohort 1}
+\item{a}{The sample size of cohort a}
 
-\item{b}{The sample size of cohort 1}
+\item{b}{The sample size of cohort b. b must be > a}
 
 \item{breaks.a}{Number of resampling values to generate for a}
 
@@ -35,15 +35,37 @@ b->a.}
 
 \item{min.size.diff}{Default=15. Minimum difference between resampling values (integer).}
 
-\item{max.upsample.ratio}{Default=8 Remove pairs where a or b are upsampled more than this
-value}
+\item{min.downsample.size}{Default=1000. Pairs where downsampling of `b` leads to a sample size less than this value are deprioritized}
 
-\item{max.upsample.size}{Default=1000. Remove pairs where upsampling results in a higher sample
-size than this}
+\item{min.downsample.ratio}{Default=NULL. Pairs where downsampling of `b` leads to a resampling ratio less than this value are deprioritized}
+
+\item{max.upsample.size}{Default=300. Pairs where upsampling of `a` leads to a sample size greater than this value are deprioritized}
+
+\item{max.upsample.ratio}{Default=5. Pairs where upsampling of `a` leads to a resampling ratio greater than this value are deprioritized}
+
+\item{max.imbalance.ratio}{Default=15. Pairs where resampling leads high `max(a/b, b/a)` are deprioritized}
+
+\item{max.pairs}{Default=10. The max number of target sample size pairs to return.}
+
+\item{bypass.filter}{If TRUE, all pairs of target sample sizes are returned. If FALSE, only the
+pairs strictly passing the follow criteria are returned:
+* pass `max.upsample.size`
+* pass `min.downsample.size`
+* max.pairs}
 }
 \value{
 A dataframe of target sample sizes and resampling ratios for a and b
 }
 \description{
-Create pairs of resample sizes/ratios for performing a grid search
+This function aims to automatically select the best pairs of resampling parameters
+given the sample size of to groups `a` and `b`. The priority for selection of pairs is as follows:
+* downsampling and no upsampling
+* pass `min.downsample.size`
+* pass `min.downsample.ratio`
+* pass `max.upsample.size`
+* pass `max.upsample.ratio`
+* pass `max.imbalance.ratio`: prioritize pairs resulting in acceptably low imbalances
+* resampling intensity: prioritizes lower intensities; intensity = (1/ratio_b + 1) ^ ratio_a
+* size_a: prioritizes smaller a sample sizes
+* size_b: prioritizes larger b sample sizes
 }
