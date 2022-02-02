@@ -1,18 +1,38 @@
 ################################################################################
 #' Create pairs of resample sizes/ratios for performing a grid search
 #'
-#' @param a The sample size of cohort 1
-#' @param b The sample size of cohort 1
+#' @description This function aims to automatically select the best pairs of resampling parameters
+#' given the sample size of to groups `a` and `b`. The priority for selection of pairs is as follows:
+#' * downsampling and no upsampling
+#' * pass `min.downsample.size`
+#' * pass `min.downsample.ratio`
+#' * pass `max.upsample.size`
+#' * pass `max.upsample.ratio`
+#' * pass `max.imbalance.ratio`: prioritize pairs resulting in acceptably low imbalances
+#' * resampling intensity: prioritizes lower intensities; intensity = (1/ratio_b + 1) ^ ratio_a
+#' * size_a: prioritizes smaller a sample sizes
+#' * size_b: prioritizes larger b sample sizes
+#'
+#' @param a The sample size of cohort a
+#' @param b The sample size of cohort b. b must be > a
 #' @param breaks.a Number of resampling values to generate for a
 #' @param breaks.b Number of resampling values to generate for b
 #' @param midpoint.type Can be 'geometric', 'arithmetic', or 'none'. Calculate the resampling values
 #' from a->midpoint and b->midpoint? If 'none', resampling values will be calculated from a->b and
 #' b->a.
 #' @param min.size.diff Default=15. Minimum difference between resampling values (integer).
-#' @param max.upsample.ratio Default=8 Remove pairs where a or b are upsampled more than this
-#' value
-#' @param max.upsample.size Default=1000. Remove pairs where upsampling results in a higher sample
-#' size than this
+#' @param min.downsample.size Default=1000. Pairs where downsampling of `b` leads to a sample size less than this value are deprioritized
+#' @param min.downsample.ratio Default=NULL. Pairs where downsampling of `b` leads to a resampling ratio less than this value are deprioritized
+#' @param max.upsample.size Default=300. Pairs where upsampling of `a` leads to a sample size greater than this value are deprioritized
+#' @param max.upsample.ratio Default=5. Pairs where upsampling of `a` leads to a resampling ratio greater than this value are deprioritized
+#' @param max.imbalance.ratio Default=15. Pairs where resampling leads high `max(a/b, b/a)` are deprioritized
+#' @param max.pairs Default=10. The max number of target sample size pairs to return.
+#'
+#' @param bypass.filter If TRUE, all pairs of target sample sizes are returned. If FALSE, only the
+#' pairs strictly passing the follow criteria are returned:
+#' * pass `max.upsample.size`
+#' * pass `min.downsample.size`
+#' * max.pairs
 #'
 #' @return A dataframe of target sample sizes and resampling ratios for a and b
 #' @export
@@ -21,25 +41,25 @@ resamplingGrid <- function(
    a, b,
    breaks.a=5, breaks.b=5,
    midpoint.type='geometric',
+
    min.size.diff=15,
-   max.upsample.ratio=5, max.upsample.size=300,
-   min.downsample.ratio=NULL, min.downsample.size=1000,
-   max.imbalance.ratio=15,
-   max.pairs=10, bypass.filter=F
+   min.downsample.size=1000, min.downsample.ratio=NULL,
+   max.upsample.size=300, max.upsample.ratio=5,
+   max.imbalance.ratio=15, max.pairs=10, bypass.filter=F
 ){
-   if(F){
-      a=50
-      b=6000
-      breaks.a=5
-      breaks.b=5
-      midpoint.type='geometric'
-      max.upsample.ratio=5
-      max.upsample.size=300
-      min.downsample.ratio=NULL
-      min.downsample.size=1000
-      max.imbalance.ratio=15
-      max.pairs=10
-   }
+   # if(F){
+   #    a=50
+   #    b=6000
+   #    breaks.a=5
+   #    breaks.b=5
+   #    midpoint.type='geometric'
+   #    max.upsample.ratio=5
+   #    max.upsample.size=300
+   #    min.downsample.ratio=NULL
+   #    min.downsample.size=1000
+   #    max.imbalance.ratio=15
+   #    max.pairs=10
+   # }
 
    if(a>b){ stop('b must be greater than a') }
    #if(a==b){ }
@@ -171,7 +191,6 @@ resamplingGrid <- function(
          -pass.max.upsample.size,
          -pass.max.upsample.ratio,
          -pass.max.imbalance.ratio, ## prioritize pairs resulting in acceptably low imbalances
-         #imbalance_ratio,
          resampling_intensity,
          size_a,
          -size_b
@@ -182,22 +201,22 @@ resamplingGrid <- function(
       out <- out[out$pass.max.upsample.size,] ## When original sample size is already high, no need to upsample
       out <- out[out$pass.min.downsample.size,] ## Never allow too much down sampling
       out <- out[1:min(max.pairs,nrow(out)),] ## Select maximum number of pairs
-      out <- out[,!grepl('^pass',colnames(out))]
+      out <- out[,!grepl('^pass',colnames(out))] ## Remove temporary pass columns from output
    }
 
    rownames(out) <- NULL
    return(out)
 }
 
-if(F){
-   resamplingGrid(
-      30, 6000, breaks.a=5, breaks.b=5, min.size.diff=15,
-      max.upsample.ratio=5, max.upsample.size=300,
-      min.downsample.ratio=NULL, min.downsample.size=1000,
-      max.imbalance.ratio=15,
-      max.pairs=10, bypass.filter=F
-   )
-}
+# if(F){
+#    resamplingGrid(
+#       30, 6000, breaks.a=5, breaks.b=5, min.size.diff=15,
+#       max.upsample.ratio=5, max.upsample.size=300,
+#       min.downsample.ratio=NULL, min.downsample.size=1000,
+#       max.imbalance.ratio=15,
+#       max.pairs=10, bypass.filter=F
+#    )
+# }
 
 
 ################################################################################
@@ -215,9 +234,7 @@ if(F){
 #' @export
 #'
 resampleClasses <- function(
-   df, colname.response='response',
-   resample.ratios=NULL, target.sample.sizes=NULL,
-   return.data=T
+   df, colname.response='response', resample.ratios=NULL, target.sample.sizes=NULL, return.data=T
 ){
    # if(F){
    #    #df=train[,1:10]
@@ -264,18 +281,6 @@ resampleClasses <- function(
    if(!all(names(target.sample.sizes) %in% names(indexes))){
       stop('Not all class names are present in the names of `target.sample.sizes`')
    }
-
-   ##
-   # sample_weights <- NULL
-   # if(!is.null(sample.weights)){
-   #    if(length(names(sample.weights))==0){
-   #       stop('`sample.weights` must be a numeric vector with names (of each sample)')
-   #    }
-   #    sample_weights <- sample.weights[rownames(df)]
-   #    if(anyNA(sample_weights)){
-   #       stop('`sample.weights` is missing values for certain samples')
-   #    }
-   # }
 
    ## Main --------------------------------
    indexes_new <- lapply(names(target.sample.sizes), function(i){
