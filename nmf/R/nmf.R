@@ -141,9 +141,14 @@ runNmf <- function(
 #' @param A A numeric matrix (rows=samples, columns=features)
 #' @param k.range Integer vector. A range of ranks in which to find the optimum rank
 #' @param repeats See description
+#' @param repeat.num Only used to label the repeat number in the output dataframe of `runNmf()`
 #' @param max.samples Subsample number of rows to this value to reduce computation time
+#' @param perf.metrics Can be 'mse_imputed' (calculate MSE on imputed values) or 'mse_perm'
+#' (calculate MSE on permuted data)
 #' @param impute.prop See description
 #' @param max.rel.log.mse.increase See description
+#' @param return.perf Only for `runNmf()`. If TRUE will return a dataframe with performance stats.
+#' If FALSE, the output of `NNLM::nnmf()` as well as performance stats willbe returned
 #' @param seed Random seed
 #' @param verbose Show progress? Can be 0,1,2
 #'
