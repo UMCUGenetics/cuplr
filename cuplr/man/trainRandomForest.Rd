@@ -76,8 +76,17 @@ b->a.}
 
 \item{min.size.diff}{Default=30. Minimum difference between resampling values (integer).}
 
-\item{max.upsample.ratio}{Default=10. Remove pairs where a or b are upsampled more than this
-value}
+\item{max.upsample.ratio}{See documentation for `resamplingGrid()`}
+
+\item{max.upsample.size}{See documentation for `resamplingGrid()`}
+
+\item{min.downsample.ratio}{See documentation for `resamplingGrid()`}
+
+\item{min.downsample.size}{See documentation for `resamplingGrid()`}
+
+\item{max.imbalance.ratio}{See documentation for `resamplingGrid()`}
+
+\item{max.pairs}{See documentation for `resamplingGrid()`}
 
 \item{ntree}{Number of decision trees in the random forest}
 
