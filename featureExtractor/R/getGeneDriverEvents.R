@@ -1,9 +1,9 @@
 #' Determine the presence of gene mono/biallelic hits, deep deletions, and amplifications
 #'
-#' @param linx.fusions Path to the LINX driver catalog txt file, or a dataframe of the file
+#' @param linx.drivers Path to the LINX driver catalog txt file, or a dataframe of the file
 #' @param whitelist.path Path to the gene whitelist txt file
 #' @param min.dnds.likelihood Min DNDS likelihood for to consider a monoallelic hit as impactful
-#' @param na.output If TRUE, and if `linx.fusions` is NA, then a vector of FALSE values will be 
+#' @param na.output If TRUE, and if `linx.drivers` is NA, then a vector of FALSE values will be 
 #' returned
 #' 
 #' @return A named logical vector indicating which gene driver events are present in a sample
@@ -56,7 +56,8 @@ getGeneDriverEvents <- function(
    drivers$event_type <- 'none'
    drivers$event_type <- with(drivers,{
       
-      event_type[driver=='MUTATION' & !biallelic] <- 'monoall'
+      #event_type[driver=='MUTATION' & !biallelic] <- 'monoall'
+      event_type[driver=='MUTATION' & !biallelic & driverLikelihood>=min.dnds.likelihood] <- 'monoall'
       event_type[biallelic & likelihoodMethod!='DEL'] <- 'biall'
       event_type[biallelic & likelihoodMethod=='DEL'] <- 'deep_del'
       event_type[likelihoodMethod=='AMP'] <- 'amp'
