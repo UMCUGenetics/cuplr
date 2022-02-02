@@ -18,16 +18,18 @@ univarFeatSel.default(
   min.features = 2,
   show.conting = FALSE,
   show.avg = TRUE,
+  avg.numeric.func = "iqm",
+  show.sample.size = FALSE,
   whitelist = NULL,
   order.by.pvalue = TRUE,
-  verbose = F
+  verbose = FALSE
 )
 }
 \arguments{
-\item{x}{A matrix or dataframe of features}
+\item{x}{A dataframe of features where rows are samples}
 
-\item{y}{A vector of class labels. For binary classification a logical vector. For
-multiclass classification a factor.}
+\item{y}{A vector of class labels for each sample in `x`. For binary classification a logical
+vector. For multiclass classification a character or factor vector.}
 
 \item{order.by.pvalue}{If FALSE, rows of the output dataframe will be ordered by the same
 order of the features (i.e. colnames) in `x`. If TRUE, it will be sorted by pvalue}
@@ -54,6 +56,10 @@ to both +ve and -ve values}
 \item{show.conting}{Show contingency matrix for each feature?}
 
 \item{show.avg}{Show case and control group averages per feature?}
+
+\item{avg.numeric.func}{Can be 'iqm' (interquartile mean), 'mean', or 'median'}
+
+\item{show.sample.size}{Show the sample size of case and control groups?}
 
 \item{whitelist}{A character vector of feature names in x to keep, regardless of statistical
 enrichment}
