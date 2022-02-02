@@ -33,6 +33,9 @@ fisherTest(x, ...)
 
 \item{ctrl.false}{Control group (untreated) non responders}
 
+\item{alternative}{Indicates the alternative hypothesis and must be one of "two.sided", "greater"
+or "less"}
+
 \item{verbose}{Show progress?}
 
 \item{m}{A matrix containing the 4 columns corresponding to a contingency matrix:}
