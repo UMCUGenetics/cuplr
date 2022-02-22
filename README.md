@@ -23,6 +23,7 @@ from: (i) the somatic VCF file containing SBS, DBS and indel mutations,
 | rmd          | VCF    | [Regional mutational density (RMD)](https://www.nature.com/articles/nature14221) profiles as extracted by NMF |
 | chrom_arm    | PURPLE | Chromosome arm gains/losses compared to the overall genome ploidy                                             |
 | gender       | PURPLE | Gender as derived from copy number data                                                                       |
+| genome       | PURPLE | Genome properties, including overall ploidy, diploid proportion, and presence of whole genome duplication     |
 | gene         | LINX   | Deep deletions, amplifications, biallelic losses and mutations of cancer associated genes                     |
 | sv           | LINX   | Simple and complex structural variants                                                                        |
 | fusion       | LINX   | Presence of gene fusions                                                                                      |
@@ -120,8 +121,8 @@ features <- extractFeaturesCuplr(
 features[,1:5]
 ```
 
-    ##    sigs.SBS1  sigs.SBS2  sigs.SBS3 sigs.SBS4 sigs.SBS5
-    ## 1 0.04819147 0.01070571 0.01383367         0         0
+    ##    sigs.SBS1  sigs.SBS2   sigs.SBS3 sigs.SBS4 sigs.SBS5
+    ## 1 0.04792343 0.01030294 0.009803203         0         0
 
 ### Method 2
 
