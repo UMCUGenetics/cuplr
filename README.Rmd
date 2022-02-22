@@ -21,6 +21,7 @@ mut_load      | VCF    | Total number of SBSs, DBSs and indels
 rmd           | VCF    | [Regional mutational density (RMD)](https://www.nature.com/articles/nature14221) profiles as extracted by NMF
 chrom_arm     | PURPLE | Chromosome arm gains/losses compared to the overall genome ploidy
 gender        | PURPLE | Gender as derived from copy number data
+genome        | PURPLE | Genome properties, including overall ploidy, diploid proportion, and presence of whole genome duplication
 gene          | LINX   | Deep deletions, amplifications, biallelic losses and mutations of cancer associated genes
 sv            | LINX   | Simple and complex structural variants
 fusion        | LINX   | Presence of gene fusions
