@@ -75,6 +75,15 @@ predict.randomForestEnsemble <- function(
       newdata <- fitToRmdProfiles(newdata, object$rmd_sig_profiles)
    }
 
+   ## Check missing features --------------------------------
+   missing_features <- colnames(object$imp)[ !(colnames(object$imp) %in% colnames(newdata)) ]
+   if(length(missing_features)>0){
+      stop(
+         'The following features are missing from `newdata`: ',
+         paste(missing_features, collapse=', ')
+      )
+   }
+
    ## --------------------------------
    if(verbose){
       counter <- 0
