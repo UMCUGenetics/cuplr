@@ -140,17 +140,17 @@ extractFeaturesCuplr <- function(
    sigs <- list(
       snv=mutSigExtractor::fitToSignatures(
          mut.context.counts=contexts_split$snv, 
-         signature.profiles=mutSigExtractor::SBS_SIGNATURE_PROFILES_V3
+         signature.profiles=featureExtractor::SBS_SIGNATURE_PROFILES_V3
       ),
       
       dbs=mutSigExtractor::fitToSignatures(
          mut.context.counts=contexts_split$dbs,
-         signature.profiles=mutSigExtractor::DBS_SIGNATURE_PROFILES
+         signature.profiles=featureExtractor::DBS_SIGNATURE_PROFILES
       ),
       
       indel=mutSigExtractor::fitToSignatures(
          mut.context.counts=contexts_split$indel,
-         signature.profiles=mutSigExtractor::INDEL_SIGNATURE_PROFILES
+         signature.profiles=featureExtractor::INDEL_SIGNATURE_PROFILES
       )
    )
 
