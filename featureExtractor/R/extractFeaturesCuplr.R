@@ -29,12 +29,9 @@ extractFeaturesCuplr <- function(
    ## Debugging --------------------------------
    if(F){
       devtools::load_all('/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/featureExtractor')
-      in.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/doc/data/DO36021/'
+      in.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/cuplr/doc/data/DO35886/'
       out.dir=paste0(in.dir,'/output/')
       dir.create(out.dir, showWarnings=F)
-      
-      in.dir='/Users/lnguyen/hpc/cuppen/projects/P0013_WGS_patterns_Diagn/CUPs_classifier/processed/features/_all/01_HMF_PCAWG_full/output/XXXXXXXX/symlinks/'
-      out.dir='/Users/lnguyen/Desktop/test/'
       verbose=T
    }
    
@@ -125,7 +122,7 @@ extractFeaturesCuplr <- function(
       vcf.file=input.paths[['purple.smnv']], 
       vcf.fields=c(1,2,4,5,7,8),
       vcf.filter='PASS', keep.chroms=c(1:22,'X'),
-      ref.genome=mutSigExtractor:::DEFAULT_GENOME, verbose=verbose>=2
+      verbose=verbose>=2
    )
    
    ## --------------------------------
@@ -176,7 +173,7 @@ extractFeaturesCuplr <- function(
    ## --------------------------------
    if(verbose){ message('> Regional mutational density') }
    rmd_bin_counts <- saveAndReadVector(
-      extractRmd(df=vcf_smnv, bin.size=1e6, clonal.variants.only=clonal.variants.only, as.matrix=F, verbose=verbose>=2),
+      extractRmd(df=vcf_smnv, clonal.variants.only=clonal.variants.only, as.matrix=F, verbose=verbose>=2),
       'raw/rmd_bin_counts.txt'
    )
    
