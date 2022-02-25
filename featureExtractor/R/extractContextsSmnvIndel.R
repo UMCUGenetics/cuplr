@@ -24,7 +24,7 @@
 #'
 extractContextsSmnvIndel <- function(
    vcf.file=NULL, df=NULL, sample.name=NULL, vcf.filter='PASS', keep.chroms=c(1:22,'X'),
-   ref.genome=mutSigExtractor::DEFAULT_GENOME, clonal.variants.only=T,
+   ref.genome=BSGENOME, clonal.variants.only=T,
    as.matrix=T, verbose=F, ...
 ){
 
@@ -42,13 +42,17 @@ extractContextsSmnvIndel <- function(
    #    
    #    clonal.variants.only=T
    # }
-
+   
+   ## --------------------------------
    if(verbose){ message('Loading variants...') }
+   
+   ## Convert string to variable name
+   if(is.character(ref.genome)){ ref.genome <- eval(parse(text=ref.genome)) }
+   
    if(!is.null(vcf.file)){
       df <- mutSigExtractor::variantsFromVcf(
          vcf.file, vcf.fields=c(1,2,4,5,7,8),
-         vcf.filter=vcf.filter, keep.chroms=keep.chroms,
-         ref.genome=ref.genome, verbose=verbose,
+         vcf.filter=vcf.filter, keep.chroms=keep.chroms, verbose=verbose,
          ...
       )
    }
@@ -76,32 +80,24 @@ extractContextsSmnvIndel <- function(
    if(verbose){ message('Removing rows with multiple ALT sequences...') }
    df <- df[!grepl(',',df$alt),]
    
-   if(nrow(df)!=0){
-      if(verbose){ message('Converting chrom name style...') }
-      GenomeInfoDb::seqlevelsStyle(df$chrom)<- 'NCBI'
-   }
+   # if(nrow(df)!=0){
+   #    if(verbose){ message('Converting chrom name style...') }
+   #    GenomeInfoDb::seqlevelsStyle(df$chrom)<- 'NCBI'
+   # }
    
-   ##----------------------------------------------------------------
+   ## --------------------------------
    l <- list()
    
    if(verbose){ message('\n## Extracting SNV contexts...') }
-   l$snv <- mutSigExtractor::extractSigsSnv(df=df, output='contexts',verbose=verbose)[,1]
+   l$snv <- mutSigExtractor::extractSigsSnv(df=df, ref.genome=ref.genome, output='contexts', verbose=verbose)[,1]
    
    if(verbose){ message('\n## Extracting indel contexts...') }
-   l$indel <- mutSigExtractor::extractSigsIndel(df=df, output='contexts', method='PCAWG', verbose=verbose)[,1]
+   l$indel <- mutSigExtractor::extractSigsIndel(df=df, ref.genome=ref.genome, output='contexts', method='PCAWG', verbose=verbose)[,1]
    
    if(verbose){ message('\n## Extracting DBS contexts...') }
    l$dbs <- mutSigExtractor::extractSigsDbs(df=df, output='contexts', verbose=verbose)[,1]
    
-   # if(verbose){ message('\n## Counting MNVs...') }
-   # ## excluding DBSs
-   # df$ref_len <- nchar(df$ref)
-   # df$alt_len <- nchar(df$alt)
-   # l$mnv <- c(
-   #    counts=sum(with(df,{ (ref_len>=3 & alt_len>=2) | (ref_len>=2 & alt_len>=3) }))
-   # )
-   
-   ##----------------------------------------------------------------
+   ## --------------------------------
    if(verbose){ message('Returning output...') }
    out <- do.call(c, l)
    
