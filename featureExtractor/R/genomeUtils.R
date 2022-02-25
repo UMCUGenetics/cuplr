@@ -1,5 +1,8 @@
-## hg19 constants
-## centromere positions
+## hg19 constants ====================================
+## Centromere positions according to https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/gap.txt.gz
+## Example row: chr10	39254935	42254935	341	N	3000000	centromere	no
+## The below centromere positions are the midpoints between the centromere start and end positions
+## (e.g. 39254935 and 42254935 for chr10)
 CENTRO_POS_HG19 <- c(
    chr1=123035434,chr2=93826171,chr3=92004854,chr4=51160117,chr5=47905641,
    chr6=60330166,chr7=59554331,chr8=45338887,chr9=48867679,chr10=40754935,
@@ -8,6 +11,8 @@ CENTRO_POS_HG19 <- c(
    chr21=12788129,chr22=14500000,chrX=60132012,chrY=11604553
 )
 
+## The below values were obtained using:
+## seqlengths(BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19)
 CHROM_LENGTHS_HG19 <- c(
    chr1=249250621,chr2=243199373,chr3=198022430,chr4=191154276,chr5=180915260,
    chr6=171115067,chr7=159138663,chr8=146364022,chr9=141213431,chr10=135534747,
@@ -15,6 +20,61 @@ CHROM_LENGTHS_HG19 <- c(
    chr16=90354753,chr17=81195210,chr18=78077248,chr19=59128983,chr20=63025520,
    chr21=48129895,chr22=51304566,chrX=155270560,chrY=59373566,chrM=16571
 )
+
+## hg38 constants ====================================
+## The below centromere positions values were obtained using the below code block
+# if(F){
+#    ## Download file from 'http://hgdownload.cse.ucsc.edu/goldenpath/hg38/database/centromeres.txt.gz'
+#    df <- read.delim('/Users/lnguyen/Downloads/centromeres.txt.gz', header=F)
+#    colnames(df) <- c('bin','chrom','start','end','name')
+#    df_split <- split(df, df$chrom)
+#    sapply(df_split, function(i){
+#       centro_start <- min(i$start)
+#       centro_end <- max(i$end)
+#       (centro_start+centro_end)/2
+#    })
+# }
+CENTRO_POS_HG38 <- c(
+   chr1=123479592,chr2=93139351,chr3=92214016,chr4=50728006,chr5=48272854,
+   chr6=59191911,chr7=59848836,chr8=44955504,chr9=44454096,chr10=40640102,
+   chr11=52751711,chr12=35977330,chr13=17025624,chr14=17086762,chr15=18404464,
+   chr16=37288414,chr17=24714922,chr18=18161052,chr19=25844927,chr20=28237290,
+   chr21=11890184,chr22=14004553,chrX=60509060,chrY=10430492
+)
+
+## The below values were obtained using:
+## seqlengths(BSgenome.Hsapiens.UCSC.hg38::BSgenome.Hsapiens.UCSC.hg38)
+CHROM_LENGTHS_HG38 <- c(
+   chr1=248956422,chr2=242193529,chr3=198295559,chr4=190214555,chr5=181538259,
+   chr6=170805979,chr7=159345973,chr8=145138636,chr9=138394717,chr10=133797422,
+   chr11=135086622,chr12=133275309,chr13=114364328,chr14=107043718,chr15=101991189,
+   chr16=90338345,chr17=83257441,chr18=80373285,chr19=58617616,chr20=64444167,
+   chr21=46709983,chr22=50818468,chrX=156040895,chrY=57227415,chrM=16569
+)
+
+####################################################################################################
+setGenome <- function(genome.name, verbose=T){
+   pkg_env <- parent.env(environment())
+   
+   if(genome.name=='hg19'){
+      assign('BSGENOME', BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19, envir=pkg_env)
+      assign('CENTRO_POS', CENTRO_POS_HG19, envir=pkg_env)
+      assign('CHROM_LENGTHS', CHROM_LENGTHS_HG19, envir=pkg_env)
+      assign('RMD_BINS_PATH', RMD_BINS_HG19_PATH, envir=pkg_env)
+      
+   } else if(genome.name=='hg38'){
+      assign('BSGENOME', BSgenome.Hsapiens.UCSC.hg38::BSgenome.Hsapiens.UCSC.hg38, envir=pkg_env)
+      assign('CENTRO_POS', CENTRO_POS_HG38, envir=pkg_env)
+      assign('CHROM_LENGTHS', CHROM_LENGTHS_HG38, envir=pkg_env)
+      assign('RMD_BINS_PATH', RMD_BINS_HG38_PATH, envir=pkg_env)
+      
+   } else {
+      stop("`genome.name` must be 'hg19' or 'hg38'")
+   }
+   
+   if(verbose){ message('Genome set to ',genome.name) }
+   assign('CURRENT_GENOME', genome.name, envir=pkg_env)
+}
 
 ####################################################################################################
 #' Find overlapping intervals
@@ -141,7 +201,7 @@ isOverlappingChromPos <- function(
 #' @export
 #'
 getChromArm <- function(
-   df=NULL, centro.pos=CENTRO_POS_HG19, one.armed.chroms=c(13,14,15,21,22),
+   df=NULL, centro.pos=CENTRO_POS, one.armed.chroms=c(13,14,15,21,22),
    arm.only=F, seq.levels.style='NCBI', centro.intervals.rough.fix=F, show.warnings=F
 ){
 
@@ -191,7 +251,7 @@ getChromArm <- function(
 #' @return An integer vector of linear coordinates
 #' @export
 #'
-linearizeChromPos <- function(chrom=NULL, pos=NULL, df=NULL, chrom.lengths=CHROM_LENGTHS_HG19){
+linearizeChromPos <- function(chrom=NULL, pos=NULL, df=NULL, chrom.lengths=CHROM_LENGTHS){
 
    if(!is.null(df)){
       chrom <- df[,1]
@@ -286,8 +346,8 @@ mkGenomeBins <- function(
       #genome_bins$chrom_arm <- NULL
    }
 
-   genome_bins$start_linear <- linearizeChromPos(df=genome_bins[,c('chrom','start')])
-   genome_bins$end_linear <- linearizeChromPos(df=genome_bins[,c('chrom','end')])
+   #genome_bins$start_linear <- linearizeChromPos(df=genome_bins[,c('chrom','start')])
+   #genome_bins$end_linear <- linearizeChromPos(df=genome_bins[,c('chrom','end')])
 
    ## Make feature names
    genome_bins$chrom_arm <- factor(genome_bins$chrom_arm, unique(genome_bins$chrom_arm))
