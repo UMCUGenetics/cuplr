@@ -8,11 +8,10 @@ extractRmd(
   vcf.file = NULL,
   df = NULL,
   sample.name = NULL,
-  genome.bins = NULL,
-  bin.size = 1e+06,
+  genome.bins = RMD_BINS_PATH,
   as.matrix = T,
   vcf.filter = "PASS",
-  clonal.variants.only = T,
+  clonal.variants.only = F,
   mut.types = "snv",
   verbose = F,
   ...
@@ -29,10 +28,8 @@ matrix will be named to this. If none is provided, the basename of the vcf
 file will be used.}
 
 \item{genome.bins}{A dataframe containing predetermined bins. Must contain the columns: chrom,
-start, end, chrom_arm, start_linear, end_linear, bin_name}
-
-\item{bin.size}{Alternatively if \code{genome.bins} is NULL, the user can specify the size of the
-genomic bins}
+start, end, bin_name. Alternatively, if a path to a txt (as a string) is provided, the txt will
+be loaded.}
 
 \item{as.matrix}{Return a matrix or vector?}
 
