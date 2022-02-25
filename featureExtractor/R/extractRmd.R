@@ -101,7 +101,10 @@ extractRmd <- function(
       genome.bins <- read.delim(genome.bins) 
    }
    
-   counts <- structure(rep(0, nrow(genome.bins)), names=unique(genome.bins$bin_name) )
+   counts <- structure(
+      rep(0, nrow(genome.bins)), 
+      names=naturalsort::naturalsort(unique(genome.bins$bin_name))
+   )
    
    ## Main
    if(nrow(df)!=0){
