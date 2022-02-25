@@ -18,7 +18,7 @@ CHROM_LENGTHS_HG19 <- c(
    chr6=171115067,chr7=159138663,chr8=146364022,chr9=141213431,chr10=135534747,
    chr11=135006516,chr12=133851895,chr13=115169878,chr14=107349540,chr15=102531392,
    chr16=90354753,chr17=81195210,chr18=78077248,chr19=59128983,chr20=63025520,
-   chr21=48129895,chr22=51304566,chrX=155270560,chrY=59373566,chrM=16571
+   chr21=48129895,chr22=51304566,chrX=155270560,chrY=59373566
 )
 
 ## hg38 constants ====================================
@@ -49,10 +49,20 @@ CHROM_LENGTHS_HG38 <- c(
    chr6=170805979,chr7=159345973,chr8=145138636,chr9=138394717,chr10=133797422,
    chr11=135086622,chr12=133275309,chr13=114364328,chr14=107043718,chr15=101991189,
    chr16=90338345,chr17=83257441,chr18=80373285,chr19=58617616,chr20=64444167,
-   chr21=46709983,chr22=50818468,chrX=156040895,chrY=57227415,chrM=16569
+   chr21=46709983,chr22=50818468,chrX=156040895,chrY=57227415
 )
 
 ####################################################################################################
+#' Set the genome to hg19 or hg38
+#' 
+#' @description This function assigns several global variables in the `featureExtractor` environment
+#' including BSGENOME, CENTRO_POS, CHROM_LENGTHS and RMD_BINS_PATH
+#'
+#' @param genome.name Can be 'hg19' or 'hg38'
+#' @param verbose Show details?
+#'
+#' @export
+#'
 setGenome <- function(genome.name, verbose=T){
    pkg_env <- parent.env(environment())
    
@@ -72,8 +82,30 @@ setGenome <- function(genome.name, verbose=T){
       stop("`genome.name` must be 'hg19' or 'hg38'")
    }
    
-   if(verbose){ message('Genome set to ',genome.name) }
    assign('CURRENT_GENOME', genome.name, envir=pkg_env)
+   if(verbose){ message('Genome set to ',genome.name) }
+}
+
+#' @rdname setGenome
+#' @export
+getCurrentGenome <- function(){
+   message('The currently loaded genome is ',CURRENT_GENOME,'. Below are the assigned variables:')
+   
+   cat('\n')
+   message('`BSGENOME`')
+   print(BSGENOME)
+   
+   cat('\n')
+   message('`CENTRO_POS`')
+   print(CENTRO_POS)
+   
+   cat('\n')
+   message('`CHROM_LENGTHS`')
+   print(CHROM_LENGTHS)
+   
+   cat('\n')
+   message('`RMD_BINS_PATH`')
+   cat(RMD_BINS_PATH)
 }
 
 ####################################################################################################
