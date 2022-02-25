@@ -4,7 +4,9 @@
    ## Paths within the package
    pkg_constant_paths <- list(
       c('GENE_FUSION_WHITELIST','/gene_fusion_whitelist.txt'),
-      c('GENE_DRIVER_WHITELIST','/gene_driver_whitelist.txt')
+      c('GENE_DRIVER_WHITELIST','/gene_driver_whitelist.txt'),
+      c('RMD_BINS_HG19_PATH','/rmd_bins.hg19.txt.gz'),
+      c('RMD_BINS_HG38_PATH','/rmd_bins.hg38.hg19_liftover.txt.gz')
    )
 
    for(i in pkg_constant_paths){
@@ -13,6 +15,9 @@
          envir=parent.env(environment())
       )
    }
+   
+   ## Set reference genome
+   setGenome('hg19')
 }
 
 # if(F){
