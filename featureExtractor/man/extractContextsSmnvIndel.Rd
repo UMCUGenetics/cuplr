@@ -10,7 +10,7 @@ extractContextsSmnvIndel(
   sample.name = NULL,
   vcf.filter = "PASS",
   keep.chroms = c(1:22, "X"),
-  ref.genome = mutSigExtractor::DEFAULT_GENOME,
+  ref.genome = BSGENOME,
   clonal.variants.only = T,
   as.matrix = T,
   verbose = F,
