@@ -55,15 +55,16 @@ CHROM_LENGTHS_HG38 <- c(
 ####################################################################################################
 #' Set the genome to hg19 or hg38
 #' 
-#' @description This function assigns several global variables in the `featureExtractor` environment
-#' including BSGENOME, CENTRO_POS, CHROM_LENGTHS and RMD_BINS_PATH
+#' @description `setGenome()` assigns several global variables in the `featureExtractor` environment
+#' including BSGENOME, CENTRO_POS, CHROM_LENGTHS and RMD_BINS_PATH. `getCurrentGenome()` displays
+#' the current genome and the associated assigned global variables.
 #'
 #' @param genome.name Can be 'hg19' or 'hg38'
 #' @param verbose Show details?
 #'
 #' @export
 #'
-setGenome <- function(genome.name, verbose=T){
+setGenome <- function(genome.name, verbose=2){
    pkg_env <- parent.env(environment())
    
    if(genome.name=='hg19'){
@@ -83,7 +84,8 @@ setGenome <- function(genome.name, verbose=T){
    }
    
    assign('CURRENT_GENOME', genome.name, envir=pkg_env)
-   if(verbose){ message('Genome set to ',genome.name) }
+   if(verbose==1){ message('Genome set to ',genome.name) }
+   if(verbose==2){ getCurrentGenome() }
 }
 
 #' @rdname setGenome
