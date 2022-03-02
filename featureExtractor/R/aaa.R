@@ -17,7 +17,7 @@
    }
    
    ## Set reference genome
-   setGenome('hg19')
+   setGenome('hg19', verbose=1)
 }
 
 # if(F){
