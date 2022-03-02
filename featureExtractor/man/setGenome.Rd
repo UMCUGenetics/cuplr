@@ -5,7 +5,7 @@
 \alias{getCurrentGenome}
 \title{Set the genome to hg19 or hg38}
 \usage{
-setGenome(genome.name, verbose = T)
+setGenome(genome.name, verbose = 2)
 
 getCurrentGenome()
 }
@@ -15,6 +15,7 @@ getCurrentGenome()
 \item{verbose}{Show details?}
 }
 \description{
-This function assigns several global variables in the \code{featureExtractor} environment
-including BSGENOME, CENTRO_POS, CHROM_LENGTHS and RMD_BINS_PATH
+\code{setGenome()} assigns several global variables in the \code{featureExtractor} environment
+including BSGENOME, CENTRO_POS, CHROM_LENGTHS and RMD_BINS_PATH. \code{getCurrentGenome()} displays
+the current genome and the associated assigned global variables.
 }
