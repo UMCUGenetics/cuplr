@@ -38,6 +38,16 @@ predictions on a held out test set.
 For details on performance, the top features used by CUPLR, and other
 details, please see the plots at `doc/perf/`.
 
+# Reference
+
+**Machine learning-based tissue of origin classification for cancer of
+unknown primary diagnostics using genome-wide mutation features**  
+*Luan Nguyen, Arne Van Hoeck, Edwin Cuppen*  
+<https://www.biorxiv.org/content/10.1101/2021.10.05.463244v1.full>
+
+For now, please refer to the paper on bioRxiv. Once the paper is
+published, this link will be updated.
+
 # Installation
 
 ## Dependencies
