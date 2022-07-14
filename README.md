@@ -32,21 +32,18 @@ from: (i) the somatic VCF file containing SBS, DBS and indel mutations,
 CUPLR was trained with tumor samples from 6756 patients from the Hartwig
 Medical Foundation (HMF) and the Pan-Cancer Analysis of Whole Genomes
 (PCAWG) consortium. The model can predict the primary tumor location
-with an accuracy of 0.90 based on cross-validation and 0.89 based on
-predictions on a held out test set.
-
-For details on performance, the top features used by CUPLR, and other
-details, please see the plots at `doc/perf/`.
+with an overall recall and precision of \~90% based on cross-validation
+and predictions on a held out test set.
 
 # Reference
 
+For more details about the model, please see the CUPLR paper:
+
 **Machine learning-based tissue of origin classification for cancer of
 unknown primary diagnostics using genome-wide mutation features**  
-*Luan Nguyen, Arne Van Hoeck, Edwin Cuppen*  
-<https://www.biorxiv.org/content/10.1101/2021.10.05.463244v1.full>
+*Luan Nguyen, Arne Van Hoeck, Edwin Cuppen. Nature Communications, 2022*
 
-For now, please refer to the paper on bioRxiv. Once the paper is
-published, this link will be updated.
+Link: <https://www.nature.com/articles/s41467-022-31666-w>
 
 # Installation
 
