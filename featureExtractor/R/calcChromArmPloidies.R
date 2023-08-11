@@ -43,14 +43,6 @@ calcChromArmPloidies <- function(
    one.armed.chroms=c(13,14,15,21,22),
    verbose=F
 ){
-
-   if(F){
-      cnv.file='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104-update3/somatics/150720_HMFregXXXXXXXX/purple/XXXXXXXX.purple.cnv.somatic.tsv'
-      sel.cols <- c(
-         chrom='chromosome',start='start',end='end',
-         total_cn='copyNumber',major_cn='majorAlleleCopyNumber',minor_cn='minorAlleleCopyNumber'
-      )
-   }
    
    ## Load data --------------------------------
    if(!is.null(cnv.file)){

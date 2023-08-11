@@ -6,7 +6,6 @@
 #' @export
 #'
 getPurplePurityData <- function(purple.purity.path){
-   #purple.purity.path='/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104/data/somatics/160704_HMFregXXXXXXXX/XXXXXXXX.purple.purity.tsv'
    df <- read.delim(purple.purity.path, check.names=F, stringsAsFactors=F)
 
    c(

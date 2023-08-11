@@ -38,24 +38,6 @@ patientReport <- function(
    level.of.detail=3, rel.widths=c(1.05, 1, 1)
 ){
 
-   if(F){
-      ##
-      sample.name='XXXXXXXX' ## 2 top classes
-      #sample.name='DO36039'
-
-      probs=pred_reports$holdout$prob_scaled
-      feat.contrib=pred_reports$holdout$feat_contrib
-      plot.title=sample.name
-
-      gender.feature.name='gender.gender';
-      top.n.class.probs=NULL;
-      top.n.class.features=3; top.n.features=5;
-      prob.thres.min=0.1; prob.thres.rel.diff=0.4;
-      prob.label.size=3.5; feature.label.size=3.5;
-      drop.feature.type.levels=FALSE
-      level.of.detail=3; rel.widths=c(1.05, 1, 1)
-   }
-
    ## Init ================================
    require(ggplot2)
    require(ggrepel)
