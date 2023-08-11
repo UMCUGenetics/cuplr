@@ -6,13 +6,6 @@
 #' @export
 #'
 extractContextsSvLinx <- function(vis.sv.data=NULL){
-   # if(F){
-   #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor/DO1003-from-jar/linx14/DO1003T.linx.vis_sv_data.tsv"
-   #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104-update3//somatics/161205_HMFregXXXXXXXX/linx14/XXXXXXXX.linx.vis_sv_data.tsv"
-   #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data/DR-104-update3/somatics/160601_HMFreg0056_FR10302053_FR10302054_XXXXXXXX/linx14/XXXXXXXX.linx.vis_sv_data.tsv"
-   #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/HMF_data//DR-104-update5/somatics/XXXXXXXX/linx/XXXXXXXX.linx.vis_sv_data.tsv"
-   #    vis.sv.data="/Users/lnguyen/hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor/DO222275-from-jar//linxsoft1.17/DO222275T.linx.vis_sv_data.tsv"
-   # }
    
    ## Load inputs --------------------------------
    if(is.character(vis.sv.data)){

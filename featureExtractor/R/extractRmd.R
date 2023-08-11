@@ -28,21 +28,6 @@ extractRmd <- function(
    vcf.filter='PASS', clonal.variants.only=F, mut.types='snv',
    verbose=F, ...
 ){
-   # if(F){
-   #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/171002_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
-   #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/200117_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
-   #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/160825_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
-   #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor//DO217817-from-jar//purple25/DO217817T.purple.somatic.vcf.gz'
-   #    
-   #    bin.size=1e6
-   #    genome.bins=rmd_bins.hg38
-   #    genome.bins=rmd_bins.hg19
-   #    as.matrix=T
-   #    vcf.filter='PASS'
-   #    clonal.variants.only=F
-   #    mut.types='snv'
-   #    verbose=T
-   # }
    
    ## Init --------------------------------
    if(!is.null(vcf.file)){

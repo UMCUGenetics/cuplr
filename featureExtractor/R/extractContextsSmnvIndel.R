@@ -27,21 +27,6 @@ extractContextsSmnvIndel <- function(
    ref.genome=BSGENOME, clonal.variants.only=T,
    as.matrix=T, verbose=F, ...
 ){
-
-   # if(F){
-   #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/HMF_data/DR-104/data//somatics/171002_HMFregXXXXXXXX/XXXXXXXX.purple.somatic.vcf.gz'
-   #    vcf.file='/Users/lnguyen/hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor//DO217817-from-jar//purple25/DO217817T.purple.somatic.vcf.gz'
-   #    vcf.file='/Users/lnguyen//hpc/cuppen/shared_resources/PCAWG/pipeline5/per-donor//DO218019-from-jar//purple25/DO218019T.purple.somatic.vcf.gz'
-   #    
-   #    vcf.filter='PASS'
-   #    keep.chroms=c(1:22,'X')
-   #    
-   #    ref.genome=mutSigExtractor::DEFAULT_GENOME
-   #    tag.features=T
-   #    verbose=T
-   #    
-   #    clonal.variants.only=T
-   # }
    
    ## --------------------------------
    if(verbose){ message('Loading variants...') }
@@ -80,10 +65,6 @@ extractContextsSmnvIndel <- function(
    if(verbose){ message('Removing rows with multiple ALT sequences...') }
    df <- df[!grepl(',',df$alt),]
    
-   # if(nrow(df)!=0){
-   #    if(verbose){ message('Converting chrom name style...') }
-   #    GenomeInfoDb::seqlevelsStyle(df$chrom)<- 'NCBI'
-   # }
    
    ## --------------------------------
    l <- list()

@@ -675,8 +675,6 @@ if(WRITE_OUTPUT){
 
    ##
    patientReportWrapper <- function(report, sample.name){
-      #report=pred_reports$holdout
-      #sample.name='XXXXXXXX'
 
       sample_name_anon <- anonymizeSampleId(sample.name)
       cancer_type <- metadata$cancer_type[match(sample.name, metadata$sample_id)]
@@ -704,8 +702,6 @@ if(WRITE_OUTPUT){
    patient_reports
    dev.off()
 
-   # View(subset(pred_summ, group=='holdout'))
-   # patientReportWrapper(pred_reports$holdout, sample.name='XXXXXXXX')
 }
 
 ## Feature avg per cancer type ================================
