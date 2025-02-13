@@ -1,6 +1,11 @@
 CUPLR: Cancer of Unknown Primary Location Resolver
 ================
 
+> [!NOTE]
+> **CUPLR is no longer actively maintained. Please use 
+> [CUPPA](https://github.com/hartwigmedical/hmftools/tree/master/cuppa), 
+> the successor to CUPLR.**
+
 CUPLR is a classifier for identifying the primary tumor location of
 metastatic tumors based on features derived from whole genome sequencing
 data. The model itself is an ensemble of binary random forest
